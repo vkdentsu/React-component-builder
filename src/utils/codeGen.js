@@ -192,7 +192,7 @@ const elToJSX = (el, indent = '          ') => {
     case 'button': {
       const r = roundedMap[el.rounded] || 'rounded-md';
       const p = paddingMap[el.padding] || 'px-4 py-2';
-      return `${indent}<button${hc} className="${p} ${r} text-sm font-medium cursor-pointer" style={{background:'${el.bg}',color:'${el.color}',fontSize:${el.fontSize}}}>\n${indent}  ${el.label}\n${indent}</button>`;
+      return `${indent}<button${hc} type="button" className="${p} ${r} text-sm font-medium cursor-pointer" style={{background:'${el.bg}',color:'${el.color}',fontSize:${el.fontSize}}}>\n${indent}  ${el.label}\n${indent}</button>`;
     }
     case "radio":
       return `<div style={{textAlign:"${el.align}"}}><label className="flex items-center gap-2"><input type="radio" name="${el.group}" value="${el.value}" ${el.checked ? "defaultChecked" : ""} style={{accentColor:"${el.color}"}} /><span style={{color:"${el.color}",fontSize:${el.fontSize},fontWeight:"${el.fontWeight}"}}>${el.label}</span></label></div>`;
@@ -307,7 +307,7 @@ const elToJSX = (el, indent = '          ') => {
         ${indent}})()}`; 
     
     case 'text':
-      return `${indent}<p${hc} className="${alignMap[el.align] || 'text-left'} ${fontWeightMap[el.fontWeight] || 'font-normal'}" style={{color:'${el.color}',fontSize:${el.fontSize}}}>\n${indent}  ${el.label}\n${indent}</p>`;
+      return `${indent}<label${hc} className="${alignMap[el.align] || 'text-left'} ${fontWeightMap[el.fontWeight] || 'font-normal'}" style={{color:'${el.color}',fontSize:${el.fontSize}}}>${indent} ${el.label} ${indent}</label>`;
     case 'heading':
       return `${indent}<h2${hc} className="${alignMap[el.align] || 'text-left'} ${fontWeightMap[el.fontWeight] || 'font-bold'}" style={{color:'${el.color}',fontSize:${el.fontSize}}}>\n${indent}  ${el.label}\n${indent}</h2>`;
     case 'input':
@@ -329,100 +329,238 @@ const elToJSX = (el, indent = '          ') => {
       return `${indent}<hr${hc} className="w-full" style={{borderColor:'${el.color}',borderTopWidth:${el.thickness}}} />`;
 
     case 'modal': {
-      const modalbuttonBg = el.modalButtonType === 'button' ? `style={{background:'${el.modalButtonBg}',color:'${el.modalButtonColor}'}}` : `style={{color:'${el.modalButtonColor}'}}`;
-      const triggerClass = el.modalButtonType === 'button' ? 'px-4 py-2 rounded-md text-sm font-medium' : 'text-sm font-medium underline';
-      const modalContent =
-  el.rows && el.rows.length
-    ? rowsToJSX(el.rows, indent + '      ')
-    : `${indent}      <p className="text-gray-600">Modal content goes here</p>`;
-      
-      return `${indent}{(() => {
-${indent}  const [modalOpen, setModalOpen] = React.useState(false);
-${indent} React.useEffect(() => {
-${indent}   if (!modalOpen) return;
-${indent}   const handleKeyDown = (event) => {
-${indent}     if (event.key === 'Escape') {
-${indent}       setModalOpen(false);
-${indent}     }
-${indent}   };
-${indent}   window.addEventListener('keydown', handleKeyDown);
+      const modalbuttonBg =
+        el.modalButtonType === 'button'
+          ? `style={{background:'${el.modalButtonBg}',color:'${el.modalButtonColor}'}}`
+          : `style={{color:'${el.modalButtonColor}'}}`;
 
-${indent}   return () => {
-${indent}     window.removeEventListener('keydown', handleKeyDown);
-${indent}   };
-${indent} }, [modalOpen]);
-${indent}  return (
-${indent}    <div${hc}>
-${indent}      <button onClick={() => setModalOpen(true)} className="${triggerClass}" ${modalbuttonBg}>
-${indent}        ${el.modalButtonLabel}
-${indent}      </button>
-${indent}      {modalOpen && (
-${indent}        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 rounded-lg" onClick={() => setModalOpen(false)}>
-${indent}          <div className="bg-white rounded-lg shadow-xl p-6 relative max-h-[80vh] overflow-y-auto" style={{width:'${el.modalContentWidth || '500px'}', background:'${el.modalContentBg}'}} onClick={(e) => e.stopPropagation()}>
-${indent}            <button onClick={() => setModalOpen(false)} className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-xl" style={{background:'none',border:'none',cursor:'pointer'}}>
-${indent}              ×
-${indent}            </button>
-${indent}            <h2 className="text-lg font-semibold mb-4 pr-6">${el.modalContentTitle}</h2>
-${indent}            <div className="flex flex-col gap-4">
-${modalContent}
-${indent}            </div>
-${indent}          </div>
-${indent}        </div>
-${indent}      )}
-${indent}    </div>
-${indent}  );
-${indent}})()}`;
+      const triggerClass =
+        el.modalButtonType === 'button'
+          ? 'px-4 py-2 rounded-md text-sm font-medium'
+          : 'text-sm font-medium underline';
+
+      const modalContent =
+        el.rows && el.rows.length
+          ? rowsToJSX(el.rows, indent + '      ')
+          : `${indent}      <p className="text-gray-600">Modal content goes here</p>`;
+
+      return `${indent}{(() => {
+        ${indent}  const [modalOpen, setModalOpen] = React.useState(false);
+        ${indent}  const openButtonRef = React.useRef(null);
+        ${indent}  const closeButtonRef = React.useRef(null);
+        ${indent}  const modalRef = React.useRef(null);
+
+        ${indent}  React.useEffect(() => {
+        ${indent}    if (!modalOpen) return;
+
+        ${indent}    closeButtonRef.current?.focus();
+
+        ${indent}    const handleKeyDown = (event) => {
+        ${indent}      if (event.key === 'Escape') {
+        ${indent}        setModalOpen(false);
+        ${indent}        openButtonRef.current?.focus();
+        ${indent}      }
+        ${indent}    };
+
+        ${indent}    window.addEventListener('keydown', handleKeyDown);
+
+        ${indent}    return () => {
+        ${indent}      window.removeEventListener('keydown', handleKeyDown);
+        ${indent}    };
+        ${indent}  }, [modalOpen]);
+
+        ${indent}  React.useEffect(() => {
+        ${indent}    if (!modalOpen) return;
+
+        ${indent}    const modal = modalRef.current;
+        ${indent}    if (!modal) return;
+
+        ${indent}    const handleTabKey = (event) => {
+        ${indent}      if (event.key !== 'Tab') return;
+
+        ${indent}      const focusableElements = modal.querySelectorAll(
+        ${indent}        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        ${indent}      );
+
+        ${indent}      if (!focusableElements.length) return;
+
+        ${indent}      const firstElement = focusableElements[0];
+        ${indent}      const lastElement = focusableElements[focusableElements.length - 1];
+
+        ${indent}      if (event.shiftKey && document.activeElement === firstElement) {
+        ${indent}        event.preventDefault();
+        ${indent}        lastElement.focus();
+        ${indent}      } else if (!event.shiftKey && document.activeElement === lastElement) {
+        ${indent}        event.preventDefault();
+        ${indent}        firstElement.focus();
+        ${indent}      }
+        ${indent}    };
+
+        ${indent}    modal.addEventListener('keydown', handleTabKey);
+
+        ${indent}    return () => {
+        ${indent}      modal.removeEventListener('keydown', handleTabKey);
+        ${indent}    };
+        ${indent}  }, [modalOpen]);
+
+        ${indent}  return (
+        ${indent}    <div${hc}>
+        ${indent}      <button
+        ${indent}        type="button"
+        ${indent}        ref={openButtonRef}
+        ${indent}        onClick={() => setModalOpen(true)}
+        ${indent}        aria-haspopup="dialog"
+        ${indent}        className="${triggerClass}"
+        ${indent}        ${modalbuttonBg}
+        ${indent}      >
+        ${indent}        ${el.modalButtonLabel}
+        ${indent}      </button>
+
+        ${indent}      {modalOpen && (
+        ${indent}        <div
+        ${indent}          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 rounded-lg"
+        ${indent}          onClick={() => {
+        ${indent}            setModalOpen(false);
+        ${indent}            openButtonRef.current?.focus();
+        ${indent}          }}
+        ${indent}        >
+        ${indent}          <div
+        ${indent}            ref={modalRef}
+        ${indent}            role="dialog"
+        ${indent}            aria-modal="true"
+        ${indent}            aria-labelledby="modal-title"
+        ${indent}            className="bg-white rounded-lg shadow-xl p-6 relative max-h-[80vh] overflow-y-auto"
+        ${indent}            style={{width:'${el.modalContentWidth || '500px'}', background:'${el.modalContentBg || '#ffffff'}'}}
+        ${indent}            onClick={(event) => event.stopPropagation()}
+        ${indent}          >
+        ${indent}            <button
+        ${indent}              type="button"
+        ${indent}              ref={closeButtonRef}
+        ${indent}              onClick={() => {
+        ${indent}                setModalOpen(false);
+        ${indent}                openButtonRef.current?.focus();
+        ${indent}              }}
+        ${indent}              aria-label="Close modal"
+        ${indent}              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-xl"
+        ${indent}              style={{background:'none',border:'none',cursor:'pointer'}}
+        ${indent}            >
+        ${indent}              ×
+        ${indent}            </button>
+
+        ${indent}            <h2
+        ${indent}              id="modal-title"
+        ${indent}              className="text-lg font-semibold mb-4 pr-6"
+        ${indent}            >
+        ${indent}              ${el.modalContentTitle || 'Modal'}
+        ${indent}            </h2>
+
+        ${indent}            <div className="flex flex-col gap-4">
+        ${modalContent}
+        ${indent}            </div>
+        ${indent}          </div>
+        ${indent}        </div>
+        ${indent}      )}
+        ${indent}    </div>
+        ${indent}  );
+        ${indent}})()
+      }`;
     }
 
 case 'popover': {
   const position = el.popoverContentPosition || "bottom";
+
   const positionClasses = {
     top: "bottom-full mb-3 left-1/2 -translate-x-1/2",
     bottom: "top-full mt-3 left-1/2 -translate-x-1/2",
     left: "right-full mr-3 top-1/2 -translate-y-1/2",
     right: "left-full ml-3 top-1/2 -translate-y-1/2"
   };
+
   const arrowClasses = {
     top: "top-full left-1/2 -translate-x-1/2 border-l-8 border-r-8 border-t-8 border-transparent",
     bottom: "bottom-full left-1/2 -translate-x-1/2 border-l-8 border-r-8 border-b-8 border-transparent",
     left: "left-full top-1/2 -translate-y-1/2 border-t-8 border-b-8 border-l-8 border-transparent",
     right: "right-full top-1/2 -translate-y-1/2 border-t-8 border-b-8 border-r-8 border-transparent"
   };
+
+  const popoverId = `popover-${Math.random().toString(36).slice(2, 8)}`;
+
   return `${indent}{(() => {
-    ${indent} const [open,setOpen] = React.useState(false);
+    ${indent} const [open, setOpen] = React.useState(false);
+    ${indent} const buttonRef = React.useRef(null);
+
+    ${indent} React.useEffect(() => {
+    ${indent}   if (!open) return;
+
+    ${indent}   const handleKeyDown = (event) => {
+    ${indent}     if (event.key === 'Escape') {
+    ${indent}       setOpen(false);
+    ${indent}       buttonRef.current?.focus();
+    ${indent}     }
+    ${indent}   };
+
+    ${indent}   window.addEventListener('keydown', handleKeyDown);
+
+    ${indent}   return () => {
+    ${indent}     window.removeEventListener('keydown', handleKeyDown);
+    ${indent}   };
+    ${indent} }, [open]);
+
     ${indent} return (
     ${indent} <div className="relative inline-block w-max text-left">
-    ${indent}  <button onClick={()=>setOpen(!open)} className="px-4 py-2 rounded-md text-sm font-medium"
-    ${indent}   style={{
-    ${indent}     background:'${el.popoverButtonBg}',
-    ${indent}     color:'${el.popoverButtonColor}'
-    ${indent}   }}
-    ${indent}  >
-    ${indent}   ${el.popoverButtonLabel}
-    ${indent}  </button>
-    ${indent} {
-    ${indent} open && (
-    ${indent} <div className="absolute z-50 rounded-lg shadow-lg p-4 ${positionClasses[position]}"
-    ${indent}  style={{
-    ${indent}    width:'${el.popoverContentWidth || "280px"}',
-    ${indent}    background:'${el.popoverContentBg}',
-    ${indent}    color:'${el.popoverContentColor}'
-    ${indent}  }}
-    ${indent} >
-    ${indent}  <div className="absolute w-0 h-0 ${arrowClasses[position]}"
-    ${indent}   style={{
-    ${indent}     borderColor:'transparent',
-    ${indent}     ${position==="top" ? "borderTopColor:'"+el.popoverContentBg+"'" : ""}
-    ${indent}     ${position==="bottom" ? "borderBottomColor:'"+el.popoverContentBg+"'" : ""}
-    ${indent}     ${position==="left" ? "borderLeftColor:'"+el.popoverContentBg+"'" : ""}
-    ${indent}     ${position==="right" ? "borderRightColor:'"+el.popoverContentBg+"'" : ""}
-    ${indent}   }}
-    ${indent}  ></div>
-    ${indent}  <h3 className="font-semibold mb-2">${el.popoverContentTitle}</h3>
-    ${indent}  <p>${el.popoverContentText}</p>
-    ${indent} </div>
-    ${indent} )
-    ${indent} }
+
+    ${indent}   <button
+    ${indent}     ref={buttonRef}
+    ${indent}     type="button"
+    ${indent}     onClick={() => setOpen(!open)}
+    ${indent}     aria-expanded={open}
+    ${indent}     aria-controls="${popoverId}"
+    ${indent}     className="px-4 py-2 rounded-md text-sm font-medium"
+    ${indent}     style={{
+    ${indent}       background:'${el.popoverButtonBg}',
+    ${indent}       color:'${el.popoverButtonColor}'
+    ${indent}     }}
+    ${indent}   >
+    ${indent}     ${el.popoverButtonLabel}
+    ${indent}   </button>
+
+    ${indent}   {open && (
+    ${indent}     <div
+    ${indent}       id="${popoverId}"
+    ${indent}       role="dialog"
+    ${indent}       aria-labelledby="${popoverId}-title"
+    ${indent}       className="absolute z-50 rounded-lg shadow-lg p-4 ${positionClasses[position]}"
+    ${indent}       style={{
+    ${indent}         width:'${el.popoverContentWidth || "280px"}',
+    ${indent}         background:'${el.popoverContentBg}',
+    ${indent}         color:'${el.popoverContentColor}'
+    ${indent}       }}
+    ${indent}     >
+
+    ${indent}       <div
+    ${indent}         className="absolute w-0 h-0 ${arrowClasses[position]}"
+    ${indent}         aria-hidden="true"
+    ${indent}         style={{
+    ${indent}           borderColor:'transparent',
+    ${indent}           ${position === "top" ? "borderTopColor:'" + el.popoverContentBg + "'" : ""}
+    ${indent}           ${position === "bottom" ? "borderBottomColor:'" + el.popoverContentBg + "'" : ""}
+    ${indent}           ${position === "left" ? "borderLeftColor:'" + el.popoverContentBg + "'" : ""}
+    ${indent}           ${position === "right" ? "borderRightColor:'" + el.popoverContentBg + "'" : ""}
+    ${indent}         }}
+    ${indent}       ></div>
+
+    ${indent}       <h3
+    ${indent}         id="${popoverId}-title"
+    ${indent}         className="font-semibold mb-2"
+    ${indent}       >
+    ${indent}         ${el.popoverContentTitle}
+    ${indent}       </h3>
+
+    ${indent}       <p>${el.popoverContentText}</p>
+
+    ${indent}     </div>
+    ${indent}   )}
+
     ${indent} </div>
     ${indent} );
     ${indent}})()
