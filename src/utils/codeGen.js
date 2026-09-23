@@ -214,7 +214,11 @@ const elToJSX = (el, indent = '          ') => {
         ? `<button onClick={(e)=>e.currentTarget.closest(".alert-box")?.remove()} className="mt-3 text-sm underline">Close</button>`
         : "";
 
-      return `<div className="${alertClass} rounded-md p-4 alert-box">
+      return `<div
+          role="alert"
+          aria-live="assertive"
+          className="${alertClass} rounded-md p-4 alert-box"
+        >
         <div className="font-semibold">${el.title}</div>
         <div className="mt-2">${el.message}</div>
         ${closeButton}
@@ -307,7 +311,7 @@ const elToJSX = (el, indent = '          ') => {
         ${indent}})()}`; 
     
     case 'text':
-      return `${indent}<label${hc} className="${alignMap[el.align] || 'text-left'} ${fontWeightMap[el.fontWeight] || 'font-normal'}" style={{color:'${el.color}',fontSize:${el.fontSize}}}>${indent} ${el.label} ${indent}</label>`;
+      return `${indent}<label${hc} className="${alignMap[el.align] || 'text-left'} ${fontWeightMap[el.fontWeight] || 'font-normal'}" style={{color:'${el.color || '#000000'}',fontSize:${el.fontSize || '16px'}}}>${indent} ${el.label} ${indent}</label>`;
     case 'heading':
       return `${indent}<h2${hc} className="${alignMap[el.align] || 'text-left'} ${fontWeightMap[el.fontWeight] || 'font-bold'}" style={{color:'${el.color}',fontSize:${el.fontSize}}}>\n${indent}  ${el.label}\n${indent}</h2>`;
     case 'input':
@@ -488,6 +492,7 @@ case 'popover': {
   return `${indent}{(() => {
     ${indent} const [open, setOpen] = React.useState(false);
     ${indent} const buttonRef = React.useRef(null);
+    ${indent} const popoverRef = React.useRef(null);
 
     ${indent} React.useEffect(() => {
     ${indent}   if (!open) return;
@@ -499,10 +504,24 @@ case 'popover': {
     ${indent}     }
     ${indent}   };
 
+    ${indent}   const handleOutsideClick = (event) => {
+    ${indent}     if (
+    ${indent}       popoverRef.current &&
+    ${indent}       !popoverRef.current.contains(event.target) &&
+    ${indent}       buttonRef.current &&
+    ${indent}       !buttonRef.current.contains(event.target)
+    ${indent}     ) {
+    ${indent}       setOpen(false);
+    ${indent}     }
+    ${indent}   };
+
     ${indent}   window.addEventListener('keydown', handleKeyDown);
+    ${indent}   document.addEventListener('mousedown', handleOutsideClick);
+
 
     ${indent}   return () => {
     ${indent}     window.removeEventListener('keydown', handleKeyDown);
+    ${indent}     document.removeEventListener('mousedown', handleOutsideClick);
     ${indent}   };
     ${indent} }, [open]);
 
@@ -526,6 +545,7 @@ case 'popover': {
 
     ${indent}   {open && (
     ${indent}     <div
+    ${indent}       ref={popoverRef}
     ${indent}       id="${popoverId}"
     ${indent}       role="dialog"
     ${indent}       aria-labelledby="${popoverId}-title"
