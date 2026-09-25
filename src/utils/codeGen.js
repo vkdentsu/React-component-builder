@@ -270,14 +270,22 @@ const elToJSX = (el, indent = '          ') => {
     }
 
     case "toggle":
-        return `${indent}{(() => {
+      return `${indent}{(() => {
         ${indent}  const [enabled, setEnabled] = React.useState(${el.checked ? "true" : "false"});
         ${indent}  return (
-        ${indent}    <div style={{display:"flex",justifyContent:"${el.align === "center" ? "center" : el.align === "right" ? "flex-end" : "flex-start"}"}}>
-        ${indent}      <label className="flex items-center gap-2 cursor-pointer">
+        ${indent}    <div
+        ${indent}      style={{
+        ${indent}        display:"flex",
+        ${indent}        justifyContent:"${el.align === "center" ? "center" : el.align === "right" ? "flex-end" : "flex-start"}"
+        ${indent}      }}
+        ${indent}    >
+        ${indent}      <div className="flex items-center gap-2">
         ${indent}        <button
         ${indent}          type="button"
-        ${indent}          onClick={() => setEnabled(!enabled)}
+        ${indent}          role="switch"
+        ${indent}          aria-checked={enabled}
+        ${indent}          aria-label="${el.label}"
+        ${indent}          onClick={() => setEnabled((value) => !value)}
         ${indent}          style={{
         ${indent}            width:"44px",
         ${indent}            height:"24px",
@@ -290,6 +298,7 @@ const elToJSX = (el, indent = '          ') => {
         ${indent}          }}
         ${indent}        >
         ${indent}          <span
+        ${indent}            aria-hidden="true"
         ${indent}            style={{
         ${indent}              position:"absolute",
         ${indent}              top:"2px",
@@ -302,13 +311,19 @@ const elToJSX = (el, indent = '          ') => {
         ${indent}            }}
         ${indent}          />
         ${indent}        </button>
-        ${indent}        <span style={{fontSize:${el.fontSize},fontWeight:"${el.fontWeight}",color:"${el.labelColor || "#000"}"}}>
+        ${indent}        <span
+        ${indent}          style={{
+        ${indent}            fontSize:${el.fontSize},
+        ${indent}            fontWeight:"${el.fontWeight}",
+        ${indent}            color:"${el.labelColor || "#000"}"
+        ${indent}          }}
+        ${indent}        >
         ${indent}          ${el.label}
         ${indent}        </span>
-        ${indent}      </label>
+        ${indent}      </div>
         ${indent}    </div>
         ${indent}  );
-        ${indent}})()}`; 
+      ${indent}})()}`;
     
     case 'text':
       return `${indent}<label${hc} className="${alignMap[el.align] || 'text-left'} ${fontWeightMap[el.fontWeight] || 'font-normal'}" style={{color:'${el.color || '#000000'}',fontSize:${el.fontSize || '16px'}}}>${indent} ${el.label} ${indent}</label>`;
@@ -320,12 +335,10 @@ const elToJSX = (el, indent = '          ') => {
       return `${indent}<img${hc} src="${el.src}" alt="${el.alt}" className="w-full ${roundedMap[el.rounded] || 'rounded-md'} object-${el.objectFit || 'cover'}" />`;
     case 'card': {
       const imgJSX = el.image ? `${indent}  <img src="${el.image}" alt="${el.imageAlt || ''}" className="w-full h-40 object-cover" />\n` : '';
-      const ctaJSX = el.ctaLabel ? `${indent}    <button className="mt-3 self-start px-4 py-2 rounded-md text-sm font-medium" style={{background:'${el.ctaBg}',color:'${el.ctaColor}'}}>${el.ctaLabel}</button>\n` : '';
+      const ctaJSX = el.ctaLabel ? `${indent}    <a href="${el.link}" className="mt-3 self-start px-4 py-2 rounded-md text-sm font-medium" style={{background:'${el.ctaBg}',color:'${el.ctaColor}'}}>${el.ctaLabel}</a>\n` : '';
       const cardInner = `${indent}<div${hc} className="border border-gray-200 rounded-xl overflow-hidden shadow-sm flex flex-col" style={{background:'${el.bg}'}}>\n${imgJSX}${indent}  <div className="p-4 flex flex-col gap-1">\n${indent}    <p className="font-semibold text-gray-900">${el.title}</p>\n${indent}    <p className="text-sm text-gray-500">${el.subtitle}</p>\n${ctaJSX}${indent}  </div>\n${indent}</div>`;
       // If a link URL is set, wrap the whole card in an anchor tag.
-      return el.link
-        ? `${indent}<a href="${el.link}" className="block no-underline">\n${cardInner}\n${indent}</a>`
-        : cardInner;
+      return cardInner;
     }
     case 'badge':
       return `${indent}<span${hc} className="absolute top-2 left-2 z-20 px-3 py-1 rounded-full text-xs font-medium" style={{background:'${el.bg}',color:'${el.color}'}}> ${el.label} </span>`;
