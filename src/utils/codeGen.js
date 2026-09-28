@@ -75,7 +75,8 @@ const formFieldIconLabel = (iconName) => {
   }
 };
 
-const passwordFieldToJSX = (field, indent, label) => {
+const passwordFieldToJSX = (field, indent, label, index) => {
+  const fieldId = `field-${index}-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
   const hasIcon = field.icon && field.icon !== 'none';
   const iconMarkup = hasIcon
     ? `${indent}<span className="absolute inset-y-0 left-0 flex items-center pl-3">
@@ -95,10 +96,10 @@ ${indent}</span>
 ${indent}  const [showPassword, setShowPassword] = React.useState(false);
 ${indent}  return (
 ${indent}    <div className="flex flex-col gap-1">
-${indent}      <label className="text-sm font-medium text-gray-700">${label}${field.required ? ' *' : ''}</label>
+${indent}      <label htmlFor="${fieldId}" className="text-sm font-medium text-gray-700">${label}${field.required ? ' *' : ''}</label>
 ${indent}      <div className="relative">
-${iconMarkup}${indent}        <input type={showPassword ? 'text' : 'password'} placeholder="${field.placeholder || `Enter ${label.toLowerCase()}`}" className="${inputClass}"${field.required ? ' required' : ''} />
-${indent}        <button type="button" className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600" onClick={() => setShowPassword((value) => !value)}>
+${iconMarkup}${indent}      <input id="${fieldId}" name="${fieldId}" type={showPassword ? 'text' : 'password'} placeholder="${field.placeholder || `Enter ${label.toLowerCase()}`}" className="${inputClass}" ${field.required ? ' required' : ''} aria-required="${field.required ? 'true' : 'false'}" />
+${indent}        <button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600" onClick={() => setShowPassword((value) => !value)}>
 ${indent}          {showPassword ? (
 ${indent}            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
 ${indent}              <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 012.152-3.292m3.358-2.358A9.956 9.956 0 0112 5c4.478 0 8.268 2.943 9.543 7a9.97 9.97 0 01-4.043 5.197M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -118,6 +119,7 @@ ${indent}})()}`;
 
 const formFieldToJSX = (field, indent, index) => {
   const label = field.label || `Field ${index + 1}`;
+  const fieldId = `field-${index}-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
   const invalidAttr = field.validationMessage
     ? `
         onInvalid={(e) => {
@@ -130,28 +132,48 @@ const formFieldToJSX = (field, indent, index) => {
   switch (field.type) {
     case 'textarea':
       return `${indent}<div className="flex flex-col gap-1">
-${indent}  <label className="text-sm font-medium text-gray-700">${label}${field.required ? ' *' : ''}</label>
-${indent}  <textarea placeholder="${field.placeholder || `Enter ${label.toLowerCase()}`}" className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 w-full focus:ring-blue-500 min-h-[96px]" />
-${indent}</div>`;
+    ${indent}  <label htmlFor="${fieldId}" className="text-sm font-medium text-gray-700">${label}${field.required ? ' *' : ''}</label>
+    ${indent}  <textarea
+    ${indent}    id="${fieldId}"
+    ${indent}    name="${fieldId}"
+    ${indent}    placeholder="${field.placeholder || `Enter ${label.toLowerCase()}`}"
+    ${indent}    className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 w-full focus:ring-blue-500 min-h-[96px]"
+    ${indent}    ${field.required ? 'required' : ''}
+    ${indent}    aria-required="${field.required ? 'true' : 'false'}"
+    ${indent}  />
+    ${indent}</div>`;
     case 'dropdown': {
       const options = (field.options || '').split(',').map((opt) => opt.trim()).filter(Boolean);
       const opts = options.length ? options.map((opt) => `${indent}    <option value="${opt}">${opt}</option>`).join('\n') : `${indent}    <option value="">Select</option>`;
       return `${indent}<div className="flex flex-col gap-1">
-${indent}  <label className="text-sm font-medium text-gray-700">${label}${field.required ? ' *' : ''}</label>
-${indent}  <select className="border border-gray-300 rounded-md px-3 py-2 w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" ${field.required ? 'required' : ''}>
-${opts}
-${indent}  </select>
-${indent}</div>`;
+      ${indent}  <label htmlFor="${fieldId}" className="text-sm font-medium text-gray-700">${label}${field.required ? ' *' : ''}</label>
+      ${indent}  <select
+      ${indent}    id="${fieldId}"
+      ${indent}    name="${fieldId}"
+      ${indent}    className="border border-gray-300 rounded-md px-3 py-2 w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      ${indent}    ${field.required ? 'required' : ''}
+      ${indent}    aria-required="${field.required ? 'true' : 'false'}"
+      ${indent}  >
+      ${opts}
+      ${indent}  </select>
+      ${indent}</div>`;
     }
     case 'checkbox':
-      return `${indent}<label className="flex items-center gap-2 text-sm text-gray-700">
-${indent}  <input type="checkbox" className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" ${field.required ? 'required' : ''} />
-${indent}  <span>${label}${field.required ? ' *' : ''}</span>
-${indent}</label>`;
+      return `${indent}<div className="flex items-center gap-2">
+    ${indent}  <input
+    ${indent}    type="checkbox"
+    ${indent}    id="${fieldId}"
+    ${indent}    name="${fieldId}"
+    ${indent}    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+    ${indent}    ${field.required ? 'required' : ''}
+    ${indent}    aria-required="${field.required ? 'true' : 'false'}"
+    ${indent}  />
+    ${indent}  <label htmlFor="${fieldId}" className="text-sm text-gray-700">${label}${field.required ? ' *' : ''}</label>
+    ${indent}</div>`;
     default: {
       const inputType = field.inputType || 'text';
       if (inputType === 'password') {
-        return passwordFieldToJSX(field, indent, label);
+        return passwordFieldToJSX(field, indent, label, index);
       }
 
       const hasIcon = field.icon && field.icon !== 'none';
@@ -173,11 +195,30 @@ ${indent}</label>`;
         field.validationRegex && message
           ? ` title="${message}"`
           : '';
-      const inputClass = hasIcon ? 'border border-gray-300 rounded-md px-3 py-2 pl-10 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500' : 'border border-gray-300 rounded-md px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500';
+      const inputClass = hasIcon
+        ? 'border border-gray-300 rounded-md px-3 py-2 pl-10 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500'
+        : 'border border-gray-300 rounded-md px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500';
+
       return `${indent}<div className="flex flex-col gap-1">
-      ${indent}  <label className="text-sm font-medium text-gray-700">${label}${field.required ? ' *' : ''}</label>
+      ${indent}  <label
+      ${indent}    htmlFor="${fieldId}"
+      ${indent}    className="text-sm font-medium text-gray-700"
+      ${indent}  >
+      ${indent}    ${label}${field.required ? ' *' : ''}
+      ${indent}  </label>
       ${indent}  <div className="relative">
-      ${iconMarkup}${indent}    <input type="${inputType}" placeholder="${field.placeholder || `Enter ${label.toLowerCase()}`}" className="${inputClass}"${patternAttr}${titleAttr}${field.required ? ' required' : ''}${invalidAttr}/>
+      ${iconMarkup}${indent}    <input
+      ${indent}      id="${fieldId}"
+      ${indent}      name="${fieldId}"
+      ${indent}      type="${inputType}"
+      ${indent}      placeholder="${field.placeholder || `Enter ${label.toLowerCase()}`}"
+      ${indent}      className="${inputClass}"
+      ${indent}      ${patternAttr}
+      ${indent}      ${titleAttr}
+      ${indent}      ${field.required ? 'required' : ''}
+      ${indent}      aria-required="${field.required ? 'true' : 'false'}"
+      ${indent}      ${invalidAttr}
+      ${indent}    />
       ${indent}  </div>
       ${indent}</div>`;
     }
