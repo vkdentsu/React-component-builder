@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import RowsCanvas from './RowsCanvas';
+import useBuilderStore from '../store/builderStore';
+import { getResponsiveTypographyClassName, getResponsiveTypographyClasses, getResponsiveTypographyStyles } from '../utils/responsiveTypography';
 import { ChevronDown, Menu, X, Lock, Mail, User, Eye, EyeOff, Type, Phone } from 'lucide-react';
 
 const roundedCls = { none: '', sm: 'rounded-sm', md: 'rounded-md', lg: 'rounded-lg', full: 'rounded-full' };
@@ -347,6 +349,9 @@ function HeroPreview({ el, device }) {
     : { background: el.bg, ...heightStyle };
 
   const textColorWhenBgImage = bgImage ? '#ffffff' : undefined;
+  const titleTypography = getResponsiveTypographyStyles({ fontSize: el.titleSize, fontWeight: el.titleWeight, lineHeight: el.titleLineHeight }, device);
+  const subtitleTypography = getResponsiveTypographyStyles({ fontSize: el.subtitleSize, fontWeight: el.subtitleFontWeight, lineHeight: el.subtitleLineHeight }, device);
+  const ctaTypography = getResponsiveTypographyStyles({ fontSize: el.ctaSize, fontWeight: el.ctaFontWeight, lineHeight: el.ctaLineHeight }, device);
 
   return (
     <div
@@ -360,24 +365,22 @@ function HeroPreview({ el, device }) {
       }}
     >
       <Tag
+        className={getResponsiveTypographyClasses({ fontSize: el.titleSize, fontWeight: el.titleWeight, lineHeight: el.titleLineHeight }, device)}
         style={{
           color: el.titleColor || textColorWhenBgImage || '#111827',
-          fontSize: el.titleSize || 40,
-          fontWeight: el.titleWeight === 'bold' ? 700 : el.titleWeight === 'medium' ? 500 : 400,
-          margin: 0, lineHeight: 1.15,
+          margin: 0,
         }}
       >
         {el.title}
       </Tag>
-      <p style={{ color: el.subtitleColor || textColorWhenBgImage || '#6b7280', fontSize: el.subtitleSize || 18, margin: 0, maxWidth: 560 }}>
+      <p className={getResponsiveTypographyClasses({ fontSize: el.subtitleSize, fontWeight: el.subtitleFontWeight, lineHeight: el.subtitleLineHeight }, device)} style={{ color: el.subtitleColor || textColorWhenBgImage || '#6b7280', margin: 0, maxWidth: 560 }}>
         {el.subtitle}
       </p>
       <button
-        className={`mt-1 font-medium ${roundedCls[el.ctaRounded] || 'rounded-md'}`}
+        className={`mt-1 ${getResponsiveTypographyClasses({ fontSize: el.ctaSize, fontWeight: el.ctaFontWeight, lineHeight: el.ctaLineHeight }, device)} ${roundedCls[el.ctaRounded] || 'rounded-md'}`}
         style={{
           background: el.ctaBg || '#3b82f6',
           color: el.ctaColor || '#ffffff',
-          fontSize: el.ctaSize || 15,
           padding: '10px 24px',
           border: 'none',
           pointerEvents: 'none',
@@ -407,97 +410,99 @@ export default function ElementPreview({ el, isSelected, device }) {
   }
 
   switch (el.type) {
-    case 'button':
+    case 'button': {
+      const typography = getResponsiveTypographyStyles(el, device);
       return (
         <button
-          className={`text-sm font-medium ${roundedCls[el.rounded] || 'rounded-md'} ${el.padding === 'sm' ? 'px-3 py-1.5' : el.padding === 'lg' ? 'px-6 py-3' : 'px-4 py-2'}`}
-          style={{ background: el.bg, color: el.color, fontSize: el.fontSize, pointerEvents: 'none', border: 'none', cursor: 'default' }}
+          className={`text-sm ${roundedCls[el.rounded] || 'rounded-md'} ${el.padding === 'sm' ? 'px-3 py-1.5' : el.padding === 'lg' ? 'px-6 py-3' : 'px-4 py-2'}`}
+          style={{ background: el.bg, color: el.color, fontSize: typography.fontSize, fontWeight: typography.fontWeight, lineHeight: typography.lineHeight, pointerEvents: 'none', border: 'none', cursor: 'default' }}
         >
           {el.label}
         </button>
       );
+    }
 
-    case 'text':
+    case 'text': {
+      const typography = getResponsiveTypographyStyles(el, device);
       return (
         <p
-          className={`leading-relaxed ${el.fontWeight === 'bold' ? 'font-bold' : el.fontWeight === 'medium' ? 'font-medium' : 'font-normal'} ${el.align === 'center' ? 'text-center' : el.align === 'right' ? 'text-right' : 'text-left'}`}
-          style={{ color: el.color, fontSize: el.fontSize, margin: 0 }}
+          className={`leading-relaxed ${getResponsiveTypographyClassName(el, device)} ${el.align === 'center' ? 'text-center' : el.align === 'right' ? 'text-right' : 'text-left'}`}
+          style={{ color: el.color, fontSize: typography.fontSize, fontWeight: typography.fontWeight, lineHeight: typography.lineHeight, margin: 0 }}
         >
           {el.label}
         </p>
       );
+    }
 
-    case "radio":
+    case "radio": {
+        const typography = getResponsiveTypographyStyles(el, device);
         return (
-        <label className="flex items-center gap-2">
+          <label className="flex items-center gap-2">
             <input
-                type="radio"
-                name={el.group}
-                value={el.value}
-                checked={el.checked}
-                onChange={() =>
-                    useBuilderStore
-                        .getState()
-                        .updateRadioSelection(el.id, true)
-                }
-                style={{
-                    accentColor: el.color,
-                    fontSize: el.fontSize,
-                    fontWeight: el.fontWeight,
-                    textAlign: el.align
-                }}
+              type="radio"
+              name={el.group}
+              value={el.value}
+              checked={el.checked}
+              onChange={() =>
+                useBuilderStore
+                  .getState()
+                  .updateRadioSelection(el.id, true)
+              }
+              style={{
+                accentColor: el.color,
+                textAlign: el.align,
+              }}
             />
 
-            <span>{el.label}</span>
-        </label>
-    );
+            <span className={`${getResponsiveTypographyClasses({ fontSize: el.fontSize, fontWeight: el.fontWeight, lineHeight: el.lineHeight }, device)} ${el.align === 'center' ? 'text-center' : el.align === 'right' ? 'text-right' : 'text-left'}`} style={{ color: el.color }}>{el.label}</span>
+          </label>
+        );
+    }
 
-    case "checkbox":
+    case "checkbox": {
+        const typography = getResponsiveTypographyStyles(el, device);
         return (
-            <div
-                style={{
-                    display: "flex",
-                    justifyContent:
-                        el.align === "center"
-                            ? "center"
-                            : el.align === "right"
-                            ? "flex-end"
-                            : "flex-start",
-                }}
-            >
+          <div
+            style={{
+              display: "flex",
+              justifyContent:
+                el.align === "center"
+                  ? "center"
+                  : el.align === "right"
+                  ? "flex-end"
+                  : "flex-start",
+            }}
+          >
             <label className="flex items-center gap-2">
-                <input
-                    type="checkbox"
-                    checked={el.checked}
-                    onChange={(e) =>
-                        updateElement(el.id, {
-                            checked: e.target.checked,
-                        })
-                    }
-                    style={{
-                        accentColor: el.color,
-                    }}
-                />
+              <input
+                type="checkbox"
+                checked={el.checked}
+                onChange={(e) =>
+                  useBuilderStore.getState().updateElement(el.id, {
+                    checked: e.target.checked,
+                  })
+                }
+                style={{ accentColor: el.color }}
+              />
 
-                <span
-                    style={{
-                        color: el.color,
-                        fontSize: el.fontSize,
-                        fontWeight: el.fontWeight,
-                    }}
-                >
-                    {el.label}
-                </span>
+              <span
+                className={`${getResponsiveTypographyClasses({ fontSize: el.fontSize, fontWeight: el.fontWeight, lineHeight: el.lineHeight }, device)} ${el.align === 'center' ? 'text-center' : el.align === 'right' ? 'text-right' : 'text-left'}`}
+                style={{ color: el.color }}
+              >
+                {el.label}
+              </span>
             </label>
-        </div>
-    );
+          </div>
+        );
+    }
 
     case 'heading': {
       const Tag = ['h1','h2','h3','h4','h5','h6'].includes(el.tag) ? el.tag : 'h2';
+      const typography = getResponsiveTypographyStyles(el, device);
       return (
         <Tag
-          className={`leading-tight ${el.fontWeight === 'bold' ? 'font-bold' : el.fontWeight === 'medium' ? 'font-medium' : 'font-normal'} ${el.align === 'center' ? 'text-center' : el.align === 'right' ? 'text-right' : 'text-left'}`}
-          style={{ color: el.color, fontSize: el.fontSize, margin: 0 }}
+          className={`leading-tight ${getResponsiveTypographyClassName(el, device)} ${el.align === 'center' ? 'text-center' : el.align === 'right' ? 'text-right' : 'text-left'}`}
+          style={{ color: el.color, fontSize: typography.fontSize, fontWeight: typography.fontWeight, lineHeight: typography.lineHeight, margin: 0 }}
         >
           {el.label}
         </Tag>
@@ -522,37 +527,115 @@ export default function ElementPreview({ el, isSelected, device }) {
         />
       );
 
-    case 'card':
-      return (
-        <div className="border border-gray-200 rounded-xl overflow-hidden shadow-md w-full flex flex-col" style={{ background: el.bg }}>
-          {el.image && (
-            <img
-              src={el.image}
-              alt={el.imageAlt || ''}
-              className="w-full h-32 object-cover"
-              style={{ pointerEvents: 'none' }}
-              onError={(e) => { e.target.style.display = 'none'; }}
-            />
-          )}
-          <div className="p-4 flex flex-col gap-1">
-            <p className="font-semibold text-gray-900 text-sm">{el.title}</p>
-            <p className="text-xs text-gray-500">{el.subtitle}</p>
-            {el.ctaLabel && (
-              <button
-                className="mt-3 self-start px-3 py-1.5 rounded-md text-xs font-medium"
-                style={{ background: el.ctaBg, color: el.ctaColor, pointerEvents: 'none' }}
-              >
-                {el.ctaLabel}
-              </button>
-            )}
-            {el.link && !el.ctaLabel && (
-              <span className="mt-2 text-xs font-medium" style={{ color: el.ctaBg || '#3b82f6' }}>
-                {el.link} →
-              </span>
-            )}
-          </div>
-        </div>
-      );
+    case 'card': {
+  const titleTypography = getResponsiveTypographyStyles(
+    {
+      fontSize: el.titleFontSize,
+      fontWeight: el.titleFontWeight,
+      lineHeight: el.titleLineHeight,
+    },
+    device
+  );
+
+  const subtitleTypography = getResponsiveTypographyStyles(
+    {
+      fontSize: el.subtitleFontSize,
+      fontWeight: el.subtitleFontWeight,
+      lineHeight: el.subtitleLineHeight,
+    },
+    device
+  );
+
+  const ctaTypography = getResponsiveTypographyStyles(
+    {
+      fontSize: el.ctaFontSize,
+      fontWeight: el.ctaFontWeight,
+      lineHeight: el.ctaLineHeight,
+    },
+    device
+  );
+
+  return (
+    <div
+      className="border border-gray-200 rounded-xl overflow-hidden shadow-md w-full flex flex-col"
+      style={{ background: el.bg }}
+    >
+      {el.image && (
+        <img
+          src={el.image}
+          alt={el.imageAlt || ""}
+          className="w-full h-32 object-cover"
+          style={{ pointerEvents: "none" }}
+          onError={(e) => {
+            e.target.style.display = "none";
+          }}
+        />
+      )}
+
+      <div className="p-4 flex flex-col gap-2">
+
+        {/* Title */}
+        <p
+          style={{
+            margin: 0,
+            color: "#111827",
+            fontSize: titleTypography.fontSize,
+            fontWeight: titleTypography.fontWeight,
+            lineHeight: titleTypography.lineHeight,
+          }}
+        >
+          {el.title}
+        </p>
+
+        {/* Subtitle */}
+        <p
+          style={{
+            margin: 0,
+            color: "#6b7280",
+            fontSize: subtitleTypography.fontSize,
+            fontWeight: subtitleTypography.fontWeight,
+            lineHeight: subtitleTypography.lineHeight,
+          }}
+        >
+          {el.subtitle}
+        </p>
+
+        {/* CTA Button */}
+        {el.ctaLabel && (
+          <button
+            className="mt-3 self-start px-3 py-1.5 rounded-md"
+            style={{
+              background: el.ctaBg,
+              color: el.ctaColor,
+              border: "none",
+              pointerEvents: "none",
+              cursor: "default",
+              fontSize: ctaTypography.fontSize,
+              fontWeight: ctaTypography.fontWeight,
+              lineHeight: ctaTypography.lineHeight,
+            }}
+          >
+            {el.ctaLabel}
+          </button>
+        )}
+
+        {/* Link */}
+        {el.link && !el.ctaLabel && (
+          <span
+            style={{
+              color: el.ctaBg || "#3b82f6",
+              fontSize: ctaTypography.fontSize,
+              fontWeight: ctaTypography.fontWeight,
+              lineHeight: ctaTypography.lineHeight,
+            }}
+          >
+            {el.link} →
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
 
     case 'badge':
       return (
@@ -600,14 +683,17 @@ export default function ElementPreview({ el, isSelected, device }) {
           </div>
         );
     
-    case "toggle":
+    case "toggle": {
+      const typography = getResponsiveTypographyStyles(el, device);
       return (
         <div className="w-full flex justify-center">
-          <div className="px-6 py-3 rounded-md border-2 border-dashed border-gray-300 bg-gray-50 text-gray-600 text-sm font-medium">
-            ⏻ Toggle
+          <div className="px-6 py-3 rounded-md border-2 border-dashed border-gray-300 bg-gray-50 text-gray-600 flex items-center gap-2">
+            <span className="text-base">⏻</span>
+            <span className={`${getResponsiveTypographyClasses({ fontSize: el.fontSize, fontWeight: el.fontWeight, lineHeight: el.lineHeight }, device)} ${el.align === 'center' ? 'text-center' : el.align === 'right' ? 'text-right' : 'text-left'}`}>{el.label}</span>
           </div>
         </div>
       );
+    }
 
     case 'divider':
       return <hr className="w-full" style={{ borderColor: el.color, borderTopWidth: el.thickness, borderTopStyle: 'solid', margin: 0 }} />;
@@ -621,9 +707,9 @@ export default function ElementPreview({ el, isSelected, device }) {
     case 'formgroup':
       return (
         <div className="w-full rounded-xl border border-gray-200 p-4 flex flex-col gap-3 bg-white">
-          <p className="font-semibold text-sm text-gray-900">{el.title}</p>
+          <p className={`font-semibold ${getResponsiveTypographyClasses({ fontSize: { desktop: 14, tablet: 13, mobile: 12 }, fontWeight: { desktop: '600', tablet: '600', mobile: '600' }, lineHeight: { desktop: 1.2, tablet: 1.3, mobile: 1.4 } }, device)} text-gray-900`}>{el.title}</p>
           {normalizeFormFields(el.fields).map((field, index) => renderFormFieldPreview(field, index))}
-          <button className="mt-1 px-4 py-2 rounded-md text-sm font-medium bg-blue-600 text-white self-start" style={{ pointerEvents: 'none' }}>
+          <button className={`mt-1 px-4 py-2 rounded-md ${getResponsiveTypographyClasses({ fontSize: { desktop: 14, tablet: 13, mobile: 12 }, fontWeight: { desktop: 'medium', tablet: 'medium', mobile: 'medium' }, lineHeight: { desktop: 1.2, tablet: 1.3, mobile: 1.4 } }, device)} bg-blue-600 text-white self-start`} style={{ pointerEvents: 'none' }}>
             {el.buttonLabel}
           </button>
         </div>
@@ -653,7 +739,7 @@ export default function ElementPreview({ el, isSelected, device }) {
           className="mt-4 border-t pt-4"
           style={{ background: el.modalContentBg || '#ffffff' }}
         >
-          <p>{el.modalContentTitle}</p>
+          <p className={`${getResponsiveTypographyClasses({ fontSize: el.modalTitleFontSize || { desktop: 16, tablet: 15, mobile: 14 }, fontWeight: el.modalTitleFontWeight || { desktop: '600', tablet: '600', mobile: '600' }, lineHeight: el.modalTitleLineHeight || { desktop: 1.2, tablet: 1.3, mobile: 1.4 } }, device)}`}>{el.modalContentTitle}</p>
           <RowsCanvas
             rows={el.rows || []}
             hops={[el.id]}
@@ -702,11 +788,11 @@ case 'popover': {
         className="border rounded-md p-3 bg-white shadow-sm"
         style={{ width: el.popoverContentWidth || '250px' }}
       >
-        <p className="font-medium text-sm mb-2">
+        <p className={`mb-2 ${getResponsiveTypographyClasses({ fontSize: el.popoverTitleFontSize || { desktop: 14, tablet: 13, mobile: 12 }, fontWeight: el.popoverTitleFontWeight || { desktop: 'medium', tablet: 'medium', mobile: 'medium' }, lineHeight: el.popoverTitleLineHeight || { desktop: 1.2, tablet: 1.3, mobile: 1.4 } }, device)}`}>
           {el.popoverContentTitle}
         </p>
 
-        <p className="text-xs text-gray-600">
+        <p className={`${getResponsiveTypographyClasses({ fontSize: el.popoverTextFontSize || { desktop: 12, tablet: 11, mobile: 10 }, fontWeight: el.popoverTextFontWeight || { desktop: 'normal', tablet: 'normal', mobile: 'normal' }, lineHeight: el.popoverTextLineHeight || { desktop: 1.4, tablet: 1.5, mobile: 1.6 } }, device)} text-gray-600`}>
           {el.popoverContentText}
         </p>
       </div>
