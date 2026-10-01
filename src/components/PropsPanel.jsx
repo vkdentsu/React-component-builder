@@ -4,6 +4,11 @@ import useBuilderStore from '../store/builderStore';
 import { FONT_OPTIONS } from "../utils/fonts";
 import FontUpload from "./FontUpload";
 import { createFontData, loadCustomFont } from "../utils/fontManager";
+import {
+  ResponsiveFontSizeControl,
+  ResponsiveFontWeightControl,
+  ResponsiveLineHeightControl,
+} from './ResponsiveTypographyControls';
 
 /* ── Primitive UI controls ─────────────────────────────────────────── */
 const Section = ({ title, children }) => (
@@ -66,7 +71,25 @@ function ButtonProps({ el, update }) {
       <Section title="Style">
         <Field label="Background"><ColorPicker value={el.bg} onChange={(v) => update({ bg: v })} /></Field>
         <Field label="Text color"><ColorPicker value={el.color} onChange={(v) => update({ color: v })} /></Field>
-        <Field label="Font size"><Inp type="number" value={el.fontSize} onChange={(v) => update({ fontSize: +v })} min={10} max={32} /></Field>
+        <ResponsiveFontSizeControl
+          value={el.fontSize}
+          onChange={(v) => update({ fontSize: v })}
+          label="Font size"
+          min={10}
+          max={32}
+        />
+        <ResponsiveFontWeightControl
+          value={el.fontWeight}
+          onChange={(v) => update({ fontWeight: v })}
+          label="Font weight"
+        />
+        <ResponsiveLineHeightControl
+          value={el.lineHeight}
+          onChange={(v) => update({ lineHeight: v })}
+          label="Line height"
+          min={0.8}
+          max={2.5}
+        />
         <Field label="Rounded">
           <Sel value={el.rounded} onChange={(v) => update({ rounded: v })}
             options={[{value:'none',label:'None'},{value:'sm',label:'Small'},{value:'md',label:'Medium'},{value:'lg',label:'Large'},{value:'full',label:'Full'}]} />
@@ -88,11 +111,25 @@ function TextProps({ el, update }) {
       </Section>
       <Section title="Style">
         <Field label="Color"><ColorPicker value={el.color} onChange={(v) => update({ color: v })} /></Field>
-        <Field label="Font size"><Inp type="number" value={el.fontSize} onChange={(v) => update({ fontSize: +v })} min={10} max={72} /></Field>
-        <Field label="Font weight">
-          <Sel value={el.fontWeight} onChange={(v) => update({ fontWeight: v })}
-            options={[{value:'normal',label:'Normal'},{value:'medium',label:'Medium'},{value:'bold',label:'Bold'}]} />
-        </Field>
+        <ResponsiveFontSizeControl
+          value={el.fontSize}
+          onChange={(v) => update({ fontSize: v })}
+          label="Font size"
+          min={10}
+          max={72}
+        />
+        <ResponsiveFontWeightControl
+          value={el.fontWeight}
+          onChange={(v) => update({ fontWeight: v })}
+          label="Font weight"
+        />
+        <ResponsiveLineHeightControl
+          value={el.lineHeight}
+          onChange={(v) => update({ lineHeight: v })}
+          label="Line height"
+          min={0.8}
+          max={2.5}
+        />
         <Field label="Align">
           <Sel value={el.align} onChange={(v) => update({ align: v })}
             options={[{value:'left',label:'Left'},{value:'center',label:'Center'},{value:'right',label:'Right'}]} />
@@ -114,11 +151,25 @@ function HeadingProps({ el, update }) {
             options={['h1','h2','h3','h4','h5','h6'].map((t) => ({ value: t, label: t.toUpperCase() }))} />
         </Field>
         <Field label="Color"><ColorPicker value={el.color} onChange={(v) => update({ color: v })} /></Field>
-        <Field label="Font size"><Inp type="number" value={el.fontSize} onChange={(v) => update({ fontSize: +v })} min={14} max={96} /></Field>
-        <Field label="Font weight">
-          <Sel value={el.fontWeight} onChange={(v) => update({ fontWeight: v })}
-            options={[{value:'normal',label:'Normal'},{value:'medium',label:'Medium'},{value:'bold',label:'Bold'}]} />
-        </Field>
+        <ResponsiveFontSizeControl
+          value={el.fontSize}
+          onChange={(v) => update({ fontSize: v })}
+          label="Font size"
+          min={14}
+          max={96}
+        />
+        <ResponsiveFontWeightControl
+          value={el.fontWeight}
+          onChange={(v) => update({ fontWeight: v })}
+          label="Font weight"
+        />
+        <ResponsiveLineHeightControl
+          value={el.lineHeight}
+          onChange={(v) => update({ lineHeight: v })}
+          label="Line height"
+          min={0.8}
+          max={2.5}
+        />
         <Field label="Align">
           <Sel value={el.align} onChange={(v) => update({ align: v })}
             options={[{value:'left',label:'Left'},{value:'center',label:'Center'},{value:'right',label:'Right'}]} />
@@ -194,27 +245,27 @@ function RadioProps({ el, update }) {
                     />
                 </Field>
 
-                <Field label="Font Size">
-                  <Inp
-                    type="number"
-                    value={el.fontSize}
-                    onChange={(v) => update({ fontSize: +v })}
-                    min={10}
-                    max={48}
-                  />
-                </Field>
+                <ResponsiveFontSizeControl
+                  value={el.fontSize}
+                  onChange={(v) => update({ fontSize: v })}
+                  label="Font size"
+                  min={10}
+                  max={48}
+                />
 
-                <Field label="Font Weight">
-                  <Sel
-                    value={el.fontWeight}
-                    onChange={(v) => update({ fontWeight: v })}
-                    options={[
-                      { value: "normal", label: "Normal" },
-                      { value: "medium", label: "Medium" },
-                      { value: "bold", label: "Bold" },
-                    ]}
-                  />
-                </Field>
+                <ResponsiveFontWeightControl
+                  value={el.fontWeight}
+                  onChange={(v) => update({ fontWeight: v })}
+                  label="Font weight"
+                />
+
+                <ResponsiveLineHeightControl
+                  value={el.lineHeight}
+                  onChange={(v) => update({ lineHeight: v })}
+                  label="Line height"
+                  min={0.8}
+                  max={2.5}
+                />
 
                 <Field label="Alignment">
                   <Sel
@@ -263,16 +314,29 @@ function CardProps({ el, update }) {
       </Section>
       <Section title="Content">
         <Field label="Title"><Inp value={el.title} onChange={(v) => update({ title: v })} /></Field>
+        <ResponsiveFontSizeControl value={el.titleFontSize} onChange={(v) => update({ titleFontSize: v })} label="Title font size" min={12} max={96} />
+        <ResponsiveFontWeightControl value={el.titleFontWeight} onChange={(v) => update({ titleFontWeight: v })} label="Title font weight" />
+        <ResponsiveLineHeightControl value={el.titleLineHeight} onChange={(v) => update({ titleLineHeight: v })} label="Title line height" min={0.8} max={2.5} />
         <Field label="Subtitle"><Textarea value={el.subtitle} onChange={(v) => update({ subtitle: v })} rows={2} /></Field>
+        <ResponsiveFontSizeControl value={el.subtitleFontSize} onChange={(v) => update({ subtitleFontSize: v })} label="Subtitle font size" min={10} max={48} />
+        <ResponsiveFontWeightControl value={el.subtitleFontWeight} onChange={(v) => update({ subtitleFontWeight: v })} label="Subtitle font weight"  />
+        <ResponsiveLineHeightControl value={el.subtitleLineHeight} onChange={(v) => update({ subtitleLineHeight: v })} label="Subtitle line height" min={0.8} max={2.5} />
       </Section>
       <Section title="Call to action">
         <Field label="Button label (leave blank to hide)"><Inp value={el.ctaLabel} onChange={(v) => update({ ctaLabel: v })} placeholder="Learn more" /></Field>
+        <ResponsiveFontSizeControl value={el.ctaFontSize} onChange={(v) => update({ ctaFontSize: v })} label="Button font size" min={10} max={24} />
+        <ResponsiveFontWeightControl value={el.ctaFontWeight} onChange={(v) => update({ ctaFontWeight: v })} label="Button font weight" />
+        <ResponsiveLineHeightControl value={el.ctaLineHeight} onChange={(v) => update({ ctaLineHeight: v })} label="Button line height" min={0.8} max={2.5} />
         {el.ctaLabel && (
           <>
             <Field label="Button background"><ColorPicker value={el.ctaBg} onChange={(v) => update({ ctaBg: v })} /></Field>
             <Field label="Button text color"><ColorPicker value={el.ctaColor} onChange={(v) => update({ ctaColor: v })} /></Field>
           </>
         )}
+        <Field label="Button rounded">
+          <Sel value={el.ctaRounded || 'md'} onChange={(v) => update({ ctaRounded: v })}
+            options={[{value:'none',label:'None'},{value:'sm',label:'Small'},{value:'md',label:'Medium'},{value:'lg',label:'Large'},{value:'full',label:'Full'}]} />
+        </Field>
         <Field label="Link URL"><Inp value={el.link} onChange={(v) => update({ link: v })} placeholder="https://... or /page" /></Field>
         <p className="text-[10px] text-gray-400 leading-relaxed">
           The whole card links to this URL when clicked. The button (if set) is purely visual styling on top.
@@ -280,6 +344,13 @@ function CardProps({ el, update }) {
       </Section>
       <Section title="Style">
         <Field label="Background"><ColorPicker value={el.bg} onChange={(v) => update({ bg: v })} /></Field>
+        <Field label="Text color"><ColorPicker value={el.color} onChange={(v) => update({ color: v })} /></Field>
+      </Section>
+      <Section title="Layout">
+        <Field label="Alignment">
+          <Sel value={el.align || 'center'} onChange={(v) => update({ align: v })}
+            options={[{value:'left',label:'Left'},{value:'center',label:'Center'},{value:'right',label:'Right'}]} />
+        </Field>
       </Section>
     </>
   );
@@ -331,6 +402,9 @@ function NavbarProps({ el, update }) {
       <Section title="Style">
         <Field label="Background"><ColorPicker value={el.bg} onChange={(v) => update({ bg: v })} /></Field>
         <Field label="Text color"><ColorPicker value={el.color} onChange={(v) => update({ color: v })} /></Field>
+        <ResponsiveFontSizeControl value={el.fontSize} onChange={(v) => update({ fontSize: v })} label="Text font size" min={10} max={24} />
+        <ResponsiveFontWeightControl value={el.fontWeight} onChange={(v) => update({ fontWeight: v })} label="Text font weight" />
+        <ResponsiveLineHeightControl value={el.lineHeight} onChange={(v) => update({ lineHeight: v })} label="Text line height" min={0.8} max={2.5} />
         <Toggle checked={el.shadow} onChange={(v) => update({ shadow: v })} label="Drop shadow" />
       </Section>
     </>
@@ -353,27 +427,29 @@ function HeroProps({ el, update }) {
     <>
       <Section title="Heading">
         <Field label="Title text"><Inp value={el.title} onChange={(v) => update({ title: v })} /></Field>
+        <ResponsiveFontSizeControl value={el.titleSize} onChange={(v) => update({ titleSize: v })} label="Title font size" min={16} max={96} />
+        <ResponsiveFontWeightControl value={el.titleWeight} onChange={(v) => update({ titleWeight: v })} label="Title font weight" />
+        <ResponsiveLineHeightControl value={el.titleLineHeight} onChange={(v) => update({ titleLineHeight: v })} label="Title line height" min={0.8} max={2.5} />
         <Field label="HTML tag">
           <Sel value={el.titleTag || 'h1'} onChange={(v) => update({ titleTag: v })}
             options={['h1','h2','h3','h4'].map((t) => ({ value: t, label: t.toUpperCase() }))} />
         </Field>
         <Field label="Title color"><ColorPicker value={el.titleColor} onChange={(v) => update({ titleColor: v })} /></Field>
-        <Field label="Title size (px)"><Inp type="number" value={el.titleSize} onChange={(v) => update({ titleSize: +v })} min={16} max={96} /></Field>
-        <Field label="Title weight">
-          <Sel value={el.titleWeight || 'bold'} onChange={(v) => update({ titleWeight: v })}
-            options={[{value:'normal',label:'Normal'},{value:'medium',label:'Medium'},{value:'bold',label:'Bold'}]} />
-        </Field>
       </Section>
       <Section title="Subtitle">
         <Field label="Subtitle text"><Textarea value={el.subtitle} onChange={(v) => update({ subtitle: v })} rows={2} /></Field>
         <Field label="Subtitle color"><ColorPicker value={el.subtitleColor} onChange={(v) => update({ subtitleColor: v })} /></Field>
-        <Field label="Subtitle size (px)"><Inp type="number" value={el.subtitleSize} onChange={(v) => update({ subtitleSize: +v })} min={12} max={48} /></Field>
+        <ResponsiveFontSizeControl value={el.subtitleSize} onChange={(v) => update({ subtitleSize: v })} label="Subtitle font size" min={12} max={48} />
+        <ResponsiveFontWeightControl value={el.subtitleFontWeight} onChange={(v) => update({ subtitleFontWeight: v })} label="Subtitle font weight" />
+        <ResponsiveLineHeightControl value={el.subtitleLineHeight} onChange={(v) => update({ subtitleLineHeight: v })} label="Subtitle line height" min={0.8} max={2.5} />
       </Section>
       <Section title="CTA Button">
         <Field label="Button label"><Inp value={el.ctaLabel} onChange={(v) => update({ ctaLabel: v })} /></Field>
         <Field label="Button background"><ColorPicker value={el.ctaBg} onChange={(v) => update({ ctaBg: v })} /></Field>
         <Field label="Button text color"><ColorPicker value={el.ctaColor} onChange={(v) => update({ ctaColor: v })} /></Field>
-        <Field label="Button font size"><Inp type="number" value={el.ctaSize} onChange={(v) => update({ ctaSize: +v })} min={11} max={24} /></Field>
+        <ResponsiveFontSizeControl value={el.ctaSize} onChange={(v) => update({ ctaSize: v })} label="Button font size" min={11} max={24} />
+        <ResponsiveFontWeightControl value={el.ctaFontWeight} onChange={(v) => update({ ctaFontWeight: v })} label="Button font weight" />
+        <ResponsiveLineHeightControl value={el.ctaLineHeight} onChange={(v) => update({ ctaLineHeight: v })} label="Button line height" min={0.8} max={2.5} />
         <Field label="Button rounded">
           <Sel value={el.ctaRounded || 'md'} onChange={(v) => update({ ctaRounded: v })}
             options={[{value:'none',label:'None'},{value:'sm',label:'Small'},{value:'md',label:'Medium'},{value:'lg',label:'Large'},{value:'full',label:'Full'}]} />
@@ -673,6 +749,12 @@ function FormGroupProps({ el, update }) {
         ))}
       </div>
       <Field label="Submit label"><Inp value={el.buttonLabel} onChange={(v) => update({ buttonLabel: v })} /></Field>
+      <ResponsiveFontSizeControl value={el.titleFontSize} onChange={(v) => update({ titleFontSize: v })} label="Form title font size" min={10} max={24} />
+      <ResponsiveFontWeightControl value={el.titleFontWeight} onChange={(v) => update({ titleFontWeight: v })} label="Form title font weight"  />
+      <ResponsiveLineHeightControl value={el.titleLineHeight} onChange={(v) => update({ titleLineHeight: v })} label="Form title line height" min={0.8} max={2.5} />
+      <ResponsiveFontSizeControl value={el.buttonFontSize} onChange={(v) => update({ buttonFontSize: v })} label="Button font size" min={10} max={24} />
+      <ResponsiveFontWeightControl value={el.buttonFontWeight} onChange={(v) => update({ buttonFontWeight: v })} label="Button font weight" />
+      <ResponsiveLineHeightControl value={el.buttonLineHeight} onChange={(v) => update({ buttonLineHeight: v })} label="Button line height" min={0.8} max={2.5} />
     </Section>
   );
 }
@@ -858,6 +940,9 @@ function ModalProps({ el, update }) {
       </Section>
       <Section title="Modal Content">
         <Field label="Modal Content Title"><Inp value={el.modalContentTitle} onChange={(v) => update({ modalContentTitle: v })} /></Field>
+        <ResponsiveFontSizeControl value={el.modalTitleFontSize} onChange={(v) => update({ modalTitleFontSize: v })} label="Title font size" min={10} max={36} />
+        <ResponsiveFontWeightControl value={el.modalTitleFontWeight} onChange={(v) => update({ modalTitleFontWeight: v })} label="Title font weight" />
+        <ResponsiveLineHeightControl value={el.modalTitleLineHeight} onChange={(v) => update({ modalTitleLineHeight: v })} label="Title line height" min={0.8} max={2.5} />
         <Field label="Modal Content Background"><ColorPicker value={el.modalContentBg} onChange={(v) => update({ modalContentBg: v })} /></Field>
         <Field label="Modal Content Width">
           <Sel value={el.modalContentWidth || '500px'} onChange={(v) => update({ modalContentWidth: v })}
@@ -926,6 +1011,12 @@ function PopoverProps({ el, update }) {
             onChange={(v) => update({ popoverContentText: v })}
           />
         </Field>
+        <ResponsiveFontSizeControl value={el.popoverTitleFontSize} onChange={(v) => update({ popoverTitleFontSize: v })} label="Title font size" min={10} max={36} />
+        <ResponsiveFontWeightControl value={el.popoverTitleFontWeight} onChange={(v) => update({ popoverTitleFontWeight: v })} label="Title font weight" />
+        <ResponsiveLineHeightControl value={el.popoverTitleLineHeight} onChange={(v) => update({ popoverTitleLineHeight: v })} label="Title line height" min={0.8} max={2.5} />
+        <ResponsiveFontSizeControl value={el.popoverTextFontSize} onChange={(v) => update({ popoverTextFontSize: v })} label="Body font size" min={10} max={24} />
+        <ResponsiveFontWeightControl value={el.popoverTextFontWeight} onChange={(v) => update({ popoverTextFontWeight: v })} label="Body font weight" />
+        <ResponsiveLineHeightControl value={el.popoverTextLineHeight} onChange={(v) => update({ popoverTextLineHeight: v })} label="Body line height" min={0.8} max={2.5} />
         <Field label="Popover Content Background">
           <ColorPicker
             value={el.popoverContentBg}
@@ -1000,29 +1091,27 @@ function CheckboxProps({ el, update }) {
           />
         </Field>
 
-        <Field label="Font Size">
-          <Inp
-            type="number"
-            value={el.fontSize}
-            onChange={(v) =>
-              update({ fontSize: +v })
-            }
-          />
-        </Field>
+        <ResponsiveFontSizeControl
+          value={el.fontSize}
+          onChange={(v) => update({ fontSize: v })}
+          label="Font size"
+          min={10} 
+          max={24}
+        />
 
-        <Field label="Font Weight">
-          <Sel
-            value={el.fontWeight}
-            onChange={(v) =>
-              update({ fontWeight: v })
-            }
-            options={[
-              { value: "normal", label: "Normal" },
-              { value: "medium", label: "Medium" },
-              { value: "bold", label: "Bold" },
-            ]}
-          />
-        </Field>
+        <ResponsiveFontWeightControl
+          value={el.fontWeight}
+          onChange={(v) => update({ fontWeight: v })}
+          label="Font weight"
+        />
+
+        <ResponsiveLineHeightControl
+          value={el.lineHeight}
+          onChange={(v) => update({ lineHeight: v })}
+          label="Line height"
+          min={0.8}
+          max={2.5}
+        />
 
         <Field label="Alignment">
           <Sel
@@ -1192,26 +1281,27 @@ function ToggleProps({ el, update }) {
           />
         </Field>
 
-        <Field label="Font size">
-          <Inp
-            type="number"
-            value={el.fontSize}
-            onChange={(v) => update({ fontSize: Number(v) })}
-          />
-        </Field>
+        <ResponsiveFontSizeControl
+          value={el.fontSize}
+          onChange={(v) => update({ fontSize: v })}
+          label="Font size"
+          min={10} 
+          max={24}
+        />
 
-        <Field label="Font weight">
-          <Sel
-            value={el.fontWeight}
-            onChange={(v) => update({ fontWeight: v })}
-            options={[
-              { value: "400", label: "Normal" },
-              { value: "500", label: "Medium" },
-              { value: "600", label: "Semi Bold" },
-              { value: "700", label: "Bold" },
-            ]}
-          />
-        </Field>
+        <ResponsiveFontWeightControl
+          value={el.fontWeight}
+          onChange={(v) => update({ fontWeight: v })}
+          label="Font weight"
+        />
+
+        <ResponsiveLineHeightControl
+          value={el.lineHeight}
+          onChange={(v) => update({ lineHeight: v })}
+          label="Line height"
+          min={0.8}
+          max={2.5}
+        />
 
         <Field label="Alignment">
           <Sel

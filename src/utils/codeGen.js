@@ -3,6 +3,118 @@ const paddingMap = { sm: 'px-3 py-1.5', md: 'px-4 py-2', lg: 'px-6 py-3' };
 const fontWeightMap = { normal: 'font-normal', medium: 'font-medium', bold: 'font-bold' };
 const alignMap = { left: 'text-left', center: 'text-center', right: 'text-right' };
 
+const resolveResponsiveValue = (value, device) => {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    if (device === 'mobile') return value.mobile ?? value.tablet ?? value.desktop ?? '';
+    if (device === 'tablet') return value.tablet ?? value.desktop ?? value.mobile ?? '';
+    return value.desktop ?? value.tablet ?? value.mobile ?? '';
+  }
+  return value;
+};
+
+const resolveResponsiveFontWeight = (value, device) => {
+  const resolved = resolveResponsiveValue(value, device);
+  if (resolved === '' || resolved === null || resolved === undefined) return undefined;
+  if (typeof resolved === 'number') return resolved;
+
+  const normalized = String(resolved).toLowerCase();
+  if (normalized === 'bold') return 700;
+  if (normalized === 'medium') return 500;
+  if (normalized === 'normal') return 400;
+  if (['100', '200', '300', '400', '500', '600', '700', '800', '900'].includes(normalized)) {
+    return Number(normalized);
+  }
+
+  return resolved;
+};
+
+const getFontWeightClass = (value, device = 'mobile', prefix = '') => {
+  const resolved = resolveResponsiveFontWeight(value, device);
+  const normalized = String(resolved ?? '').toLowerCase();
+
+  if (resolved === 700 || normalized === 'bold') {
+    return `${prefix}font-bold`;
+  }
+
+  if (resolved === 500 || normalized === 'medium') {
+    return `${prefix}font-medium`;
+  }
+
+  if (
+    resolved === 400 ||
+    normalized === 'normal' ||
+    resolved === undefined
+  ) {
+    return `${prefix}font-normal`;
+  }
+
+  return `${prefix}font-[${resolved}]`;
+};
+
+const getResponsiveTypographyClasses = (fontSize, fontWeight, lineHeight) => {
+  const classes = [];
+
+  const baseFontSize = resolveResponsiveValue(fontSize, 'mobile');
+  if (baseFontSize !== '' && baseFontSize !== undefined && baseFontSize !== null) {
+    classes.push(`text-[${baseFontSize}px]`);
+  }
+
+  const tabletFontSize = resolveResponsiveValue(fontSize, 'tablet');
+  if (tabletFontSize !== '' && tabletFontSize !== undefined && tabletFontSize !== null && tabletFontSize !== baseFontSize) {
+    classes.push(`md:text-[${tabletFontSize}px]`);
+  }
+
+  const desktopFontSize = resolveResponsiveValue(fontSize, 'desktop');
+  if (desktopFontSize !== '' && desktopFontSize !== undefined && desktopFontSize !== null && desktopFontSize !== tabletFontSize && desktopFontSize !== baseFontSize) {
+    classes.push(`lg:text-[${desktopFontSize}px]`);
+  }
+
+  const baseLineHeight = resolveResponsiveValue(lineHeight, 'mobile');
+  if (baseLineHeight !== '' && baseLineHeight !== undefined && baseLineHeight !== null) {
+    classes.push(`leading-[${baseLineHeight}]`);
+  }
+
+  const tabletLineHeight = resolveResponsiveValue(lineHeight, 'tablet');
+  if (tabletLineHeight !== '' && tabletLineHeight !== undefined && tabletLineHeight !== null && tabletLineHeight !== baseLineHeight) {
+    classes.push(`md:leading-[${tabletLineHeight}]`);
+  }
+
+  const desktopLineHeight = resolveResponsiveValue(lineHeight, 'desktop');
+  if (desktopLineHeight !== '' && desktopLineHeight !== undefined && desktopLineHeight !== null && desktopLineHeight !== tabletLineHeight && desktopLineHeight !== baseLineHeight) {
+    classes.push(`lg:leading-[${desktopLineHeight}]`);
+  }
+
+  const mobileWeightClass = getFontWeightClass(fontWeight, 'mobile');
+  classes.push(mobileWeightClass);
+
+  const tabletWeightClass = getFontWeightClass(
+    fontWeight,
+    'tablet',
+    'md:'
+  );
+
+  if (
+    tabletWeightClass.replace('md:', '') !== mobileWeightClass
+  ) {
+    classes.push(tabletWeightClass);
+  }
+
+  const desktopWeightClass = getFontWeightClass(
+    fontWeight,
+    'desktop',
+    'lg:'
+  );
+
+  if (
+    desktopWeightClass.replace('lg:', '') !==
+    tabletWeightClass.replace('md:', '')
+  ) {
+    classes.push(desktopWeightClass);
+  }
+
+  return classes.join(' ');
+};
+
 // ── Helper-component registry ──────────────────────────────────────────
 // Some elements (e.g. navbar) need their own local React state (a mobile
 // menu toggle) in the exported code. Rather than lifting that state up into
@@ -233,13 +345,66 @@ const elToJSX = (el, indent = '          ') => {
     case 'button': {
       const r = roundedMap[el.rounded] || 'rounded-md';
       const p = paddingMap[el.padding] || 'px-4 py-2';
-      return `${indent}<button${hc} type="button" className="${p} ${r} text-sm font-medium cursor-pointer" style={{background:'${el.bg}',color:'${el.color}',fontSize:${el.fontSize}}}>\n${indent}  ${el.label}\n${indent}</button>`;
+      const typographyClasses = getResponsiveTypographyClasses(el.fontSize, el.fontWeight, el.lineHeight);
+      return `${indent}<button${hc} className="${p} ${r} cursor-pointer ${typographyClasses}" style={{background:'${el.bg}',color:'${el.color}'}}>\n${indent}  ${el.label}\n${indent}</button>`;
     }
-    case "radio":
-      return `<div style={{textAlign:"${el.align}"}}><label className="flex items-center gap-2"><input type="radio" name="${el.group}" value="${el.value}" ${el.checked ? "defaultChecked" : ""} style={{accentColor:"${el.color}"}} /><span style={{color:"${el.color}",fontSize:${el.fontSize},fontWeight:"${el.fontWeight}"}}>${el.label}</span></label></div>`;
+    case "radio": {
+      const typographyClasses = getResponsiveTypographyClasses(
+        el.fontSize,
+        el.fontWeight,
+        el.lineHeight
+      );
 
-   case "checkbox":
-    return `<div style={{display:"flex",justifyContent:"${el.align === "center" ? "center" : el.align === "right" ? "flex-end" : "flex-start"}"}}><label className="flex items-center gap-2"><input type="checkbox" ${el.checked ? "defaultChecked" : ""} style={{accentColor:"${el.color}"}} /><span style={{color:"${el.color}",fontSize:${el.fontSize},fontWeight:"${el.fontWeight}"}}>${el.label}</span></label></div>`;
+      return `
+        <div style={{textAlign:"${el.align}"}}>
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              name="${el.group}"
+              value="${el.value}"
+              ${el.checked ? "defaultChecked" : ""}
+              style={{accentColor:"${el.color}"}}
+            />
+            <span
+              className="${typographyClasses}"
+              style={{color:"${el.color}"}}
+            >
+              ${el.label}
+            </span>
+          </label>
+        </div>`;
+      }
+
+    case "checkbox": {
+        const typographyClasses = getResponsiveTypographyClasses(
+          el.fontSize,
+          el.fontWeight,
+          el.lineHeight
+        );
+
+        return `
+        <div style={{display:"flex",justifyContent:"${
+            el.align === "center"
+              ? "center"
+              : el.align === "right"
+              ? "flex-end"
+              : "flex-start"
+          }"}}>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              ${el.checked ? "defaultChecked" : ""}
+              style={{accentColor:"${el.color}"}}
+            />
+            <span
+              className="${typographyClasses}"
+              style={{color:"${el.color}"}}
+            >
+              ${el.label}
+            </span>
+          </label>
+        </div>`;
+    }
 
     case "alert": {
       const alertClass =
@@ -311,6 +476,11 @@ const elToJSX = (el, indent = '          ') => {
     }
 
     case "toggle":
+      const typographyClasses = getResponsiveTypographyClasses(
+        el.fontSize,
+        el.fontWeight,
+        el.lineHeight
+      );
       return `${indent}{(() => {
         ${indent}  const [enabled, setEnabled] = React.useState(${el.checked ? "true" : "false"});
         ${indent}  return (
@@ -353,9 +523,8 @@ const elToJSX = (el, indent = '          ') => {
         ${indent}          />
         ${indent}        </button>
         ${indent}        <span
+        ${indent}          className="${typographyClasses}"
         ${indent}          style={{
-        ${indent}            fontSize:${el.fontSize},
-        ${indent}            fontWeight:"${el.fontWeight}",
         ${indent}            color:"${el.labelColor || "#000"}"
         ${indent}          }}
         ${indent}        >
@@ -366,18 +535,27 @@ const elToJSX = (el, indent = '          ') => {
         ${indent}  );
       ${indent}})()}`;
     
-    case 'text':
-      return `${indent}<label${hc} className="${alignMap[el.align] || 'text-left'} ${fontWeightMap[el.fontWeight] || 'font-normal'}" style={{color:'${el.color || '#000000'}',fontSize:${el.fontSize || '16px'}}}>${indent} ${el.label} ${indent}</label>`;
-    case 'heading':
-      return `${indent}<h2${hc} className="${alignMap[el.align] || 'text-left'} ${fontWeightMap[el.fontWeight] || 'font-bold'}" style={{color:'${el.color}',fontSize:${el.fontSize}}}>\n${indent}  ${el.label}\n${indent}</h2>`;
+    case 'text': {
+      const typographyClasses = getResponsiveTypographyClasses(el.fontSize, el.fontWeight, el.lineHeight);
+      return `${indent}<p${hc} className="${alignMap[el.align] || 'text-left'} ${typographyClasses}" style={{color:'${el.color}'}}>
+      ${indent}  ${el.label}
+      ${indent}</p>`;
+    }
+    case 'heading': {
+      const typographyClasses = getResponsiveTypographyClasses(el.fontSize, el.fontWeight, el.lineHeight);
+      return `${indent}<h2${hc} className="${alignMap[el.align] || 'text-left'} ${typographyClasses}" style={{color:'${el.color}'}}>
+      ${indent}  ${el.label}
+      ${indent}</h2>`;
+    }
+
     case 'input':
       return `${indent}<div${hc} className="flex flex-col gap-1">\n${indent}  <label className="text-sm font-medium text-gray-700">${el.label}</label>\n${indent}  <input type="${el.type}" placeholder="${el.placeholder}" className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />\n${indent}</div>`;
     case 'image':
       return `${indent}<img${hc} src="${el.src}" alt="${el.alt}" className="w-full ${roundedMap[el.rounded] || 'rounded-md'} object-${el.objectFit || 'cover'}" />`;
     case 'card': {
       const imgJSX = el.image ? `${indent}  <img src="${el.image}" alt="${el.imageAlt || ''}" className="w-full h-40 object-cover" />\n` : '';
-      const ctaJSX = el.ctaLabel ? `${indent}    <a href="${el.link}" className="mt-3 self-start px-4 py-2 rounded-md text-sm font-medium" style={{background:'${el.ctaBg}',color:'${el.ctaColor}'}}>${el.ctaLabel}</a>\n` : '';
-      const cardInner = `${indent}<div${hc} className="border border-gray-200 rounded-xl overflow-hidden shadow-sm flex flex-col" style={{background:'${el.bg}'}}>\n${imgJSX}${indent}  <div className="p-4 flex flex-col gap-1">\n${indent}    <p className="font-semibold text-gray-900">${el.title}</p>\n${indent}    <p className="text-sm text-gray-500">${el.subtitle}</p>\n${ctaJSX}${indent}  </div>\n${indent}</div>`;
+      const ctaJSX = el.ctaLabel ? `${indent}    <button className="mt-3 self-start px-4 py-2 rounded-md ${getResponsiveTypographyClasses( el.ctaFontSize, el.ctaFontWeight, el.ctaLineHeight )}" style={{background:'${el.ctaBg}',color:'${el.ctaColor}'}}>${el.ctaLabel}</button>\n` : '';
+      const cardInner = `${indent}<div${hc} className="border border-gray-200 rounded-xl overflow-hidden shadow-sm flex flex-col" style={{background:'${el.bg}'}}>\n${imgJSX}${indent}  <div className="p-4 flex flex-col gap-1">\n${indent}    <p className="${getResponsiveTypographyClasses( el.titleFontSize, el.titleFontWeight, el.titleLineHeight )}" style={{ color:'${el.titleColor || "#111827"}' }} > ${el.title} </p>\n${indent}    <p className="${getResponsiveTypographyClasses( el.subtitleFontSize, el.subtitleFontWeight, el.subtitleLineHeight )}" style={{ color:'${el.subtitleColor || "#6B7280"}' }} > ${el.subtitle} </p>\n${ctaJSX}${indent}  </div>\n${indent}</div>`;
       // If a link URL is set, wrap the whole card in an anchor tag.
       return cardInner;
     }
@@ -507,7 +685,7 @@ const elToJSX = (el, indent = '          ') => {
 
         ${indent}            <h2
         ${indent}              id="modal-title"
-        ${indent}              className="text-lg font-semibold mb-4 pr-6"
+        ${indent}              className="${getResponsiveTypographyClasses({ fontSize: el.modalTitleFontSize || { desktop: 18, tablet: 16, mobile: 14 }, fontWeight: el.modalTitleFontWeight || { desktop: '600', tablet: '600', mobile: '600' }, lineHeight: el.modalTitleLineHeight || { desktop: 1.2, tablet: 1.3, mobile: 1.4 } }, 'mobile')} mb-4 pr-6"
         ${indent}            >
         ${indent}              ${el.modalContentTitle || 'Modal'}
         ${indent}            </h2>
@@ -625,12 +803,16 @@ case 'popover': {
 
     ${indent}       <h3
     ${indent}         id="${popoverId}-title"
-    ${indent}         className="font-semibold mb-2"
+    ${indent}         className="${getResponsiveTypographyClasses({ fontSize: el.popoverTitleFontSize || { desktop: 14, tablet: 13, mobile: 12 }, fontWeight: el.popoverTitleFontWeight || { desktop: 'medium', tablet: 'medium', mobile: 'medium' }, lineHeight: el.popoverTitleLineHeight || { desktop: 1.2, tablet: 1.3, mobile: 1.4 } }, 'mobile')} mb-2"
     ${indent}       >
     ${indent}         ${el.popoverContentTitle}
     ${indent}       </h3>
 
-    ${indent}       <p>${el.popoverContentText}</p>
+    ${indent}       <p
+    ${indent}        className="${getResponsiveTypographyClasses({ fontSize: el.popoverTextFontSize || { desktop: 12, tablet: 11, mobile: 10 }, fontWeight: el.popoverTextFontWeight || { desktop: 'normal', tablet: 'normal', mobile: 'normal' }, lineHeight: el.popoverTextLineHeight || { desktop: 1.4, tablet: 1.5, mobile: 1.6 } }, 'mobile')}"
+    ${indent}       >
+    ${indent}       ${el.popoverContentText}
+    ${indent}       </p>
 
     ${indent}     </div>
     ${indent}   )}
@@ -768,7 +950,10 @@ ${mobileLinkItems}
       }
 
       const textColorWhenBg = hasBgImage ? '#ffffff' : undefined;
-      const heroDiv = `${indent}<div${hc} className="w-full rounded-xl ${pxClass} ${pyClass} flex flex-col gap-4 justify-center ${alignCls}${hasBgImage ? ' ' + heroClass : ''}" style={{${hasBgImage ? '' : `background:'${el.bg}',`}${heightStyleStr ? heightStyleStr + ',' : ''}}}>\n${indent}  <${Tag} style={{color:'${el.titleColor || textColorWhenBg || '#111827'}',fontSize:${el.titleSize || 40},fontWeight:${el.titleWeight === 'bold' ? 700 : el.titleWeight === 'medium' ? 500 : 400},margin:0,lineHeight:1.15}}>${el.title}</${Tag}>\n${indent}  <p style={{color:'${el.subtitleColor || textColorWhenBg || '#6b7280'}',fontSize:${el.subtitleSize || 18},margin:0,maxWidth:560}}>${el.subtitle}</p>\n${indent}  <button className="mt-1 font-medium ${roundedMap[el.ctaRounded] || 'rounded-md'}" style={{background:'${el.ctaBg || '#3b82f6'}',color:'${el.ctaColor || '#ffffff'}',fontSize:${el.ctaSize || 15},padding:'10px 24px',border:'none'}}>${el.ctaLabel}</button>\n${indent}</div>`;
+      const titleTypography = getResponsiveTypographyClasses(el.titleSize, el.titleWeight, el.titleLineHeight);
+      const subtitleTypography = getResponsiveTypographyClasses(el.subtitleSize, el.subtitleFontWeight, el.subtitleLineHeight);
+      const ctaTypography = getResponsiveTypographyClasses(el.ctaSize, el.ctaFontWeight, el.ctaLineHeight);
+      const heroDiv = `${indent}<div${hc} className="w-full rounded-xl ${pxClass} ${pyClass} flex flex-col gap-4 justify-center ${alignCls}${hasBgImage ? ' ' + heroClass : ''}" style={{${hasBgImage ? '' : `background:'${el.bg}',`}${heightStyleStr ? heightStyleStr + ',' : ''}}}>\n${indent}  <${Tag} className="${titleTypography}" style={{color:'${el.titleColor || textColorWhenBg || '#111827'}',margin:0}}>${el.title}</${Tag}>\n${indent}  <p className="${subtitleTypography}" style={{color:'${el.subtitleColor || textColorWhenBg || '#6b7280'}',margin:0,maxWidth:560}}>${el.subtitle}</p>\n${indent}  <button className="mt-1 ${roundedMap[el.ctaRounded] || 'rounded-md'} ${ctaTypography}" style={{background:'${el.ctaBg || '#3b82f6'}',color:'${el.ctaColor || '#ffffff'}',padding:'10px 24px',border:'none'}}>${el.ctaLabel}</button>\n${indent}</div>`;
 
       return hasBgImage ? `${indent}<style>{\`${bgCss}\`}</style>\n${heroDiv}` : heroDiv;
     }

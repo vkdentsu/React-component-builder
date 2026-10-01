@@ -11,23 +11,168 @@ import {
 } from '../utils/treeHelpers';
 
 const defaultElementProps = {
-  button: { label: 'Click me', bg: '#3b82f6', color: '#ffffff', fontSize: 14, rounded: 'md', padding: 'md' },
-  text: { label: 'Paragraph text here.', color: '#374151', fontSize: 14, fontWeight: 'normal', align: 'left' },
-  radio: { label: "Radio Button", group: "group1", value: "option1", checked: false, color: "#2563eb", fontSize: 14, fontWeight: "normal", align: "left" },
-  checkbox: { label: "Checkbox", checked: false, value: "option1", color: "#2563eb", fontSize: 14, fontWeight: "normal", align: "left" },
-  heading: { label: 'Section Heading', color: '#111827', fontSize: 24, fontWeight: 'bold', align: 'left' },
+  button: {
+    label: 'Click me',
+    bg: '#3b82f6',
+    color: '#ffffff',
+    fontSize: { desktop: 14, tablet: 13, mobile: 12 },
+    fontWeight: { desktop: 'medium', tablet: 'medium', mobile: 'medium' },
+    lineHeight: { desktop: 1.2, tablet: 1.3, mobile: 1.5 },
+    rounded: 'md',
+    padding: 'md',
+  },
+  text: {
+    label: 'Paragraph text here.',
+    color: '#374151',
+    fontSize: { desktop: 14, tablet: 13, mobile: 12 },
+    fontWeight: { desktop: 'normal', tablet: 'normal', mobile: 'normal' },
+    lineHeight: { desktop: 1.2, tablet: 1.3, mobile: 1.5 },
+    align: 'left',
+  },
+  radio: {
+    label: "Radio Button",
+    group: "group1",
+    value: "option1",
+    checked: false,
+    color: "#2563eb",
+    fontSize: { desktop: 14, tablet: 13, mobile: 12 },
+    fontWeight: { desktop: 'normal', tablet: 'normal', mobile: 'normal' },
+    lineHeight: { desktop: 1.2, tablet: 1.3, mobile: 1.5 },
+    align: "left",
+  },
+  checkbox: {
+    label: "Checkbox",
+    checked: false,
+    value: "option1",
+    color: "#2563eb",
+    fontSize: { desktop: 14, tablet: 13, mobile: 12 },
+    fontWeight: { desktop: 'normal', tablet: 'normal', mobile: 'normal' },
+    lineHeight: { desktop: 1.2, tablet: 1.3, mobile: 1.5 },
+    align: "left",
+  },
+  heading: {
+    label: 'Section Heading',
+    color: '#111827',
+    fontSize: { desktop: 24, tablet: 20, mobile: 18 },
+    fontWeight: { desktop: 'bold', tablet: 'medium', mobile: 'normal' },
+    lineHeight: { desktop: 1.2, tablet: 1.3, mobile: 1.5 },
+    align: 'left',
+  },
   input: { placeholder: 'Enter value…', label: 'Label', type: 'text' },
   image: { src: 'https://placehold.co/600x300/e0e7ff/6366f1?text=Image', alt: 'Image', rounded: 'md', objectFit: 'cover' },
-  card: { image: '', imageAlt: '', title: 'Card title', subtitle: 'Supporting description text.', bg: '#ffffff', ctaLabel: '', ctaBg: '#3b82f6', ctaColor: '#ffffff', link: '' },
+  // card: { image: '', imageAlt: '', title: 'Card title', subtitle: 'Supporting description text.', bg: '#ffffff', ctaLabel: '', ctaBg: '#3b82f6', ctaColor: '#ffffff', link: '' },
+  card: {
+    image: '',
+    imageAlt: '',
+
+    title: 'Card title',
+    titleColor: '#111827',
+    titleFontSize: {
+      desktop: 24,
+      tablet: 20,
+      mobile: 18,
+    },
+    titleFontWeight: {
+      desktop: 'bold',
+      tablet: 'medium',
+      mobile: 'normal',
+    },
+    titleLineHeight: {
+      desktop: 1.2,
+      tablet: 1.3,
+      mobile: 1.5,
+    },
+
+    subtitle: 'Supporting description text.',
+    subtitleColor: '#6b7280',
+    subtitleFontSize: {
+      desktop: 16,
+      tablet: 15,
+      mobile: 14,
+    },
+    subtitleFontWeight: {
+      desktop: 'normal',
+      tablet: 'normal',
+      mobile: 'normal',
+    },
+    subtitleLineHeight: {
+      desktop: 1.4,
+      tablet: 1.5,
+      mobile: 1.6,
+    },
+
+    ctaLabel: 'Learn More',
+
+    ctaBg: '#3b82f6',
+    ctaColor: '#ffffff',
+
+    ctaFontSize: {
+      desktop: 14,
+      tablet: 13,
+      mobile: 12,
+    },
+    ctaFontWeight: {
+      desktop: 'medium',
+      tablet: 'medium',
+      mobile: 'medium',
+    },
+    ctaLineHeight: {
+      desktop: 1.2,
+      tablet: 1.3,
+      mobile: 1.4,
+    },
+
+    bg: '#ffffff',
+    rounded: 'lg',
+
+    link: '',
+  },
   badge: { label: 'Badge', bg: '#ede9fe', color: '#6d28d9' },
   alert: { title: "Alert", message: "This is an alert message.", variant: "info", closable: false, bg: "#e0f2fe", color: "#0369a1", icon: true },
-  toggle: { label: 'Toggle', checked: false, color: '#3b82f6', labelColor: '#000000', fontSize: 14, fontWeight: '400', align: 'left'},
+  toggle: {
+    label: 'Toggle',
+    checked: false,
+    color: '#3b82f6',
+    labelColor: '#000000',
+    fontSize: { desktop: 14, tablet: 13, mobile: 12 },
+    fontWeight: { desktop: '500', tablet: '500', mobile: '400' },
+    lineHeight: { desktop: 1.2, tablet: 1.3, mobile: 1.5 },
+    align: 'left',
+  },
   divider: { color: '#e5e7eb', thickness: 1 },
-  loader: { loaderType: "spinner", size: "md", color: "#3b82f6", speed: 1, label: "Loading...", showLabel: true},
-  modal: {modalButtonLabel: 'Open Modal', modalButtonType: 'button', modalButtonBg: '#3b82f6', modalButtonColor: '#ffffff', modalContenttitle: 'Modal Title', modalContentbg: '#ffffff', modalContentwidth: '500px' },
-  popover: {popoverButtonLabel: 'Open Popover', popoverButtonType: 'button', popoverButtonBg: '#3b82f6', popoverButtonColor: '#ffffff', popoverContentTitle: 'Popover', popoverContentText: 'This is a popover.', popoverContentPosition: 'bottom', popoverContentBg: '#ffffff', popoverContentColor: '#111827', popoverContentWidth: '280px' },
+  loader: { loaderType: "spinner", size: "md", color: "#3b82f6", speed: 1, label: "Loading...", showLabel: true },
+  modal: { modalButtonLabel: 'Open Modal', modalButtonType: 'button', modalButtonBg: '#3b82f6', modalButtonColor: '#ffffff', modalContenttitle: 'Modal Title', modalContentbg: '#ffffff', modalContentwidth: '500px' },
+  popover: { popoverButtonLabel: 'Open Popover', popoverButtonType: 'button', popoverButtonBg: '#3b82f6', popoverButtonColor: '#ffffff', popoverContentTitle: 'Popover', popoverContentText: 'This is a popover.', popoverContentPosition: 'bottom', popoverContentBg: '#ffffff', popoverContentColor: '#111827', popoverContentWidth: '280px' },
   navbar: { brand: 'Brand', logoUrl: '', logoAlign: 'left', links: 'Home, Features, Pricing, Contact', submenus: '', bg: '#ffffff', color: '#111827', shadow: true },
-  hero: { title: 'Build something great', titleTag: 'h1', titleSize: 40, titleColor: '#111827', titleWeight: 'bold', subtitle: 'A short supporting line about your product or page.', subtitleSize: 18, subtitleColor: '#6b7280', ctaLabel: 'Get started', ctaBg: '#3b82f6', ctaColor: '#ffffff', ctaSize: 15, ctaRounded: 'md', bg: '#eef2ff', bgImageMobile: '', bgImageTablet: '', bgImageDesktop: '', bgOverlay: 0.3, align: 'center', heightMode: 'auto', minHeight: 400, viewportHeight: 60, verticalPadding: { desktop: 8, tablet: 6, mobile: 4, }, horizontalPadding: { desktop: 8, tablet: 6, mobile: 4,},},
+  hero: {
+    title: 'Build something great',
+    titleTag: 'h1',
+    titleSize: { desktop: 40, tablet: 32, mobile: 24 },
+    titleColor: '#111827',
+    titleWeight: { desktop: 'bold', tablet: 'medium', mobile: 'normal' },
+    titleLineHeight: { desktop: 1.1, tablet: 1.2, mobile: 1.4 },
+    subtitle: 'A short supporting line about your product or page.',
+    subtitleSize: { desktop: 18, tablet: 16, mobile: 14 },
+    subtitleColor: '#6b7280',
+    subtitleLineHeight: { desktop: 1.4, tablet: 1.5, mobile: 1.6 },
+    ctaLabel: 'Get started',
+    ctaBg: '#3b82f6',
+    ctaColor: '#ffffff',
+    ctaSize: { desktop: 15, tablet: 14, mobile: 13 },
+    ctaLineHeight: { desktop: 1.2, tablet: 1.3, mobile: 1.4 },
+    ctaRounded: 'md',
+    bg: '#eef2ff',
+    bgImageMobile: '',
+    bgImageTablet: '',
+    bgImageDesktop: '',
+    bgOverlay: 0.3,
+    align: 'center',
+    heightMode: 'auto',
+    minHeight: 400,
+    viewportHeight: 60,
+    verticalPadding: { desktop: 8, tablet: 6, mobile: 4 },
+    horizontalPadding: { desktop: 8, tablet: 6, mobile: 4 },
+  },
   formgroup: {
     title: 'Contact us',
     fields: [
@@ -127,7 +272,7 @@ const useBuilderStore = create(
 
       setGlobalFont: (font) =>
         set({
-            globalFont: font,
+          globalFont: font,
         }),
 
       addCustomFont: (font) =>
@@ -143,7 +288,7 @@ const useBuilderStore = create(
           writeStoredCustomFonts(nextFonts);
           return { customFonts: nextFonts };
         }),
-        
+
 
       _history: { past: [], future: [] },
 
@@ -336,25 +481,25 @@ const useBuilderStore = create(
 
       updateRadioSelection: (id, checked) =>
         set((state) => {
-            const rows = structuredClone(state.rows);
-            rows.forEach(row => {
-                row.cols.forEach(col => {
-                    const current = col.elements.find(
-                        e => e.id === id
-                    );
-                    if (!current) return;
-                    col.elements.forEach(el => {
-                        if (
-                            el.type === "radio" &&
-                            el.group === current.group
-                        ) {
-                            el.checked = false;
-                        }
-                    });
-                    current.checked = checked;
-                });
+          const rows = structuredClone(state.rows);
+          rows.forEach(row => {
+            row.cols.forEach(col => {
+              const current = col.elements.find(
+                e => e.id === id
+              );
+              if (!current) return;
+              col.elements.forEach(el => {
+                if (
+                  el.type === "radio" &&
+                  el.group === current.group
+                ) {
+                  el.checked = false;
+                }
+              });
+              current.checked = checked;
             });
-            return { rows };
+          });
+          return { rows };
         }),
 
       // ── Reorder elements within a column ─────────────────────
@@ -376,7 +521,7 @@ const useBuilderStore = create(
         }));
       },
 
-// ── duplicate elements within a column ─────────────────────
+      // ── duplicate elements within a column ─────────────────────
       duplicateElement: (elId) => {
         const loc = findLocation(get().rows, elId);
         if (!loc) return;
