@@ -5,6 +5,7 @@ import UploadDesign from "./pages/UploadDesign";
 import Processing from "./pages/Processing";
 import GeneratedProject from "./pages/GeneratedProject";
 import CustomBuilder from "./pages/CustomBuilder";
+import Preview from "./pages/Preview";
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
         <Route path="/processing" element={<Processing />} />
         <Route path="/generated" element={<GeneratedProject />} />
         <Route path="/custom-builder" element={<CustomBuilder />} />
+        <Route path="/preview" element={<Preview />} />
 
       </Routes>
     </BrowserRouter>
