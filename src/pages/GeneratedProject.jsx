@@ -94,6 +94,15 @@ const jsxContent = generatedCodeFromState
         }
     };
 
+    const handlePreview = () => {
+        navigate("/preview", {
+            state: {
+                pageName,
+                generatedJSX: jsxContent,
+            },
+        });
+    };
+
     return (
         <div
             style={{
@@ -141,6 +150,19 @@ const jsxContent = generatedCodeFromState
                             gap: "10px",
                         }}
                     >
+                        <button
+                            onClick={handlePreview}
+                            style={{
+                                ...buttonStyle,
+                                backgroundColor: "#7c3aed",
+                                color: "#fff",
+                                fontSize: "18px",
+                                height: "38px",
+                                maxWidth: "180px",
+                            }}
+                        >
+                            Preview
+                        </button>
                         <button
                             onClick={handleCopy}
                             style={{
