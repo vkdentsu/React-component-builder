@@ -4,11 +4,19 @@ const deviceOptions = [
   { key: 'mobile', label: 'Mobile' },
 ];
 
-const getResolvedValue = (value) => ({
-  desktop: value?.desktop ?? '',
-  tablet: value?.tablet ?? '',
-  mobile: value?.mobile ?? '',
-});
+const getResolvedValue = (value) => {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return {
+      desktop: value.desktop ?? '',
+      tablet: value.tablet ?? '',
+      mobile: value.mobile ?? '',
+    };
+  }
+
+  // Legacy components stored one value. Showing it in all three fields keeps
+  // old saved components editable while preserving their existing appearance.
+  return { desktop: value ?? '', tablet: value ?? '', mobile: value ?? '' };
+};
 
 const normalizeNumber = (value) => {
   if (value === '' || value === null || value === undefined) return '';

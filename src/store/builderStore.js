@@ -58,7 +58,12 @@ const defaultElementProps = {
     lineHeight: { desktop: 1.2, tablet: 1.3, mobile: 1.5 },
     align: 'left',
   },
-  input: { placeholder: 'Enter value…', label: 'Label', type: 'text' },
+  input: {
+    placeholder: 'Enter value…', label: 'Label', type: 'text',
+    fontSize: { desktop: 12, tablet: 11, mobile: 10 },
+    fontWeight: { desktop: 'medium', tablet: 'medium', mobile: 'normal' },
+    lineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 },
+  },
   image: { src: 'https://placehold.co/600x300/e0e7ff/6366f1?text=Image', alt: 'Image', rounded: 'md', objectFit: 'cover' },
   // card: { image: '', imageAlt: '', title: 'Card title', subtitle: 'Supporting description text.', bg: '#ffffff', ctaLabel: '', ctaBg: '#3b82f6', ctaColor: '#ffffff', link: '' },
   card: {
@@ -127,8 +132,22 @@ const defaultElementProps = {
 
     link: '',
   },
-  badge: { label: 'Badge', bg: '#ede9fe', color: '#6d28d9' },
-  alert: { title: "Alert", message: "This is an alert message.", variant: "info", closable: false, bg: "#e0f2fe", color: "#0369a1", icon: true },
+  badge: {
+    label: 'Badge', bg: '#ede9fe', color: '#6d28d9',
+    fontSize: { desktop: 12, tablet: 11, mobile: 10 },
+    fontWeight: { desktop: 'medium', tablet: 'medium', mobile: 'normal' },
+    lineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 },
+  },
+  alert: {
+    title: "Alert", message: "This is an alert message.", variant: "info", closable: false,
+    bg: "#e0f2fe", color: "#0369a1", icon: true,
+    titleFontSize: { desktop: 16, tablet: 15, mobile: 14 },
+    titleFontWeight: { desktop: 'bold', tablet: 'bold', mobile: 'bold' },
+    titleLineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 },
+    messageFontSize: { desktop: 14, tablet: 13, mobile: 12 },
+    messageFontWeight: { desktop: 'normal', tablet: 'normal', mobile: 'normal' },
+    messageLineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 },
+  },
   toggle: {
     label: 'Toggle',
     checked: false,
@@ -136,30 +155,56 @@ const defaultElementProps = {
     labelColor: '#000000',
     fontSize: { desktop: 14, tablet: 13, mobile: 12 },
     fontWeight: { desktop: '500', tablet: '500', mobile: '400' },
-    lineHeight: { desktop: 1.2, tablet: 1.3, mobile: 1.5 },
+    lineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 },
     align: 'left',
   },
   divider: { color: '#e5e7eb', thickness: 1 },
   loader: { loaderType: "spinner", size: "md", color: "#3b82f6", speed: 1, label: "Loading...", showLabel: true },
-  modal: { modalButtonLabel: 'Open Modal', modalButtonType: 'button', modalButtonBg: '#3b82f6', modalButtonColor: '#ffffff', modalContenttitle: 'Modal Title', modalContentbg: '#ffffff', modalContentwidth: '500px' },
-  popover: { popoverButtonLabel: 'Open Popover', popoverButtonType: 'button', popoverButtonBg: '#3b82f6', popoverButtonColor: '#ffffff', popoverContentTitle: 'Popover', popoverContentText: 'This is a popover.', popoverContentPosition: 'bottom', popoverContentBg: '#ffffff', popoverContentColor: '#111827', popoverContentWidth: '280px' },
-  navbar: { brand: 'Brand', logoUrl: '', logoAlign: 'left', links: 'Home, Features, Pricing, Contact', submenus: '', bg: '#ffffff', color: '#111827', shadow: true },
+  modal: {
+    modalButtonLabel: 'Open Modal', modalButtonType: 'button', modalButtonBg: '#3b82f6', modalButtonColor: '#ffffff',
+    modalButtonFontSize: { desktop: 14, tablet: 13, mobile: 12 },
+    modalButtonFontWeight: { desktop: 'medium', tablet: 'medium', mobile: 'medium' },
+    modalButtonLineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 },
+    modalTitleFontSize: { desktop: 18, tablet: 16, mobile: 14 },
+    modalTitleFontWeight: { desktop: '600', tablet: '600', mobile: '600' },
+    modalTitleLineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 },
+    modalContenttitle: 'Modal Title', modalContentbg: '#ffffff', modalContentwidth: '500px',
+  },
+  popover: {
+    popoverButtonLabel: 'Open Popover', popoverButtonType: 'button', popoverButtonBg: '#3b82f6', popoverButtonColor: '#ffffff',
+    popoverButtonFontSize: { desktop: 14, tablet: 13, mobile: 12 },
+    popoverButtonFontWeight: { desktop: 'medium', tablet: 'medium', mobile: 'medium' },
+    popoverButtonLineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 },
+    popoverTitleFontSize: { desktop: 14, tablet: 13, mobile: 12 },
+    popoverTitleFontWeight: { desktop: 'medium', tablet: 'medium', mobile: 'medium' },
+    popoverTitleLineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 },
+    popoverTextFontSize: { desktop: 12, tablet: 11, mobile: 10 },
+    popoverTextFontWeight: { desktop: 'normal', tablet: 'normal', mobile: 'normal' },
+    popoverTextLineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 },
+    popoverContentTitle: 'Popover', popoverContentText: 'This is a popover.', popoverContentPosition: 'bottom', popoverContentBg: '#ffffff', popoverContentColor: '#111827', popoverContentWidth: '280px',
+  },
+  navbar: {
+    brand: 'Brand', logoUrl: '', logoAlign: 'left', links: 'Home, Features, Pricing, Contact', submenus: '', bg: '#ffffff', color: '#111827', shadow: true,
+    fontSize: { desktop: 14, tablet: 13, mobile: 12 },
+    fontWeight: { desktop: 'medium', tablet: 'medium', mobile: 'medium' },
+    lineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 },
+  },
   hero: {
     title: 'Build something great',
     titleTag: 'h1',
     titleSize: { desktop: 40, tablet: 32, mobile: 24 },
     titleColor: '#111827',
     titleWeight: { desktop: 'bold', tablet: 'medium', mobile: 'normal' },
-    titleLineHeight: { desktop: 1.1, tablet: 1.2, mobile: 1.4 },
+    titleLineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 },
     subtitle: 'A short supporting line about your product or page.',
     subtitleSize: { desktop: 18, tablet: 16, mobile: 14 },
     subtitleColor: '#6b7280',
-    subtitleLineHeight: { desktop: 1.4, tablet: 1.5, mobile: 1.6 },
+    subtitleLineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 },
     ctaLabel: 'Get started',
     ctaBg: '#3b82f6',
     ctaColor: '#ffffff',
     ctaSize: { desktop: 15, tablet: 14, mobile: 13 },
-    ctaLineHeight: { desktop: 1.2, tablet: 1.3, mobile: 1.4 },
+    ctaLineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 },
     ctaRounded: 'md',
     bg: '#eef2ff',
     bgImageMobile: '',
@@ -175,6 +220,18 @@ const defaultElementProps = {
   },
   formgroup: {
     title: 'Contact us',
+    titleFontSize: { desktop: 18, tablet: 16, mobile: 14 },
+    titleFontWeight: { desktop: 'bold', tablet: 'bold', mobile: 'bold' },
+    titleLineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 },
+    labelFontSize: { desktop: 12, tablet: 11, mobile: 10 },
+    labelFontWeight: { desktop: 'medium', tablet: 'medium', mobile: 'normal' },
+    labelLineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 },
+    checkboxFontSize: { desktop: 14, tablet: 13, mobile: 12 },
+    checkboxFontWeight: { desktop: 'normal', tablet: 'normal', mobile: 'normal' },
+    checkboxLineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 },
+    buttonFontSize: { desktop: 14, tablet: 13, mobile: 12 },
+    buttonFontWeight: { desktop: 'medium', tablet: 'medium', mobile: 'medium' },
+    buttonLineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 },
     fields: [
       { label: 'Name', type: 'input', placeholder: 'Enter your name', inputType: 'text', validationType: 'none', validationRegex: '', validationMessage: '' },
       { label: 'Message', type: 'textarea', placeholder: 'Tell us more' },
@@ -230,6 +287,52 @@ const makeDocument = (name = 'My Component') => ({
   name,
   rows: [],
 });
+
+const responsiveTypographyFields = {
+  input: { fontSize: { desktop: 12, tablet: 11, mobile: 10 }, fontWeight: { desktop: 'medium', tablet: 'medium', mobile: 'normal' }, lineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 } },
+  navbar: { fontSize: { desktop: 14, tablet: 13, mobile: 12 }, fontWeight: { desktop: 'medium', tablet: 'medium', mobile: 'medium' }, lineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 } },
+  badge: { fontSize: { desktop: 12, tablet: 11, mobile: 10 }, fontWeight: { desktop: 'medium', tablet: 'medium', mobile: 'normal' }, lineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 } },
+  alert: { titleFontSize: { desktop: 16, tablet: 15, mobile: 14 }, titleFontWeight: { desktop: 'bold', tablet: 'bold', mobile: 'bold' }, titleLineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 }, messageFontSize: { desktop: 14, tablet: 13, mobile: 12 }, messageFontWeight: { desktop: 'normal', tablet: 'normal', mobile: 'normal' }, messageLineHeight: { desktop: 1.4, tablet: 1.5, mobile: 1.2 } },
+  modal: { modalButtonFontSize: { desktop: 14, tablet: 13, mobile: 12 }, modalButtonFontWeight: { desktop: 'medium', tablet: 'medium', mobile: 'medium' }, modalButtonLineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 }, modalTitleFontSize: { desktop: 18, tablet: 16, mobile: 14 }, modalTitleFontWeight: { desktop: '600', tablet: '600', mobile: '600' }, modalTitleLineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 } },
+  popover: { popoverButtonFontSize: { desktop: 14, tablet: 13, mobile: 12 }, popoverButtonFontWeight: { desktop: 'medium', tablet: 'medium', mobile: 'medium' }, popoverButtonLineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 }, popoverTitleFontSize: { desktop: 14, tablet: 13, mobile: 12 }, popoverTitleFontWeight: { desktop: 'medium', tablet: 'medium', mobile: 'medium' }, popoverTitleLineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 }, popoverTextFontSize: { desktop: 12, tablet: 11, mobile: 10 }, popoverTextFontWeight: { desktop: 'normal', tablet: 'normal', mobile: 'normal' }, popoverTextLineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 } },
+  formgroup: { titleFontSize: { desktop: 18, tablet: 16, mobile: 14 }, titleFontWeight: { desktop: 'bold', tablet: 'bold', mobile: 'bold' }, titleLineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 }, labelFontSize: { desktop: 12, tablet: 11, mobile: 10 }, labelFontWeight: { desktop: 'medium', tablet: 'medium', mobile: 'normal' }, labelLineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 }, checkboxFontSize: { desktop: 14, tablet: 13, mobile: 12 }, checkboxFontWeight: { desktop: 'normal', tablet: 'normal', mobile: 'normal' }, checkboxLineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 }, buttonFontSize: { desktop: 14, tablet: 13, mobile: 12 }, buttonFontWeight: { desktop: 'medium', tablet: 'medium', mobile: 'medium' }, buttonLineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 } },
+};
+
+const migrateResponsiveTypography = (element) => {
+  const fields = responsiveTypographyFields[element.type];
+  if (!fields) return element;
+  const next = { ...element };
+  if (element.type === 'alert' && next.fontSize && !next.titleFontSize) {
+    next.titleFontSize = next.fontSize;
+    next.titleFontWeight = next.fontWeight;
+    next.titleLineHeight = next.lineHeight;
+    next.messageFontSize = next.fontSize;
+    next.messageFontWeight = next.fontWeight;
+    next.messageLineHeight = next.lineHeight;
+  }
+  Object.entries(fields).forEach(([field, fallback]) => {
+    const value = next[field];
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      next[field] = { ...fallback, ...value };
+    } else if (value !== undefined && value !== null && value !== '') {
+      next[field] = { desktop: value, tablet: value, mobile: value };
+    } else {
+      next[field] = { ...fallback };
+    }
+  });
+  if (next.rows) next.rows = migrateRows(next.rows);
+  return next;
+};
+
+function migrateRows(rows = []) {
+  return rows.map((row) => ({
+    ...row,
+    cols: (row.cols || []).map((col) => ({
+      ...col,
+      elements: (col.elements || []).map(migrateResponsiveTypography),
+    })),
+  }));
+}
 
 const HISTORY_LIMIT = 50;
 const CUSTOM_FONTS_STORAGE_KEY = 'component-builder-custom-fonts';
@@ -739,6 +842,7 @@ const useBuilderStore = create(
         if (!state.activeDocId || !state.documents.find((d) => d.id === state.activeDocId)) {
           state.activeDocId = state.documents[0].id;
         }
+        state.documents = state.documents.map((document) => ({ ...document, rows: migrateRows(document.rows) }));
         const active = state.documents.find((d) => d.id === state.activeDocId);
         state.rows = active ? active.rows : [];
         state._history = { past: [], future: [] };

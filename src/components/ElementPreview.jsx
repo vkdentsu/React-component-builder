@@ -42,14 +42,14 @@ const renderInputIcon = (iconName) => {
   }
 };
 
-const PasswordFieldPreview = ({ field, index }) => {
+const PasswordFieldPreview = ({ field, index, labelClass }) => {
   const [showPassword, setShowPassword] = useState(false);
   const label = field.label || `Field ${index + 1}`;
   const hasIcon = field.icon && field.icon !== 'none';
 
   return (
     <div key={`${label}-${index}`} className="flex flex-col gap-1">
-      <label className="text-xs font-medium text-gray-600">{label}{field.required ? ' *' : ''}</label>
+      <label className={`text-xs font-medium text-gray-600 ${labelClass || ''}`}>{label}{field.required ? ' *' : ''}</label>
       <div className="relative">
         {hasIcon && (
           <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
@@ -84,14 +84,16 @@ const PasswordFieldPreview = ({ field, index }) => {
   );
 };
 
-const renderFormFieldPreview = (field, index) => {
+const renderFormFieldPreview = (field, index, typography = {}) => {
   const label = field.label || `Field ${index + 1}`;
+  const labelClass = typography.labelClass || '';
+  const checkboxClass = typography.checkboxClass || labelClass;
 
   switch (field.type) {
     case 'textarea':
       return (
         <div key={`${label}-${index}`} className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-gray-600">{label}{field.required ? ' *' : ''}</label>
+          <label className={`text-xs font-medium text-gray-600 ${labelClass}`}>{label}{field.required ? ' *' : ''}</label>
           <textarea disabled placeholder={field.placeholder || `Enter ${label.toLowerCase()}`}
             className="border border-gray-300 rounded-md px-3 py-2 text-sm bg-white w-full min-h-[72px]" />
         </div>
@@ -99,7 +101,7 @@ const renderFormFieldPreview = (field, index) => {
     case 'dropdown':
       return (
         <div key={`${label}-${index}`} className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-gray-600">{label}{field.required ? ' *' : ''}</label>
+          <label className={`text-xs font-medium text-gray-600 ${labelClass}`}>{label}{field.required ? ' *' : ''}</label>
           <select disabled className="border border-gray-300 rounded-md px-3 py-2 text-sm bg-white w-full">
             {((field.options || '').split(',').map((opt) => opt.trim()).filter(Boolean)).length > 0 ? (
               (field.options || '').split(',').map((opt) => opt.trim()).filter(Boolean).map((opt) => <option key={opt}>{opt}</option>)
@@ -111,7 +113,7 @@ const renderFormFieldPreview = (field, index) => {
       );
     case 'checkbox':
       return (
-        <label key={`${label}-${index}`} className="flex items-center gap-2 text-sm text-gray-700">
+        <label key={`${label}-${index}`} className={`flex items-center gap-2 text-gray-700 ${checkboxClass}`}>
           <input type="checkbox" disabled className="h-4 w-4 rounded border-gray-300 text-blue-600" />
           <span>{label}{field.required ? ' *' : ''}</span>
         </label>
@@ -119,13 +121,13 @@ const renderFormFieldPreview = (field, index) => {
     default: {
       const inputType = field.inputType || 'text';
       if (inputType === 'password') {
-        return <PasswordFieldPreview field={field} index={index} />;
+        return <PasswordFieldPreview field={field} index={index} labelClass={labelClass} />;
       }
 
       const hasIcon = field.icon && field.icon !== 'none';
       return (
         <div key={`${label}-${index}`} className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-gray-600">{label}{field.required ? ' *' : ''}</label>
+          <label className={`text-xs font-medium text-gray-600 ${labelClass}`}>{label}{field.required ? ' *' : ''}</label>
           <div className="relative">
             {hasIcon && (
               <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
@@ -166,13 +168,13 @@ function NavbarPreview({ el, device }) {
         <img src={el.logoUrl} alt="logo" className="h-7 w-auto object-contain"
           onError={(e) => { e.target.style.display = 'none'; }} />
       )}
-      {el.brand && <span className="font-bold text-sm whitespace-nowrap">{el.brand}</span>}
+      {el.brand && <span className={`font-bold whitespace-nowrap ${getResponsiveTypographyClasses(el, device)}`}>{el.brand}</span>}
     </div>
   );
 
   // Rendered exactly once — never duplicated, regardless of logo alignment.
   const navLinks = (
-    <div className="flex items-center gap-1 text-xs font-medium">
+    <div className={`flex items-center gap-1 ${getResponsiveTypographyClasses(el, device)}`}>
       {links.map((link, i) => {
         const hasSub = submenus[link]?.length > 0;
         const subItems = hasSub ? submenus[link].split(',').map((s) => s.trim()) : [];
@@ -181,7 +183,7 @@ function NavbarPreview({ el, device }) {
             <button
               onMouseEnter={() => hasSub && setOpenMenu(link)}
               onMouseLeave={() => setOpenMenu(null)}
-              className="flex items-center gap-0.5 px-2 py-1 rounded hover:bg-black/5 transition-colors whitespace-nowrap"
+              className={`flex items-center gap-0.5 px-2 py-1 rounded hover:bg-black/5 transition-colors whitespace-nowrap ${getResponsiveTypographyClasses(el, device)}`}
               style={{ color: el.color }}
             >
               {link}
@@ -194,7 +196,7 @@ function NavbarPreview({ el, device }) {
                 onMouseLeave={() => setOpenMenu(null)}
               >
                 {subItems.map((sub, j) => (
-                  <div key={j} className="px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 cursor-pointer whitespace-nowrap">
+                  <div key={j} className={`px-3 py-1.5 text-gray-700 hover:bg-gray-50 cursor-pointer whitespace-nowrap ${getResponsiveTypographyClasses(el, device)}`}>
                     {sub}
                   </div>
                 ))}
@@ -218,7 +220,7 @@ function NavbarPreview({ el, device }) {
           <div key={i}>
             <button
               onClick={() => setOpenMenu(expanded ? null : (hasSub ? link : null))}
-              className="w-full flex items-center justify-between px-2 py-2 rounded hover:bg-black/5 text-left text-sm font-medium"
+              className={`w-full flex items-center justify-between px-2 py-2 rounded hover:bg-black/5 text-left ${getResponsiveTypographyClasses(el, device)}`}
               style={{ color: el.color }}
             >
               {link}
@@ -227,7 +229,7 @@ function NavbarPreview({ el, device }) {
             {hasSub && expanded && (
               <div className="flex flex-col pl-4 pb-1">
                 {subItems.map((sub, j) => (
-                  <div key={j} className="px-2 py-1.5 text-xs text-gray-600">{sub}</div>
+                  <div key={j} className={`px-2 py-1.5 text-gray-600 ${getResponsiveTypographyClasses(el, device)}`}>{sub}</div>
                 ))}
               </div>
             )}
@@ -510,13 +512,16 @@ export default function ElementPreview({ el, isSelected, device }) {
     }
 
     case 'input':
+      {
+      const typography = getResponsiveTypographyStyles(el, device);
       return (
         <div className="flex flex-col gap-1 w-full">
-          <label className="text-xs font-medium text-gray-600">{el.label}</label>
+          <label className={`text-xs font-medium text-gray-600 ${getResponsiveTypographyClasses(el, device)}`} style={{ fontSize: typography.fontSize, fontWeight: typography.fontWeight, lineHeight: typography.lineHeight }}>{el.label}</label>
           <input type="text" placeholder={el.placeholder} disabled
             className="border border-gray-300 rounded-md px-3 py-2 text-sm bg-white w-full" />
         </div>
       );
+      }
 
     case 'image':
       return (
@@ -638,14 +643,20 @@ export default function ElementPreview({ el, isSelected, device }) {
 }
 
     case 'badge':
+      {
+        const typography = getResponsiveTypographyStyles(el, device);
       return (
-        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
-          style={{ background: el.bg, color: el.color }}>
+        <span className={`inline-flex items-center px-3 py-1 rounded-full ${getResponsiveTypographyClasses(el, device)}`}
+          style={{ background: el.bg, color: el.color, fontSize: typography.fontSize, fontWeight: typography.fontWeight, lineHeight: typography.lineHeight }}>
           {el.label}
         </span>
       );
+      }
 
     case "alert":
+      {
+      const titleTypography = getResponsiveTypographyStyles({ fontSize: el.titleFontSize || el.fontSize || { desktop: 16, tablet: 15, mobile: 14 }, fontWeight: el.titleFontWeight || el.fontWeight || { desktop: 'bold', tablet: 'bold', mobile: 'bold' }, lineHeight: el.titleLineHeight || el.lineHeight || { desktop: 1.4, tablet: 1.3, mobile: 1.2 } }, device);
+      const messageTypography = getResponsiveTypographyStyles({ fontSize: el.messageFontSize || el.fontSize || { desktop: 14, tablet: 13, mobile: 12 }, fontWeight: el.messageFontWeight || el.fontWeight || { desktop: 'normal', tablet: 'normal', mobile: 'normal' }, lineHeight: el.messageLineHeight || el.lineHeight || { desktop: 1.4, tablet: 1.3, mobile: 1.2 } }, device);
       return (
           <div
               className={`rounded-md border p-3 ${
@@ -658,21 +669,22 @@ export default function ElementPreview({ el, isSelected, device }) {
                       : "bg-blue-50 border-blue-300 text-blue-700"
               }`}
           >
-              <div className="font-semibold">
+              <div className={getResponsiveTypographyClasses({ fontSize: el.titleFontSize || el.fontSize || { desktop: 16, tablet: 15, mobile: 14 }, fontWeight: el.titleFontWeight || el.fontWeight || { desktop: 'bold', tablet: 'bold', mobile: 'bold' }, lineHeight: el.titleLineHeight || el.lineHeight || { desktop: 1.2, tablet: 1.3, mobile: 1.4 } }, device)} style={{ fontSize: titleTypography.fontSize, fontWeight: titleTypography.fontWeight, lineHeight: titleTypography.lineHeight }}>
                   {el.title}
               </div>
 
-              <div className="text-sm mt-1">
+              <div className={`mt-1 ${getResponsiveTypographyClasses({ fontSize: el.messageFontSize || el.fontSize || { desktop: 14, tablet: 13, mobile: 12 }, fontWeight: el.messageFontWeight || el.fontWeight || { desktop: 'normal', tablet: 'normal', mobile: 'normal' }, lineHeight: el.messageLineHeight || el.lineHeight || { desktop: 1.4, tablet: 1.5, mobile: 1.6 } }, device)}`} style={{ fontSize: messageTypography.fontSize, fontWeight: messageTypography.fontWeight, lineHeight: messageTypography.lineHeight }}>
                   {el.message}
               </div>
 
               {el.closable && (
-                  <div className="mt-2 text-xs">
+                  <div className={`mt-2 ${getResponsiveTypographyClasses({ fontSize: el.messageFontSize || el.fontSize || { desktop: 14, tablet: 13, mobile: 12 }, fontWeight: el.messageFontWeight || el.fontWeight || { desktop: 'normal', tablet: 'normal', mobile: 'normal' }, lineHeight: el.messageLineHeight || el.lineHeight || { desktop: 1.4, tablet: 1.5, mobile: 1.6 } }, device)}`}>
                       ✕ Close
                   </div>
               )}
           </div>
       );
+      }
 
       case "loader":
         return (
@@ -705,15 +717,21 @@ export default function ElementPreview({ el, isSelected, device }) {
       return <HeroPreview el={el} device={device} />;
 
     case 'formgroup':
+      {
+      const titleTypography = { fontSize: el.titleFontSize || { desktop: 18, tablet: 16, mobile: 14 }, fontWeight: el.titleFontWeight || { desktop: 'bold', tablet: 'bold', mobile: 'bold' }, lineHeight: el.titleLineHeight || { desktop: 1.4, tablet: 1.3, mobile: 1.2 } };
+      const labelTypography = { fontSize: el.labelFontSize || { desktop: 12, tablet: 11, mobile: 10 }, fontWeight: el.labelFontWeight || { desktop: 'medium', tablet: 'medium', mobile: 'normal' }, lineHeight: el.labelLineHeight || { desktop: 1.4, tablet: 1.3, mobile: 1.2 } };
+      const checkboxTypography = { fontSize: el.checkboxFontSize || { desktop: 14, tablet: 13, mobile: 12 }, fontWeight: el.checkboxFontWeight || { desktop: 'normal', tablet: 'normal', mobile: 'normal' }, lineHeight: el.checkboxLineHeight || { desktop: 1.4, tablet: 1.3, mobile: 1.2 } };
+      const buttonTypography = { fontSize: el.buttonFontSize || { desktop: 14, tablet: 13, mobile: 12 }, fontWeight: el.buttonFontWeight || { desktop: 'medium', tablet: 'medium', mobile: 'medium' }, lineHeight: el.buttonLineHeight || { desktop: 1.4, tablet: 1.3, mobile: 1.2 } };
       return (
         <div className="w-full rounded-xl border border-gray-200 p-4 flex flex-col gap-3 bg-white">
-          <p className={`font-semibold ${getResponsiveTypographyClasses({ fontSize: { desktop: 14, tablet: 13, mobile: 12 }, fontWeight: { desktop: '600', tablet: '600', mobile: '600' }, lineHeight: { desktop: 1.2, tablet: 1.3, mobile: 1.4 } }, device)} text-gray-900`}>{el.title}</p>
-          {normalizeFormFields(el.fields).map((field, index) => renderFormFieldPreview(field, index))}
-          <button className={`mt-1 px-4 py-2 rounded-md ${getResponsiveTypographyClasses({ fontSize: { desktop: 14, tablet: 13, mobile: 12 }, fontWeight: { desktop: 'medium', tablet: 'medium', mobile: 'medium' }, lineHeight: { desktop: 1.2, tablet: 1.3, mobile: 1.4 } }, device)} bg-blue-600 text-white self-start`} style={{ pointerEvents: 'none' }}>
+          <p className={`${getResponsiveTypographyClasses(titleTypography, device)} text-gray-900`}>{el.title}</p>
+          {normalizeFormFields(el.fields).map((field, index) => renderFormFieldPreview(field, index, { labelClass: getResponsiveTypographyClasses(labelTypography, device), checkboxClass: getResponsiveTypographyClasses(checkboxTypography, device) }))}
+          <button className={`mt-1 px-4 py-2 rounded-md ${getResponsiveTypographyClasses(buttonTypography, device)} bg-blue-600 text-white self-start`} style={{ pointerEvents: 'none' }}>
             {el.buttonLabel}
           </button>
         </div>
       );
+      }
 
     case 'modal': {
       return (
@@ -721,7 +739,7 @@ export default function ElementPreview({ el, isSelected, device }) {
           {el.modalButtonType === 'link' ? (
             <button
               disabled
-              className="text-sm font-medium underline self-start cursor-default"
+              className={`underline self-start cursor-default ${getResponsiveTypographyClasses({ fontSize: el.modalButtonFontSize || { desktop: 14, tablet: 13, mobile: 12 }, fontWeight: el.modalButtonFontWeight || { desktop: 'medium', tablet: 'medium', mobile: 'medium' }, lineHeight: el.modalButtonLineHeight || { desktop: 1.4, tablet: 1.3, mobile: 1.2 } }, device)}`}
               style={{ background: 'none', color: el.modalButtonColor || '#3b82f6',textDecoration: 'none', border: 'none', padding: 0 }}
             >
               {el.modalButtonLabel}
@@ -729,7 +747,7 @@ export default function ElementPreview({ el, isSelected, device }) {
           ) : (
             <button 
               disabled
-              className="text-sm font-medium self-start px-3 py-1.5 rounded-md cursor-default"
+              className={`self-start px-3 py-1.5 rounded-md cursor-default ${getResponsiveTypographyClasses({ fontSize: el.modalButtonFontSize || { desktop: 14, tablet: 13, mobile: 12 }, fontWeight: el.modalButtonFontWeight || { desktop: 'medium', tablet: 'medium', mobile: 'medium' }, lineHeight: el.modalButtonLineHeight || { desktop: 1.4, tablet: 1.3, mobile: 1.2 } }, device)}`}
               style={{ background: el.modalButtonBg || '#3b82f6', color: el.modalButtonColor || '#ffffff', border: 'none' }}
             >
               {el.modalButtonLabel}
@@ -757,7 +775,7 @@ case 'popover': {
       {el.popoverButtonType === 'link' ? (
         <button
           disabled
-          className="text-sm font-medium self-start"
+          className={`self-start ${getResponsiveTypographyClasses({ fontSize: el.popoverButtonFontSize || { desktop: 14, tablet: 13, mobile: 12 }, fontWeight: el.popoverButtonFontWeight || { desktop: 'medium', tablet: 'medium', mobile: 'medium' }, lineHeight: el.popoverButtonLineHeight || { desktop: 1.4, tablet: 1.3, mobile: 1.2 } }, device)}`}
           style={{
             background: 'none',
             border: 'none',
@@ -772,7 +790,7 @@ case 'popover': {
       ) : (
         <button
           disabled
-          className="px-3 py-2 rounded-md text-sm font-medium self-start"
+          className={`px-3 py-2 rounded-md self-start ${getResponsiveTypographyClasses({ fontSize: el.popoverButtonFontSize || { desktop: 14, tablet: 13, mobile: 12 }, fontWeight: el.popoverButtonFontWeight || { desktop: 'medium', tablet: 'medium', mobile: 'medium' }, lineHeight: el.popoverButtonLineHeight || { desktop: 1.4, tablet: 1.3, mobile: 1.2 } }, device)}`}
           style={{
             background: el.popoverButtonBg || '#2563eb',
             color: el.popoverButtonColor || '#ffffff',
@@ -788,7 +806,7 @@ case 'popover': {
         className="border rounded-md p-3 bg-white shadow-sm"
         style={{ width: el.popoverContentWidth || '250px' }}
       >
-        <p className={`mb-2 ${getResponsiveTypographyClasses({ fontSize: el.popoverTitleFontSize || { desktop: 14, tablet: 13, mobile: 12 }, fontWeight: el.popoverTitleFontWeight || { desktop: 'medium', tablet: 'medium', mobile: 'medium' }, lineHeight: el.popoverTitleLineHeight || { desktop: 1.2, tablet: 1.3, mobile: 1.4 } }, device)}`}>
+          <p className={`mb-2 ${getResponsiveTypographyClasses({ fontSize: el.popoverTitleFontSize || { desktop: 14, tablet: 13, mobile: 12 }, fontWeight: el.popoverTitleFontWeight || { desktop: 'medium', tablet: 'medium', mobile: 'medium' }, lineHeight: el.popoverTitleLineHeight || { desktop: 1.2, tablet: 1.3, mobile: 1.4 } }, device)}`}>
           {el.popoverContentTitle}
         </p>
 
