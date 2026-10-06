@@ -5,7 +5,6 @@ import viteLogo from './assets/vite.svg'
 import './App.css'
 
 function App() {
-  const unusedVariable = "test001";
   const [count, setCount] = useState(0)
 
   return (
