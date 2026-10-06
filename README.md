@@ -1,23 +1,15 @@
 # React + Vite
-Tech Stack
--  React + Vite
-- @dnd-kit/core, @dnd-kit/sortable, state management with localstorage zustand, tailwind
- 
-Completed as of now
-- Drag-and-drop canvas
-- 8 droppable elements: Button, Text, Heading, Input, Image, Card, Badge, Divider
-- Component naming
-- Undo, Redo changes
-- Device preview Desktop / Tablet / Mobile
-- Export as .jsx file
 
-## Node version
-LTS 
-v - 26.3.0
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+
+Currently, two official plugins are available:
+
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
 ## React Compiler
-npm install
-npm run dev
+
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
 ## Expanding the ESLint configuration
 
