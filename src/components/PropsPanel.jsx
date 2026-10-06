@@ -188,6 +188,9 @@ function InputProps({ el, update }) {
         <Sel value={el.type} onChange={(v) => update({ type: v })}
           options={[{value:'text',label:'Text'},{value:'email',label:'Email'},{value:'number',label:'Number'},{value:'password',label:'Password'},{value:'url',label:'URL'}]} />
       </Field>
+      <ResponsiveFontSizeControl value={el.fontSize} onChange={(v) => update({ fontSize: v })} label="Label font size" min={10} max={24} />
+      <ResponsiveFontWeightControl value={el.fontWeight} onChange={(v) => update({ fontWeight: v })} label="Label font weight" />
+      <ResponsiveLineHeightControl value={el.lineHeight} onChange={(v) => update({ lineHeight: v })} label="Label line height" />
     </Section>
   );
 }
@@ -365,6 +368,9 @@ function BadgeProps({ el, update }) {
       <Section title="Style">
         <Field label="Background"><ColorPicker value={el.bg} onChange={(v) => update({ bg: v })} /></Field>
         <Field label="Text color"><ColorPicker value={el.color} onChange={(v) => update({ color: v })} /></Field>
+        <ResponsiveFontSizeControl value={el.fontSize} onChange={(v) => update({ fontSize: v })} label="Font size" min={10} max={24} />
+        <ResponsiveFontWeightControl value={el.fontWeight} onChange={(v) => update({ fontWeight: v })} label="Font weight" />
+        <ResponsiveLineHeightControl value={el.lineHeight} onChange={(v) => update({ lineHeight: v })} label="Line height" />
       </Section>
     </>
   );
@@ -752,6 +758,12 @@ function FormGroupProps({ el, update }) {
       <ResponsiveFontSizeControl value={el.titleFontSize} onChange={(v) => update({ titleFontSize: v })} label="Form title font size" min={10} max={24} />
       <ResponsiveFontWeightControl value={el.titleFontWeight} onChange={(v) => update({ titleFontWeight: v })} label="Form title font weight"  />
       <ResponsiveLineHeightControl value={el.titleLineHeight} onChange={(v) => update({ titleLineHeight: v })} label="Form title line height" min={0.8} max={2.5} />
+      <ResponsiveFontSizeControl value={el.labelFontSize} onChange={(v) => update({ labelFontSize: v })} label="Form label font size" min={10} max={24} />
+      <ResponsiveFontWeightControl value={el.labelFontWeight} onChange={(v) => update({ labelFontWeight: v })} label="Form label font weight" />
+      <ResponsiveLineHeightControl value={el.labelLineHeight} onChange={(v) => update({ labelLineHeight: v })} label="Form label line height" min={0.8} max={2.5} />
+      <ResponsiveFontSizeControl value={el.checkboxFontSize} onChange={(v) => update({ checkboxFontSize: v })} label="Checkbox label font size" min={10} max={24} />
+      <ResponsiveFontWeightControl value={el.checkboxFontWeight} onChange={(v) => update({ checkboxFontWeight: v })} label="Checkbox label font weight" />
+      <ResponsiveLineHeightControl value={el.checkboxLineHeight} onChange={(v) => update({ checkboxLineHeight: v })} label="Checkbox label line height" min={0.8} max={2.5} />
       <ResponsiveFontSizeControl value={el.buttonFontSize} onChange={(v) => update({ buttonFontSize: v })} label="Button font size" min={10} max={24} />
       <ResponsiveFontWeightControl value={el.buttonFontWeight} onChange={(v) => update({ buttonFontWeight: v })} label="Button font weight" />
       <ResponsiveLineHeightControl value={el.buttonLineHeight} onChange={(v) => update({ buttonLineHeight: v })} label="Button line height" min={0.8} max={2.5} />
@@ -928,6 +940,9 @@ function ModalProps({ el, update }) {
             options={[{value:'button',label:'Button'},{value:'link',label:'Link'}]} />
         </Field>
         <Field label="Modal Button Text"><Inp value={el.modalButtonLabel} onChange={(v) => update({ modalButtonLabel: v })} /></Field>
+        <ResponsiveFontSizeControl value={el.modalButtonFontSize} onChange={(v) => update({ modalButtonFontSize: v })} label="Button font size" min={10} max={32} />
+        <ResponsiveFontWeightControl value={el.modalButtonFontWeight} onChange={(v) => update({ modalButtonFontWeight: v })} label="Button font weight" />
+        <ResponsiveLineHeightControl value={el.modalButtonLineHeight} onChange={(v) => update({ modalButtonLineHeight: v })} label="Button line height" />
         {el.modalButtonType === 'button' && (
           <>
             <Field label="Modal Button Background Color"><ColorPicker value={el.modalButtonBg} onChange={(v) => update({ modalButtonBg: v })} /></Field>
@@ -979,6 +994,9 @@ function PopoverProps({ el, update }) {
             onChange={(v) => update({ popoverButtonLabel: v })}
           />
         </Field>
+        <ResponsiveFontSizeControl value={el.popoverButtonFontSize} onChange={(v) => update({ popoverButtonFontSize: v })} label="Button font size" min={10} max={32} />
+        <ResponsiveFontWeightControl value={el.popoverButtonFontWeight} onChange={(v) => update({ popoverButtonFontWeight: v })} label="Button font weight" />
+        <ResponsiveLineHeightControl value={el.popoverButtonLineHeight} onChange={(v) => update({ popoverButtonLineHeight: v })} label="Button line height" />
         {el.popoverButtonType === 'button' && (
           <>
             <Field label="Popover Button Background">
@@ -1173,6 +1191,13 @@ function AlertProps({ el, update }) {
                     checked={el.closable}
                     onChange={(v)=>update({closable:v})}
                 />
+
+                <ResponsiveFontSizeControl value={el.titleFontSize} onChange={(v) => update({ titleFontSize: v })} label="Title font size" min={10} max={36} />
+                <ResponsiveFontWeightControl value={el.titleFontWeight} onChange={(v) => update({ titleFontWeight: v })} label="Title font weight" />
+                <ResponsiveLineHeightControl value={el.titleLineHeight} onChange={(v) => update({ titleLineHeight: v })} label="Title line height" />
+                <ResponsiveFontSizeControl value={el.messageFontSize} onChange={(v) => update({ messageFontSize: v })} label="Message font size" min={10} max={36} />
+                <ResponsiveFontWeightControl value={el.messageFontWeight} onChange={(v) => update({ messageFontWeight: v })} label="Message font weight" />
+                <ResponsiveLineHeightControl value={el.messageLineHeight} onChange={(v) => update({ messageLineHeight: v })} label="Message line height" />
 
             </Section>
         </>

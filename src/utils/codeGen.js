@@ -229,8 +229,10 @@ ${indent}  );
 ${indent}})()}`;
 };
 
-const formFieldToJSX = (field, indent, index) => {
+const formFieldToJSX = (field, indent, index, typography = {}) => {
   const label = field.label || `Field ${index + 1}`;
+  const labelClass = typography.label || 'text-sm font-medium text-gray-700';
+  const checkboxClass = typography.checkbox || labelClass;
   const fieldId = `field-${index}-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
   const invalidAttr = field.validationMessage
     ? `
@@ -244,7 +246,7 @@ const formFieldToJSX = (field, indent, index) => {
   switch (field.type) {
     case 'textarea':
       return `${indent}<div className="flex flex-col gap-1">
-    ${indent}  <label htmlFor="${fieldId}" className="text-sm font-medium text-gray-700">${label}${field.required ? ' *' : ''}</label>
+    ${indent}  <label htmlFor="${fieldId}" className="${labelClass}">${label}${field.required ? ' *' : ''}</label>
     ${indent}  <textarea
     ${indent}    id="${fieldId}"
     ${indent}    name="${fieldId}"
@@ -258,7 +260,7 @@ const formFieldToJSX = (field, indent, index) => {
       const options = (field.options || '').split(',').map((opt) => opt.trim()).filter(Boolean);
       const opts = options.length ? options.map((opt) => `${indent}    <option value="${opt}">${opt}</option>`).join('\n') : `${indent}    <option value="">Select</option>`;
       return `${indent}<div className="flex flex-col gap-1">
-      ${indent}  <label htmlFor="${fieldId}" className="text-sm font-medium text-gray-700">${label}${field.required ? ' *' : ''}</label>
+      ${indent}  <label htmlFor="${fieldId}" className="${labelClass}">${label}${field.required ? ' *' : ''}</label>
       ${indent}  <select
       ${indent}    id="${fieldId}"
       ${indent}    name="${fieldId}"
@@ -280,12 +282,12 @@ const formFieldToJSX = (field, indent, index) => {
     ${indent}    ${field.required ? 'required' : ''}
     ${indent}    aria-required="${field.required ? 'true' : 'false'}"
     ${indent}  />
-    ${indent}  <label htmlFor="${fieldId}" className="text-sm text-gray-700">${label}${field.required ? ' *' : ''}</label>
+    ${indent}  <label htmlFor="${fieldId}" className="${checkboxClass}">${label}${field.required ? ' *' : ''}</label>
     ${indent}</div>`;
     default: {
       const inputType = field.inputType || 'text';
       if (inputType === 'password') {
-        return passwordFieldToJSX(field, indent, label, index);
+        return passwordFieldToJSX(field, indent, label, index).replace('text-sm font-medium text-gray-700', labelClass);
       }
 
       const hasIcon = field.icon && field.icon !== 'none';
@@ -314,7 +316,7 @@ const formFieldToJSX = (field, indent, index) => {
       return `${indent}<div className="flex flex-col gap-1">
       ${indent}  <label
       ${indent}    htmlFor="${fieldId}"
-      ${indent}    className="text-sm font-medium text-gray-700"
+      ${indent}    className="${labelClass}"
       ${indent}  >
       ${indent}    ${label}${field.required ? ' *' : ''}
       ${indent}  </label>
@@ -407,6 +409,8 @@ const elToJSX = (el, indent = '          ') => {
     }
 
     case "alert": {
+      const alertTitleTypography = getResponsiveTypographyClasses(el.titleFontSize || el.fontSize || { desktop: 16, tablet: 15, mobile: 14 }, el.titleFontWeight || el.fontWeight || { desktop: 'bold', tablet: 'bold', mobile: 'bold' }, el.titleLineHeight || el.lineHeight || { desktop: 1.4, tablet: 1.3, mobile: 1.2 });
+      const alertMessageTypography = getResponsiveTypographyClasses(el.messageFontSize || el.fontSize || { desktop: 14, tablet: 13, mobile: 12 }, el.messageFontWeight || el.fontWeight || { desktop: 'normal', tablet: 'normal', mobile: 'normal' }, el.messageLineHeight || el.lineHeight || { desktop: 1.4, tablet: 1.3, mobile: 1.2 });
       const alertClass =
         el.variant === "success"
           ? "bg-green-50 border border-green-300 text-green-700"
@@ -417,7 +421,7 @@ const elToJSX = (el, indent = '          ') => {
           : "bg-blue-50 border border-blue-300 text-blue-700";
 
       const closeButton = el.closable
-        ? `<button onClick={(e)=>e.currentTarget.closest(".alert-box")?.remove()} className="mt-3 text-sm underline">Close</button>`
+        ? `<button onClick={(e)=>e.currentTarget.closest(".alert-box")?.remove()} className="mt-3 underline ${alertMessageTypography}">Close</button>`
         : "";
 
       return `<div
@@ -425,8 +429,8 @@ const elToJSX = (el, indent = '          ') => {
           aria-live="assertive"
           className="${alertClass} rounded-md p-4 alert-box"
         >
-        <div className="font-semibold">${el.title}</div>
-        <div className="mt-2">${el.message}</div>
+        <div className="${alertTitleTypography}">${el.title}</div>
+        <div className="mt-2 ${alertMessageTypography}">${el.message}</div>
         ${closeButton}
       </div>`;
     }
@@ -548,8 +552,10 @@ const elToJSX = (el, indent = '          ') => {
       ${indent}</h2>`;
     }
 
-    case 'input':
-      return `${indent}<div${hc} className="flex flex-col gap-1">\n${indent}  <label className="text-sm font-medium text-gray-700">${el.label}</label>\n${indent}  <input type="${el.type}" placeholder="${el.placeholder}" className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />\n${indent}</div>`;
+    case 'input': {
+      const typographyClasses = getResponsiveTypographyClasses(el.fontSize || { desktop: 12, tablet: 11, mobile: 10 }, el.fontWeight || { desktop: 'medium', tablet: 'medium', mobile: 'normal' }, el.lineHeight || { desktop: 1.2, tablet: 1.3, mobile: 1.4 });
+      return `${indent}<div${hc} className="flex flex-col gap-1">\n${indent}  <label className="${typographyClasses} text-gray-700">${el.label}</label>\n${indent}  <input type="${el.type}" placeholder="${el.placeholder}" className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />\n${indent}</div>`;
+    }
     case 'image':
       return `${indent}<img${hc} src="${el.src}" alt="${el.alt}" className="w-full ${roundedMap[el.rounded] || 'rounded-md'} object-${el.objectFit || 'cover'}" />`;
     case 'card': {
@@ -559,8 +565,10 @@ const elToJSX = (el, indent = '          ') => {
       // If a link URL is set, wrap the whole card in an anchor tag.
       return cardInner;
     }
-    case 'badge':
-      return `${indent}<span${hc} className="absolute top-2 left-2 z-20 px-3 py-1 rounded-full text-xs font-medium" style={{background:'${el.bg}',color:'${el.color}'}}> ${el.label} </span>`;
+    case 'badge': {
+      const badgeTypography = getResponsiveTypographyClasses(el.fontSize || { desktop: 12, tablet: 11, mobile: 10 }, el.fontWeight || { desktop: 'medium', tablet: 'medium', mobile: 'normal' }, el.lineHeight || { desktop: 1.4, tablet: 1.3, mobile: 1.2 });
+      return `${indent}<span${hc} className="absolute top-2 left-2 z-20 px-3 py-1 rounded-full ${badgeTypography}" style={{background:'${el.bg}',color:'${el.color}'}}> ${el.label} </span>`;
+    }
     case 'divider':
       return `${indent}<hr${hc} className="w-full" style={{borderColor:'${el.color}',borderTopWidth:${el.thickness}}} />`;
 
@@ -570,10 +578,11 @@ const elToJSX = (el, indent = '          ') => {
           ? `style={{background:'${el.modalButtonBg}',color:'${el.modalButtonColor}'}}`
           : `style={{color:'${el.modalButtonColor}'}}`;
 
+      const triggerTypography = getResponsiveTypographyClasses(el.modalButtonFontSize || { desktop: 14, tablet: 13, mobile: 12 }, el.modalButtonFontWeight || { desktop: 'medium', tablet: 'medium', mobile: 'medium' }, el.modalButtonLineHeight || { desktop: 1.4, tablet: 1.3, mobile: 1.2 });
       const triggerClass =
         el.modalButtonType === 'button'
-          ? 'px-4 py-2 rounded-md text-sm font-medium'
-          : 'text-sm font-medium underline';
+          ? `px-4 py-2 rounded-md ${triggerTypography}`
+          : `${triggerTypography} underline`;
 
       const modalContent =
         el.rows && el.rows.length
@@ -704,6 +713,9 @@ const elToJSX = (el, indent = '          ') => {
 
 case 'popover': {
   const position = el.popoverContentPosition || "bottom";
+  const buttonTypography = getResponsiveTypographyClasses(el.popoverButtonFontSize || { desktop: 14, tablet: 13, mobile: 12 }, el.popoverButtonFontWeight || { desktop: 'medium', tablet: 'medium', mobile: 'medium' }, el.popoverButtonLineHeight || { desktop: 1.4, tablet: 1.3, mobile: 1.2 });
+  const titleTypography = getResponsiveTypographyClasses(el.popoverTitleFontSize || { desktop: 14, tablet: 13, mobile: 12 }, el.popoverTitleFontWeight || { desktop: 'medium', tablet: 'medium', mobile: 'medium' }, el.popoverTitleLineHeight || { desktop: 1.4, tablet: 1.3, mobile: 1.2 });
+  const bodyTypography = getResponsiveTypographyClasses(el.popoverTextFontSize || { desktop: 12, tablet: 11, mobile: 10 }, el.popoverTextFontWeight || { desktop: 'normal', tablet: 'normal', mobile: 'normal' }, el.popoverTextLineHeight || { desktop: 1.4, tablet: 1.3, mobile: 1.2 });
 
   const positionClasses = {
     top: "bottom-full mb-3 left-1/2 -translate-x-1/2",
@@ -766,7 +778,7 @@ case 'popover': {
     ${indent}     onClick={() => setOpen(!open)}
     ${indent}     aria-expanded={open}
     ${indent}     aria-controls="${popoverId}"
-    ${indent}     className="px-4 py-2 rounded-md text-sm font-medium"
+    ${indent}     className="px-4 py-2 rounded-md ${buttonTypography}"
     ${indent}     style={{
     ${indent}       background:'${el.popoverButtonBg}',
     ${indent}       color:'${el.popoverButtonColor}'
@@ -803,13 +815,13 @@ case 'popover': {
 
     ${indent}       <h3
     ${indent}         id="${popoverId}-title"
-    ${indent}         className="${getResponsiveTypographyClasses({ fontSize: el.popoverTitleFontSize || { desktop: 14, tablet: 13, mobile: 12 }, fontWeight: el.popoverTitleFontWeight || { desktop: 'medium', tablet: 'medium', mobile: 'medium' }, lineHeight: el.popoverTitleLineHeight || { desktop: 1.2, tablet: 1.3, mobile: 1.4 } }, 'mobile')} mb-2"
+    ${indent}         className="mb-2 ${titleTypography}"
     ${indent}       >
     ${indent}         ${el.popoverContentTitle}
     ${indent}       </h3>
 
     ${indent}       <p
-    ${indent}        className="${getResponsiveTypographyClasses({ fontSize: el.popoverTextFontSize || { desktop: 12, tablet: 11, mobile: 10 }, fontWeight: el.popoverTextFontWeight || { desktop: 'normal', tablet: 'normal', mobile: 'normal' }, lineHeight: el.popoverTextLineHeight || { desktop: 1.4, tablet: 1.5, mobile: 1.6 } }, 'mobile')}"
+    ${indent}        className="${bodyTypography}"
     ${indent}       >
     ${indent}       ${el.popoverContentText}
     ${indent}       </p>
@@ -828,8 +840,9 @@ case 'popover': {
       let submenus = {};
       try { submenus = el.submenus ? JSON.parse(el.submenus) : {}; } catch (e) { }
       const logoAlign = el.logoAlign || 'left';
+      const navTypography = getResponsiveTypographyClasses(el.fontSize || { desktop: 14, tablet: 13, mobile: 12 }, el.fontWeight || { desktop: 'medium', tablet: 'medium', mobile: 'medium' }, el.lineHeight || { desktop: 1.4, tablet: 1.3, mobile: 1.2 });
 
-      const logoJSX = `<div className="flex items-center gap-2 shrink-0">${el.logoUrl ? `<img src="${el.logoUrl}" alt="logo" className="h-7 w-auto object-contain" />` : ''}${el.brand ? `<span className="font-bold text-sm whitespace-nowrap">${el.brand}</span>` : ''}</div>`;
+      const logoJSX = `<div className="flex items-center gap-2 shrink-0">${el.logoUrl ? `<img src="${el.logoUrl}" alt="logo" className="h-7 w-auto object-contain" />` : ''}${el.brand ? `<span className="font-bold whitespace-nowrap ${navTypography}">${el.brand}</span>` : ''}</div>`;
 
       // Desktop inline links (hover submenus) — visible md and up only.
       const desktopLinkItems = navLinkNames.map((l) => {
@@ -837,9 +850,9 @@ case 'popover': {
         if (hasSub) {
           const subs = submenus[l].split(',').map(s => s.trim());
           const subJSX = subs.map(s => `${indent}          <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">${s}</a>`).join('\n');
-          return `${indent}      <div className="relative group">\n${indent}        <button className="flex items-center gap-1 px-2 py-1 rounded hover:bg-black/5 text-sm font-medium">${l} &#8964;</button>\n${indent}        <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-100 py-1 hidden group-hover:block min-w-[160px] z-50">\n${subJSX}\n${indent}        </div>\n${indent}      </div>`;
+          return `${indent}      <div className="relative group">\n${indent}        <button className="flex items-center gap-1 px-2 py-1 rounded hover:bg-black/5 ${navTypography}">${l} &#8964;</button>\n${indent}        <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-100 py-1 hidden group-hover:block min-w-[160px] z-50">\n${subJSX}\n${indent}        </div>\n${indent}      </div>`;
         }
-        return `${indent}      <a href="#" className="px-2 py-1 rounded hover:bg-black/5 text-sm font-medium whitespace-nowrap">${l}</a>`;
+        return `${indent}      <a href="#" className="px-2 py-1 rounded hover:bg-black/5 ${navTypography} whitespace-nowrap">${l}</a>`;
       }).join('\n');
 
       // Mobile accordion links — submenus expand inline on click (no hover on touch).
@@ -849,9 +862,9 @@ case 'popover': {
           const subs = submenus[l].split(',').map(s => s.trim());
           const subJSX = subs.map(s => `${indent}            <div className="px-2 py-1.5 text-xs text-gray-600">${s}</div>`).join('\n');
           const slug = l.replace(/[^a-zA-Z0-9]/g, '');
-          return `${indent}        <div>\n${indent}          <button onClick={() => setOpenMenu(openMenu === '${slug}' ? null : '${slug}')} className="w-full flex items-center justify-between px-2 py-2 rounded hover:bg-black/5 text-left text-sm font-medium">\n${indent}            ${l}\n${indent}            <span className={\`transition-transform \${openMenu === '${slug}' ? 'rotate-180' : ''}\`}>&#8964;</span>\n${indent}          </button>\n${indent}          {openMenu === '${slug}' && (\n${indent}            <div className="flex flex-col pl-4 pb-1">\n${subJSX}\n${indent}            </div>\n${indent}          )}\n${indent}        </div>`;
+          return `${indent}        <div>\n${indent}          <button onClick={() => setOpenMenu(openMenu === '${slug}' ? null : '${slug}')} className="w-full flex items-center justify-between px-2 py-2 rounded hover:bg-black/5 text-left ${navTypography}">\n${indent}            ${l}\n${indent}            <span className={\`transition-transform \${openMenu === '${slug}' ? 'rotate-180' : ''}\`}>&#8964;</span>\n${indent}          </button>\n${indent}          {openMenu === '${slug}' && (\n${indent}            <div className="flex flex-col pl-4 pb-1">\n${subJSX}\n${indent}            </div>\n${indent}          )}\n${indent}        </div>`;
         }
-        return `${indent}        <a href="#" className="px-2 py-2 rounded hover:bg-black/5 text-sm font-medium block">${l}</a>`;
+        return `${indent}        <a href="#" className="px-2 py-2 rounded hover:bg-black/5 ${navTypography} block">${l}</a>`;
       }).join('\n');
 
       const justifyClass = logoAlign === 'right' ? 'justify-between flex-row-reverse' : 'justify-between';
@@ -960,8 +973,12 @@ ${mobileLinkItems}
 
     case 'formgroup': {
       const fields = normalizeFormFields(el.fields);
-      const fieldsJSX = fields.map((field, index) => formFieldToJSX(field, `${indent}  `, index)).join('\n');
-      return `${indent}<form${hc} className="w-full rounded-xl border border-gray-200 p-4 flex flex-col gap-3 bg-white text-left">\n${indent}  <p className="font-semibold text-gray-900">${el.title}</p>\n${fieldsJSX}\n${indent}  <button type="submit" className="mt-1 px-4 py-2 rounded-md text-sm font-medium bg-blue-600 text-white self-start">${el.buttonLabel}</button>\n${indent}</form>`;
+      const titleTypography = getResponsiveTypographyClasses(el.titleFontSize || { desktop: 18, tablet: 16, mobile: 14 }, el.titleFontWeight || { desktop: 'bold', tablet: 'bold', mobile: 'bold' }, el.titleLineHeight || { desktop: 1.4, tablet: 1.3, mobile: 1.2 });
+      const labelTypography = getResponsiveTypographyClasses(el.labelFontSize || { desktop: 12, tablet: 11, mobile: 10 }, el.labelFontWeight || { desktop: 'medium', tablet: 'medium', mobile: 'normal' }, el.labelLineHeight || { desktop: 1.4, tablet: 1.3, mobile: 1.2 });
+      const checkboxTypography = getResponsiveTypographyClasses(el.checkboxFontSize || { desktop: 14, tablet: 13, mobile: 12 }, el.checkboxFontWeight || { desktop: 'normal', tablet: 'normal', mobile: 'normal' }, el.checkboxLineHeight || { desktop: 1.4, tablet: 1.3, mobile: 1.2 });
+      const buttonTypography = getResponsiveTypographyClasses(el.buttonFontSize || { desktop: 14, tablet: 13, mobile: 12 }, el.buttonFontWeight || { desktop: 'medium', tablet: 'medium', mobile: 'medium' }, el.buttonLineHeight || { desktop: 1.4, tablet: 1.3, mobile: 1.2 });
+      const fieldsJSX = fields.map((field, index) => formFieldToJSX(field, `${indent}  `, index, { label: labelTypography, checkbox: checkboxTypography })).join('\n');
+      return `${indent}<form${hc} className="w-full rounded-xl border border-gray-200 p-4 flex flex-col gap-3 bg-white text-left">\n${indent}  <p className="${titleTypography} text-gray-900">${el.title}</p>\n${fieldsJSX}\n${indent}  <button type="submit" className="mt-1 px-4 py-2 rounded-md ${buttonTypography} bg-blue-600 text-white self-start">${el.buttonLabel}</button>\n${indent}</form>`;
     }
 
     case 'container': {
