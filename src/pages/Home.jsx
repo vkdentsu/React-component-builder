@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Home.css";
+import logo from "../assets/logo.png";
 
 const STEPS = ["Drag & Drop", "Build", "Customize", "Preview", "Generate JSX", "Copy / Download"];
 
@@ -61,7 +62,9 @@ export default function Home() {
     <div className="bc">
       <div className="wrap">
         <nav>
-          <div className="logo"><i /> React Component Builder</div>
+          <div className="logo">
+            <img src={logo} alt="Compify" />
+          </div>
           <div>
             <a href="#features">Features</a>
             <a href="#cta">Get started</a>
@@ -69,7 +72,6 @@ export default function Home() {
         </nav>
 
         <header className="hero">
-          <span className="tag">⚛️ React Page Builder · POC</span>
           <h1>Design pages visually. <span>Export clean React JSX.</span></h1>
           <p className="sub">
             Drag and drop layouts, columns and form components, preview your page,
@@ -154,7 +156,7 @@ export default function Home() {
         </section>
 
         <footer>
-          <span>© 2026 React Component Builder · POC</span>
+          <span>© 2026 Compify</span>
           <span>Built with React.js</span>
         </footer>
       </div>
