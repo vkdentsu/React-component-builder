@@ -72,7 +72,7 @@ export default function Home() {
         </nav>
 
         <header className="hero">
-          <h1>Design pages visually. <span>Export clean React JSX</span></h1>
+          <h1>Design pages visually. <span>Export clean React JSX.</span></h1>
           <p className="sub">
             Drag and drop layouts, columns and form components, preview your page,
             then copy or download production-ready JSX.
