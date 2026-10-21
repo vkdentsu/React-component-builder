@@ -39,9 +39,6 @@ export default function Home() {
     const timers = [];
     const at = (fn, ms) => timers.push(setTimeout(fn, ms));
 
-    setStage(0); setBlocks(0); setSelected(false); setAltButton(false);
-    setPreview(false); setLines(0); setCopied(false);
-
     at(() => { setStage(1); [1, 2, 3].forEach((n, i) => at(() => setBlocks(n), i * 450)); }, 2000);
     at(() => { setStage(2); setSelected(true); }, 4200);
     at(() => setAltButton(true), 5000);
@@ -51,7 +48,16 @@ export default function Home() {
       CODE.forEach((_, i) => at(() => setLines(i + 1), i * 220));
     }, 8600);
     at(() => { setStage(5); setCopied(true); }, 11200);
-    at(() => setCycle((c) => c + 1), 14000); // loop
+    at(() => {
+      setStage(0);
+      setBlocks(0);
+      setSelected(false);
+      setAltButton(false);
+      setPreview(false);
+      setLines(0);
+      setCopied(false);
+      setCycle((c) => c + 1);
+    }, 14000);
 
     return () => timers.forEach(clearTimeout);
   }, [cycle]);
