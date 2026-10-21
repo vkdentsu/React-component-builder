@@ -1,12 +1,9 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Trash2, GripVertical, Box, Copy } from 'lucide-react';
+import { Trash2, GripVertical, Copy } from 'lucide-react';
 import ElementPreview from './ElementPreview';
 import RowsCanvas from './RowsCanvas';
 import useBuilderStore from '../store/builderStore';
-
-const roundedMap = { none: '', sm: 'rounded-sm', md: 'rounded-md', lg: 'rounded-lg' };
-const paddingMap = { sm: 'p-2', md: 'p-4', lg: 'p-6' };
 
 export default function CanvasElement({ el, hops, isSelected, device }) {
   const { select, removeElement, duplicateElement } = useBuilderStore();

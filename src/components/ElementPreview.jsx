@@ -156,7 +156,11 @@ function NavbarPreview({ el, device }) {
   const links = (el.links || '').split(',').map((l) => l.trim()).filter(Boolean);
 
   let submenus = {};
-  try { submenus = el.submenus ? JSON.parse(el.submenus) : {}; } catch {}
+  try { 
+    submenus = el.submenus ? JSON.parse(el.submenus) : {}; 
+  } catch {
+    // Use an empty submenu object if the JSON is invalid.
+  }
 
   // Hamburger kicks in on tablet and mobile previews — desktop keeps the
   // full inline nav with hover submenus.
@@ -241,18 +245,12 @@ function NavbarPreview({ el, device }) {
 
   const align = el.logoAlign || 'left';
 
-  // 3-cell grid for desktop: [left-cell] [center-cell] [right-cell].
-  let leftCell = null, centerCell = null, rightCell = null;
-  if (align === 'left') {
-    leftCell = logoArea;
-    rightCell = navLinks;
-  } else if (align === 'right') {
-    leftCell = navLinks;
-    rightCell = logoArea;
-  } else {
-    centerCell = logoArea;
-    rightCell = navLinks;
-  }
+  const leftCell =
+    align === 'left' ? logoArea :
+    align === 'right' ? navLinks :
+    null;
+  const centerCell = align === 'center' ? logoArea : null;
+  const rightCell = align === 'right' ? logoArea : navLinks;
 
   if (isCompact) {
     // Compact layout: logo on one side, hamburger toggle on the other —
@@ -351,9 +349,6 @@ function HeroPreview({ el, device }) {
     : { background: el.bg, ...heightStyle };
 
   const textColorWhenBgImage = bgImage ? '#ffffff' : undefined;
-  const titleTypography = getResponsiveTypographyStyles({ fontSize: el.titleSize, fontWeight: el.titleWeight, lineHeight: el.titleLineHeight }, device);
-  const subtitleTypography = getResponsiveTypographyStyles({ fontSize: el.subtitleSize, fontWeight: el.subtitleFontWeight, lineHeight: el.subtitleLineHeight }, device);
-  const ctaTypography = getResponsiveTypographyStyles({ fontSize: el.ctaSize, fontWeight: el.ctaFontWeight, lineHeight: el.ctaLineHeight }, device);
 
   return (
     <div
@@ -396,7 +391,7 @@ function HeroPreview({ el, device }) {
 }
 
 /* ── Main export ─────────────────────────────────────────────────────── */
-export default function ElementPreview({ el, isSelected, device }) {
+export default function ElementPreview({ el, device }) {
   const hideOn = el.hideOn || {};
   const hidden =
     (device === 'mobile'  && hideOn.mobile)  ||
@@ -437,7 +432,6 @@ export default function ElementPreview({ el, isSelected, device }) {
     }
 
     case "radio": {
-        const typography = getResponsiveTypographyStyles(el, device);
         return (
           <label className="flex items-center gap-2">
             <input
@@ -462,7 +456,6 @@ export default function ElementPreview({ el, isSelected, device }) {
     }
 
     case "checkbox": {
-        const typography = getResponsiveTypographyStyles(el, device);
         return (
           <div
             style={{
@@ -696,7 +689,6 @@ export default function ElementPreview({ el, isSelected, device }) {
         );
     
     case "toggle": {
-      const typography = getResponsiveTypographyStyles(el, device);
       return (
         <div className="w-full flex justify-center">
           <div className="px-6 py-3 rounded-md border-2 border-dashed border-gray-300 bg-gray-50 text-gray-600 flex items-center gap-2">

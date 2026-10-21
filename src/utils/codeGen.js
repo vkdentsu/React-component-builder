@@ -1,6 +1,5 @@
 const roundedMap = { none: 'rounded-none', sm: 'rounded-sm', md: 'rounded-md', lg: 'rounded-lg', full: 'rounded-full' };
 const paddingMap = { sm: 'px-3 py-1.5', md: 'px-4 py-2', lg: 'px-6 py-3' };
-const fontWeightMap = { normal: 'font-normal', medium: 'font-medium', bold: 'font-bold' };
 const alignMap = { left: 'text-left', center: 'text-center', right: 'text-right' };
 
 const resolveResponsiveValue = (value, device) => {
@@ -479,7 +478,7 @@ const elToJSX = (el, indent = '          ') => {
       }</div>`;
     }
 
-    case "toggle":
+    case "toggle": {
       const typographyClasses = getResponsiveTypographyClasses(
         el.fontSize,
         el.fontWeight,
@@ -538,6 +537,7 @@ const elToJSX = (el, indent = '          ') => {
         ${indent}    </div>
         ${indent}  );
       ${indent}})()}`;
+    }
     
     case 'text': {
       const typographyClasses = getResponsiveTypographyClasses(el.fontSize, el.fontWeight, el.lineHeight);
@@ -838,7 +838,11 @@ case 'popover': {
     case 'navbar': {
       const navLinkNames = (el.links || '').split(',').map((l) => l.trim()).filter(Boolean);
       let submenus = {};
-      try { submenus = el.submenus ? JSON.parse(el.submenus) : {}; } catch (e) { }
+      try {
+        submenus = el.submenus ? JSON.parse(el.submenus) : {};
+      } catch {
+        // Invalid submenu JSON falls back to no submenus.
+      }
       const logoAlign = el.logoAlign || 'left';
       const navTypography = getResponsiveTypographyClasses(el.fontSize || { desktop: 14, tablet: 13, mobile: 12 }, el.fontWeight || { desktop: 'medium', tablet: 'medium', mobile: 'medium' }, el.lineHeight || { desktop: 1.4, tablet: 1.3, mobile: 1.2 });
 
@@ -1059,10 +1063,9 @@ export const generateJSX = (rows, componentName = 'MyComponent', globalFont = "'
   const safeName = (componentName || 'MyComponent').replace(/[^a-zA-Z0-9]/g, '') || 'MyComponent';
   const rowsCode = rowsToJSX(rows, '      ');
 
-  const usesReactHooks = _helperComponents.length > 0;
   const helpersCode = _helperComponents.length > 0
-    ? '\n' + _helperComponents.join('\n\n') + '\n'
-    : '';
+  ? '\n' + _helperComponents.join('\n\n') + '\n'
+  : '';
 
   return `import React from 'react';
 

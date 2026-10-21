@@ -30,6 +30,8 @@ export default function CustomBuilder() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [activeDrag, setActiveDrag] = useState(null);
 
+  const handleClose = () => setExportOpen(false);
+
   const {
     rows,
     addRow,
@@ -259,7 +261,11 @@ if (activeData?.dragType === DRAG_TYPES.LAYOUT) {
         {overlayContent()}
       </DragOverlay>
 
-      <ExportModal open={exportOpen} onClose={() => setExportOpen(false)} />
+      <ExportModal
+        key={exportOpen ? 'export-open' : 'export-closed'}
+        open={exportOpen}
+        onClose={handleClose}
+      />
       <PreviewModal open={previewOpen} onClose={() => setPreviewOpen(false)} />
     </DndContext>
   );

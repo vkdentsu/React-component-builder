@@ -656,50 +656,34 @@ function FormGroupProps({ el, update }) {
                     <Sel
                         value={field.validationType || "none"}
                         onChange={(v) => {
-
-                            let regex = "";
-                            let message = "";
-
-                            switch (v) {
-
-                                case "name":
-                                    regex = "^[A-Za-z ]+$";
-                                    message = "Name should contain only alphabets.";
-                                    break;
-
-                                case "email":
-                                    regex = "^[\\w-.]+@([\\w-]+\\.)+[\\w-]{2,4}$";
-                                    message = "Please enter a valid email address.";
-                                    break;
-
-                                case "password":
-                                    regex = "^(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&]).{8,}$";
-                                    message =
-                                        "Password must contain at least 8 characters, one uppercase letter, one number and one special character.";
-                                    break;
-
-                                case "number":
-                                    regex = "^[0-9]+$";
-                                    message = "Only numbers are allowed.";
-                                    break;
-
-                                default:
-                                    regex = "";
-                                    message = "";
+                          const validationRules = {
+                            name: {
+                              regex: "^[A-Za-z ]+$",
+                              message: "Name should contain only alphabets."
+                            },
+                            email: {
+                              regex: "^[\\w-.]+@([\\w-]+\\.)+[\\w-]{2,4}$",
+                              message: "Please enter a valid email address."
+                            },
+                            password: {
+                              regex: "^(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&]).{8,}$",
+                              message:
+                                "Password must contain at least 8 characters, one uppercase letter, one number and one special character."
+                            },
+                            number: {
+                              regex: "^[0-9]+$",
+                              message: "Only numbers are allowed."
                             }
+                          };
 
-                            updateField(index, {
+                          const { regex = "", message = "" } = validationRules[v] || {};
 
-                                validationType: v,
-
-                                validationRegex: regex,
-
-                                validationMessage: message
-
-                            });
-
+                          updateField(index, {
+                            validationType: v,
+                            validationRegex: regex,
+                            validationMessage: message
+                          });
                         }}
-
                         options={[
                             { value: "none", label: "None" },
                             { value: "name", label: "Name" },
@@ -784,11 +768,7 @@ function RowProps({ row }) {
     tablet: 4,
     mobile: 4,
   };
-  const gap = row.gap || {
-    desktop: 4,
-    tablet: 3,
-    mobile: 2,
-  };
+
   return (
     <>
       <Section title="Layout">
@@ -1368,7 +1348,7 @@ const PANELS = {
 
 /* ── Main export */
 export default function PropsPanel() {
-  const { selectedId, selectedType, getSelectedRow, getSelectedElement, updateElement, globalFont, setGlobalFont } = useBuilderStore();
+  const { selectedId, getSelectedRow, getSelectedElement, updateElement, globalFont, setGlobalFont } = useBuilderStore();
   const selectedRow = getSelectedRow();
   const selectedEl  = getSelectedElement();
   const ElPanel = selectedEl ? PANELS[selectedEl.type] : null;

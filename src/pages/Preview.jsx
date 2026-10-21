@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import * as Babel from "@babel/standalone";
 
@@ -8,20 +8,16 @@ function Preview() {
 
     const { pageName, generatedJSX } = location.state || {};
 
-    const [previewDocument, setPreviewDocument] = useState("");
-    const [error, setError] = useState("");
-
-    useEffect(() => {
+    const { previewDocument, error } = useMemo(() => {
         if (!generatedJSX) {
-            setError(
-                "No generated JSX found. Please generate the component first."
-            );
-            return;
+            return {
+                previewDocument: "",
+                error: "No generated JSX found. Please generate the component first.",
+            };
         }
 
         try {
             let source = generatedJSX;
-
             const reactImports = [];
 
             source = source.replace(
@@ -55,12 +51,9 @@ function Preview() {
                 if (match) {
                     const names = match[1]
                         .split(",")
-                        .map((item) => {
-                            return item
-                                .trim()
-                                .split(/\s+as\s+/)[0]
-                                .trim();
-                        })
+                        .map((item) =>
+                            item.trim().split(/\s+as\s+/)[0].trim()
+                        )
                         .filter(Boolean);
 
                     hookNames.push(...names);
@@ -69,10 +62,9 @@ function Preview() {
 
             hookNames = [...new Set(hookNames)];
 
-            const hookSetup =
-                hookNames.length > 0
-                    ? `const { ${hookNames.join(", ")} } = React;`
-                    : "";
+            const hookSetup = hookNames.length > 0
+                ? `const { ${hookNames.join(", ")} } = React;`
+                : "";
 
             const result = Babel.transform(source, {
                 presets: [
@@ -92,9 +84,7 @@ function Preview() {
                 .replace(/[^a-zA-Z0-9_$]/g, "");
 
             if (!safePageName) {
-                throw new Error(
-                    "Invalid component name."
-                );
+                throw new Error("Invalid component name.");
             }
 
             const runtimeCode = `
@@ -102,18 +92,15 @@ function Preview() {
 
                 ${compiledCode}
 
-                if (
-                    typeof ${safePageName} === "undefined"
-                ) {
+                if (typeof ${safePageName} === "undefined") {
                     throw new Error(
                         "Component '${safePageName}' was not found."
                     );
                 }
 
-                const root =
-                    ReactDOM.createRoot(
-                        document.getElementById("root")
-                    );
+                const root = ReactDOM.createRoot(
+                    document.getElementById("root")
+                );
 
                 root.render(
                     React.createElement(${safePageName})
@@ -121,146 +108,91 @@ function Preview() {
             `;
 
             const documentHTML = `
-<!DOCTYPE html>
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            * {
+                box-sizing: border-box;
+            }
 
-<html>
+            html, body {
+                margin: 0;
+                padding: 0;
+                width: 100%;
+                min-height: 100%;
+            }
 
-<head>
+            body {
+                background: #ffffff;
+                font-family: Arial, Helvetica, sans-serif;
+            }
 
-    <meta charset="UTF-8">
+            #root {
+                width: 100%;
+                min-height: 100vh;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="root"></div>
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+        <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+        <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
 
-    <style>
+        <script>
+            try {
+                const runComponent = new Function(
+                    "React",
+                    "ReactDOM",
+                    ${JSON.stringify(runtimeCode)}
+                );
 
-        * {
-            box-sizing: border-box;
-        }
+                runComponent(React, ReactDOM);
+            } catch (error) {
+                console.error("Generated component error:", error);
 
-        html,
-        body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            min-height: 100%;
-        }
+                const root = document.getElementById("root");
+                root.innerHTML = "";
 
-        body {
-            background: #ffffff;
-            font-family:
-                Arial,
-                Helvetica,
-                sans-serif;
-        }
+                const container = document.createElement("div");
+                container.style.padding = "30px";
+                container.style.fontFamily = "Arial";
+                container.style.color = "#b91c1c";
 
-        #root {
-            width: 100%;
-            min-height: 100vh;
-        }
+                const title = document.createElement("h2");
+                title.textContent = "Preview Error";
 
-    </style>
+                const message = document.createElement("pre");
+                message.style.whiteSpace = "pre-wrap";
+                message.style.background = "#fef2f2";
+                message.style.padding = "20px";
+                message.style.borderRadius = "8px";
+                message.textContent = error.stack || error.message;
 
-</head>
+                container.appendChild(title);
+                container.appendChild(message);
+                root.appendChild(container);
+            }
+        </script>
+    </body>
+    </html>
+    `;
 
-<body>
-
-    <div id="root"></div>
-
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-
-    <script>
-
-        try {
-
-            const runComponent = new Function(
-                "React",
-                "ReactDOM",
-                ${JSON.stringify(runtimeCode)}
-            );
-
-            runComponent(
-                React,
-                ReactDOM
-            );
-
-        } catch (error) {
-
-            console.error(
-                "Generated component error:",
-                error
-            );
-
-            const root =
-                document.getElementById("root");
-
-            root.innerHTML = "";
-
-            const container =
-                document.createElement("div");
-
-            container.style.padding = "30px";
-            container.style.fontFamily = "Arial";
-            container.style.color = "#b91c1c";
-
-            const title =
-                document.createElement("h2");
-
-            title.textContent =
-                "Preview Error";
-
-            const message =
-                document.createElement("pre");
-
-            message.style.whiteSpace =
-                "pre-wrap";
-
-            message.style.background =
-                "#fef2f2";
-
-            message.style.padding =
-                "20px";
-
-            message.style.borderRadius =
-                "8px";
-
-            message.textContent =
-                error.stack ||
-                error.message;
-
-            container.appendChild(title);
-            container.appendChild(message);
-
-            root.appendChild(container);
-
-        }
-
-    </script>
-
-</body>
-
-</html>
-`;
-
-            setPreviewDocument(documentHTML);
-
+            return {
+                previewDocument: documentHTML,
+                error: "",
+            };
         } catch (err) {
+            console.error("Preview compilation failed:", err);
 
-            console.error(
-                "Preview compilation failed:",
-                err
-            );
-
-            setError(
-                err.message ||
-                "Unable to compile the generated JSX."
-            );
+            return {
+                previewDocument: "",
+                error: err.message || "Unable to compile the generated JSX.",
+            };
         }
-
     }, [generatedJSX, pageName]);
 
     return (

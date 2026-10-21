@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { X, Copy, Check, Download } from 'lucide-react';
 import { generateJSX } from '../utils/codeGen';
 import useBuilderStore from '../store/builderStore';
@@ -19,10 +19,6 @@ export default function ExportModal({ open, onClose }) {
   const activeDoc = documents.find((d) => d.id === activeDocId);
   const componentName = toPascalCase(activeDoc?.name);
   const code = generateJSX(rows, componentName, globalFont);
-
-  useEffect(() => {
-    if (!open) { setCopied(false); setDownloaded(false); }
-  }, [open]);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(code);

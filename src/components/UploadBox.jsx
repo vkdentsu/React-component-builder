@@ -16,9 +16,6 @@ function UploadBox({ title, file, setFile }) {
         setFile(null);
         inputRef.current.value = "";
     };
-    const uploadBoxStyle = {
-
-    };
     const buttonStyle = {
         width: "280px",
         fontSize: "22px",
