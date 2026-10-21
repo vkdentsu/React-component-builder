@@ -6,6 +6,19 @@ import './App.css'
 
 function App() {
   const [count, setCount] = useState(0)
+  const [backendStatus, setBackendStatus] = useState('')
+
+  const checkBackend = async () => {
+    setBackendStatus('Checking...')
+    try {
+      const res = await fetch('/api/health')
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      setBackendStatus(data.message)
+    } catch (err) {
+      setBackendStatus(`Backend not reachable: ${err.message}`)
+    }
+  }
 
   return (
     <>
@@ -28,6 +41,10 @@ function App() {
         >
           Count is {count}
         </button>
+        <button type="button" className="counter" onClick={checkBackend}>
+          Check backend connection
+        </button>
+        {backendStatus && <p>{backendStatus}</p>}
       </section>
 
       <div className="ticks"></div>
