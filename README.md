@@ -15,6 +15,9 @@ Completed as of now
 LTS 
 v - 26.3.0
 
+## Sass styles
+`src/styles/main.scss` is loaded by the app entry point. Its `@import` glob patterns are expanded by the Vite Sass glob plugin before Sass compilation, so matching `.scss` files added under `src/components` or `src/styles` are included automatically.
+
 ## React Compiler
 npm install
 npm run dev
