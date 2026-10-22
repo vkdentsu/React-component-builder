@@ -1,4 +1,5 @@
 import express from 'express'
+import routes, { handleApiError } from './routes.js'
 
 const app = express()
 
@@ -11,5 +12,11 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
   })
 })
+
+app.use('/api', routes)
+app.use('/api', (req, res) => {
+  res.status(404).json({ error: 'API route not found' })
+})
+app.use(handleApiError)
 
 export default app
