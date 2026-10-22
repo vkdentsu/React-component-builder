@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Database, LoaderCircle } from "lucide-react";
 import "./Home.css";
 import logo from "../assets/logo.png";
 
@@ -35,33 +34,6 @@ export default function Home() {
   const [lines, setLines] = useState(0); // how many code lines are visible
   const [copied, setCopied] = useState(false);
   const [cycle, setCycle] = useState(0); // restarts the drag animation
-  const [databaseCheck, setDatabaseCheck] = useState({ status: "idle", message: "" });
-
-  async function checkDatabase() {
-    setDatabaseCheck({ status: "checking", message: "Checking connection..." });
-
-    try {
-      const response = await fetch("/api/health", {
-        cache: "no-store",
-        signal: AbortSignal.timeout(15000),
-      });
-      const result = await response.json();
-
-      if (!response.ok || result.database !== "connected") {
-        setDatabaseCheck({ status: "error", message: "Database unavailable." });
-        return;
-      }
-
-      setDatabaseCheck({ status: "success", message: "Database connected." });
-    } catch (error) {
-      setDatabaseCheck({
-        status: "error",
-        message: error.name === "TimeoutError"
-          ? "Connection check timed out."
-          : "Unable to reach backend.",
-      });
-    }
-  }
 
   useEffect(() => {
     const timers = [];
@@ -123,28 +95,9 @@ export default function Home() {
           <div className="logo">
             <img src={logo} alt="Compify" />
           </div>
-          <div className="nav-actions">
+          <div>
             <a href="#features">Features</a>
             <a href="#cta">Get started</a>
-            <div className="db-check" data-status={databaseCheck.status}>
-              <button
-                type="button"
-                className="db-check-button"
-                onClick={checkDatabase}
-                disabled={databaseCheck.status === "checking"}
-                aria-busy={databaseCheck.status === "checking"}
-                aria-describedby="db-check-result"
-                title="Check database connection"
-              >
-                {databaseCheck.status === "checking"
-                  ? <LoaderCircle size={18} className="db-check-spinner" aria-hidden="true" />
-                  : <Database size={18} aria-hidden="true" />}
-                {databaseCheck.status === "checking" ? "Checking..." : "Check database"}
-              </button>
-              <span id="db-check-result" className="db-check-result" role="status" aria-atomic="true">
-                {databaseCheck.message}
-              </span>
-            </div>
           </div>
         </nav>
 
