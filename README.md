@@ -19,35 +19,23 @@ v - 26.3.0
 npm install
 npm run dev
 
-## Backend Database Configuration
+## Backend and API
 
-Use the single `.env` file in the project root for local configuration.
-Set `DATABASE_URL` to your PostgreSQL connection string and
-`DATABASE_CA_BASE64` to the Base64-encoded contents of your provider's PEM CA
-certificate. On macOS, encode the certificate with:
+The Express API uses Prisma Client and PostgreSQL. See [API.md](./API.md) for
+endpoint documentation, request/response examples, and database setup.
 
-```sh
-base64 < /path/to/ca.pem | tr -d '\n'
-```
+Set `DATABASE_URL` in the project-root `.env` file. If the PostgreSQL provider
+requires a custom CA, also set `DATABASE_CA_BASE64` to its Base64-encoded PEM;
+the backend verifies the certificate and hostname. These variables are optional
+for a local database except for `DATABASE_URL`. The `.env` file may also contain
+`GEMINI_API_KEY` for AI generation. Keep these values server-side and never use
+the `VITE_` prefix.
 
-The Express backend loads the root `.env` automatically using Node's native
-environment loader. Existing deployment environment variables take precedence.
-The PostgreSQL pool in `server/src/database.js` decodes the certificate and
-verifies TLS certificates. URL parameters `sslmode`, `sslcert`, `sslkey`, and
-`sslrootcert` are removed so they cannot override this TLS configuration.
-Backend code can import `pool` from that module and use parameterized queries.
-Do not prefix these variables with `VITE_`, which would expose them to the browser.
-
-Run `npm run server` to start the backend on port 3001 (override with `PORT`).
-Startup checks the database before listening. `GET /api/health` runs a read-only
-database query and returns 200 when connected or 503 when unavailable.
-
-The local environment file and certificate are ignored by Git. The `.env` keys are
-`DATABASE_URL`, `DATABASE_CA_BASE64`, and `GEMINI_API_KEY` (for AI generation).
-Do not create separate `.env.local` or backend environment files.
-Restart Vite and the backend after changing environment settings. In production,
-configure the variables in your hosting environment; no certificate file is
-needed. Base64 is encoding, not encryption.
+Run `npm run db:generate` after changing the Prisma schema. Use
+`npm run db:migrate -- --name init` to create and apply a development migration,
+or `npm run db:deploy` to apply committed migrations. Start the backend with
+`npm run server`; it listens on port 3001 by default (override with `PORT`) and
+checks the database before accepting requests.
 
 ## Expanding the ESLint configuration
 
