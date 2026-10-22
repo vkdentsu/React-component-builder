@@ -1,4 +1,4 @@
-import { Monitor, Tablet, Smartphone, Trash2, Code2, Undo2, Redo2, Eye } from 'lucide-react';
+import { Monitor, Tablet, Smartphone, Trash2, Code2, Undo2, Redo2, Eye, Upload, FileJson } from 'lucide-react';
 import useBuilderStore from '../store/builderStore';
 import DocumentSwitcher from './DocumentSwitcher';
 
@@ -8,7 +8,7 @@ const DEVICES = [
   { id: 'mobile',  label: 'Mobile',  Icon: Smartphone },
 ];
 
-export default function Toolbar({ onExport, onPreview, canUndo, canRedo }) {
+export default function Toolbar({ onExport, onExportJson, onImportJson, onPreview, canUndo, canRedo }) {
   const { device, setDevice, rows, clearAll, undo, redo } = useBuilderStore();
 
   const elCount = rows.reduce((acc, r) => acc + r.cols.reduce((a, c) => a + c.elements.length, 0), 0);
@@ -80,7 +80,7 @@ export default function Toolbar({ onExport, onPreview, canUndo, canRedo }) {
 
         <button
           onClick={clearAll}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg border border-gray-200 hover:border-red-200 transition-all duration-150"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg border border-gray-200 hover:border-red-200 transition-all duration-150"
         >
           <Trash2 size={13} />
           <span className="hidden sm:inline">Clear</span>
@@ -88,18 +88,42 @@ export default function Toolbar({ onExport, onPreview, canUndo, canRedo }) {
 
         <button
           onClick={onPreview}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 transition-colors duration-150"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 transition-colors duration-150"
         >
           <Eye size={13} />
           <span>Preview</span>
         </button>
 
+        {/* Import JSON CTA */}
+        <button
+          onClick={onImportJson}
+          title="Import JSON to render component"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors duration-150 shadow-xs"
+        >
+          <Upload size={13} className="text-blue-600 shrink-0" />
+          <span className="hidden sm:inline">Import JSON</span>
+          <span className="sm:hidden">Import</span>
+        </button>
+
+        {/* Export JSON CTA */}
+        <button
+          onClick={onExportJson}
+          title="Export component or project JSON"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors duration-150 shadow-xs"
+        >
+          <FileJson size={13} className="text-emerald-600 shrink-0" />
+          <span className="hidden sm:inline">Export JSON</span>
+          <span className="sm:hidden">Export</span>
+        </button>
+
+        {/* Export JSX */}
         <button
           onClick={onExport}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors duration-150"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors duration-150 shadow-xs"
         >
           <Code2 size={13} />
-          <span>Export JSX</span>
+          <span className="hidden md:inline">Export JSX</span>
+          <span className="md:hidden">JSX</span>
         </button>
       </div>
     </header>
