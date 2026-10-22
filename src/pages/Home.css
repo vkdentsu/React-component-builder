@@ -16,6 +16,20 @@ padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bott
     height: 100%;
 }
 .bc nav a{color:var(--mut);text-decoration:none;margin-left:24px;font-size:15px}
+.bc nav{flex-wrap:wrap;gap:16px}
+.bc .nav-actions{display:flex;align-items:center;flex-wrap:wrap;gap:20px;min-width:0}
+.bc .db-check{display:grid;grid-template-rows:40px 36px;width:190px;max-width:100%;gap:4px}
+.bc .db-check-button{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:40px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg);font-family:inherit;font-size:14px;font-weight:600;line-height:1.2;cursor:pointer}
+.bc .db-check-button:hover:not(:disabled){border-color:var(--acc)}
+.bc .db-check-button:focus-visible{outline:3px solid var(--acc2);outline-offset:3px}
+.bc .db-check-button:disabled{cursor:wait;opacity:.7}
+.bc .db-check-result{color:var(--mut);font-size:12px;line-height:18px;overflow-wrap:anywhere}
+.bc .db-check[data-status="success"] .db-check-result{color:#15803d}
+.bc .db-check[data-status="error"] .db-check-result{color:#dc2626}
+.bc .db-check-spinner{animation:db-check-spin 1s linear infinite}
+@keyframes db-check-spin{to{transform:rotate(360deg)}}
+@media(prefers-color-scheme:dark){.bc .db-check[data-status="success"] .db-check-result{color:#86efac}.bc .db-check[data-status="error"] .db-check-result{color:#fca5a5}}
+@media(prefers-reduced-motion:reduce){.bc .db-check-spinner{animation:none}}
 .bc .hero{text-align:center;padding:56px 0 24px;position:relative}
 .bc .hero:before{content:"";position:absolute;left:50%;top:-40px;width:700px;max-width:100%;height:380px;transform:translateX(-50%);background:radial-gradient(closest-side,var(--glow),transparent);z-index:-1}
 .bc h1{font-size:clamp(36px,6.5vw,64px);line-height:1.08;letter-spacing:-.03em;margin:22px auto 18px;max-width:820px}
