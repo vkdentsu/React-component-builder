@@ -1,5 +1,28 @@
 # API Documentation
 
+## Swagger / OpenAPI
+
+Start the backend with `npm run server`, then open:
+
+- **Interactive Swagger UI:** <http://localhost:3001/api/docs/>
+- **OpenAPI 3.0 JSON:** <http://localhost:3001/api/openapi.json>
+
+Use your configured port or deployed backend host instead of `localhost:3001`
+when applicable. Swagger UI sends requests to the same host that serves the
+documentation. Expand an operation and select **Try it out** to call the API.
+These calls use the real database, including creates, updates, and deletes.
+No authentication is currently required.
+
+Frontend developers can import the JSON URL into Postman or an OpenAPI client
+generator. For a theme/page workflow, create a theme first and replace the
+example `themeId` with its returned ID before creating a page.
+
+The contract is maintained in `server/src/openapi.js`. Update it alongside
+route changes. It documents all health, theme, and page operations in
+`server/src`, including request/response schemas, examples, filters, status
+codes, and validation rules. The documentation routes themselves are not
+business operations in the contract.
+
 The Express API runs on `http://localhost:3001` by default. Set `PORT` to
 change the port. All endpoints are prefixed with `/api`, use JSON request and
 response bodies, and return errors in this format:

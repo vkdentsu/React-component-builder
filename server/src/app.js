@@ -1,12 +1,20 @@
 import express from 'express'
+import swaggerUi from 'swagger-ui-express'
 import { prisma } from './database.js'
 import { asyncHandler, handleApiError } from './api-utils.js'
+import openapi from './openapi.js'
 import pagesRouter from './routes/pages.js'
 import themesRouter from './routes/themes.js'
 
 const app = express()
 
 app.use(express.json({ limit: '10mb' }))
+
+app.get('/api/openapi.json', (req, res) => res.json(openapi))
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(null, {
+  swaggerOptions: { url: '/api/openapi.json', validatorUrl: null },
+  customSiteTitle: 'Component Builder API Documentation',
+}))
 
 app.get('/api/health', asyncHandler(async (req, res) => {
   try {
