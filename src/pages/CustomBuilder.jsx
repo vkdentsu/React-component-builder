@@ -21,12 +21,16 @@ import Canvas from '../components/Canvas';
 import PropsPanel from '../components/PropsPanel';
 import Toolbar from '../components/Toolbar';
 import ExportModal from '../components/ExportModal';
+import ExportJsonModal from '../components/ExportJsonModal';
+import ImportJsonModal from '../components/ImportJsonModal';
 import PreviewModal from '../components/PreviewModal';
 import ElementPreview from '../components/ElementPreview';
 import { loadGoogleFont } from "../utils/loadGoogleFont";
 
 export default function CustomBuilder() {
   const [exportOpen, setExportOpen] = useState(false);
+  const [exportJsonOpen, setExportJsonOpen] = useState(false);
+  const [importJsonOpen, setImportJsonOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [activeDrag, setActiveDrag] = useState(null);
 
@@ -249,7 +253,14 @@ if (activeData?.dragType === DRAG_TYPES.LAYOUT) {
       onDragEnd={handleDragEnd}
     >
       <div className="flex flex-col h-screen overflow-hidden bg-gray-50" style={{fontFamily: globalFont,}}>
-        <Toolbar onExport={() => setExportOpen(true)} onPreview={() => setPreviewOpen(true)} canUndo={canUndo()} canRedo={canRedo()} />
+        <Toolbar
+          onExport={() => setExportOpen(true)}
+          onExportJson={() => setExportJsonOpen(true)}
+          onImportJson={() => setImportJsonOpen(true)}
+          onPreview={() => setPreviewOpen(true)}
+          canUndo={canUndo()}
+          canRedo={canRedo()}
+        />
         <div className="flex flex-1 min-h-0">
           <Sidebar />
           <Canvas />
@@ -266,6 +277,8 @@ if (activeData?.dragType === DRAG_TYPES.LAYOUT) {
         open={exportOpen}
         onClose={handleClose}
       />
+      <ExportJsonModal open={exportJsonOpen} onClose={() => setExportJsonOpen(false)} />
+      <ImportJsonModal open={importJsonOpen} onClose={() => setImportJsonOpen(false)} />
       <PreviewModal open={previewOpen} onClose={() => setPreviewOpen(false)} />
     </DndContext>
   );
