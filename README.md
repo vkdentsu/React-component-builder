@@ -27,7 +27,19 @@ npm run dev
 The Express API uses Prisma Client and PostgreSQL. See [API.md](./API.md) for
 endpoint documentation, request/response examples, and database setup.
 
-Set `DATABASE_URL` in the project-root `.env` file. If the PostgreSQL provider
+For initial local setup, copy the environment template:
+
+```sh
+cp .env.example .env
+```
+
+Replace the placeholder `DATABASE_URL` in the project-root `.env` file with your
+PostgreSQL connection URL, including the actual username, password, host, port,
+and database name. URL-encode special characters in the username and password.
+The database must already exist and be reachable. Do not commit `.env` or share
+its contents. Restart `npm run server` after changing environment variables.
+
+If the PostgreSQL provider
 requires a custom CA, also set `DATABASE_CA_BASE64` to its Base64-encoded PEM;
 the backend verifies the certificate and hostname. These variables are optional
 for a local database except for `DATABASE_URL`. The `.env` file may also contain

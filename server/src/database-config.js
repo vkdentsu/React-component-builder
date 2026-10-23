@@ -13,7 +13,9 @@ if (existsSync(envFile)) {
 
 export function getDatabaseUrl() {
   if (!process.env.DATABASE_URL) {
-    throw new Error('DATABASE_URL must be configured.')
+    throw new Error(
+      'DATABASE_URL must be configured. Copy .env.example to .env in the project root and set DATABASE_URL to your PostgreSQL connection URL, or provide it through the environment.'
+    )
   }
 
   const databaseUrl = new URL(process.env.DATABASE_URL)
