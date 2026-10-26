@@ -4,6 +4,7 @@ import { prisma } from './database.js'
 import { asyncHandler, handleApiError } from './api-utils.js'
 import openapi from './openapi.js'
 import pagesRouter from './routes/pages.js'
+import publicPagesRouter from './routes/public-pages.js'
 import themesRouter from './routes/themes.js'
 
 const app = express()
@@ -36,6 +37,7 @@ app.get('/api/health', asyncHandler(async (req, res) => {
 }))
 
 app.use('/api/themes', themesRouter)
+app.use('/api/public/pages', publicPagesRouter)
 app.use('/api/pages', pagesRouter)
 
 app.use('/api', (req, res) => {

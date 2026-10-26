@@ -132,7 +132,58 @@ other field updates do not.
 
 ### `POST /api/pages/:id/publish`
 
-Sets the page status to `PUBLISHED`.
+Sets the page status to `PUBLISHED` and creates an immutable `PageVersion`
+snapshot of its current `contentJson` and version number. Each publish creates
+a snapshot, including repeated publishes at the same page version.
+
+### `POST /api/pages/:id/duplicate`
+
+Creates a `DRAFT` copy of the page with the same theme and `contentJson`. Its
+version starts at `1`; its name gains ` (Copy)`, and its slug is made unique
+using `<source-slug>-copy`, then `<source-slug>-copy-2`, and so on. Returns
+`201` with the created page.
+
+### `GET /api/pages/:id/versions`
+
+Returns the page's immutable publish snapshots, newest first. Each snapshot
+contains `id`, `pageId`, `version`, `contentJson`, and `createdAt`. Returns
+`404` if the page does not exist.
+
+### `POST /api/pages/:id/rollback/:versionId`
+
+Restores `contentJson` from a snapshot belonging to the specified page and
+increments the page's version counter. Returns the updated page. Returns `404`
+if the page or matching snapshot does not exist.
+
+### `GET /api/public/pages/:slug`
+
+Returns published page content for external consumers in this shape:
+
+```json
+{
+  "data": {
+    "page": {
+      "id": "<page-id>",
+      "name": "Home",
+      "slug": "home",
+      "contentJson": { "sections": [], "seo": { "title": "Home" } },
+      "version": 1
+    },
+    "theme": {
+      "id": "<theme-id>",
+      "name": "Brand",
+      "slug": "brand",
+      "configJson": { "colors": { "primary": "#0055aa" } }
+    },
+    "seo": { "title": "Home" }
+  }
+}
+```
+
+`seo` is resolved from `contentJson.seo` when it is an object, or `{}` when
+that property is missing or is not an object. Draft pages and unknown slugs
+both return `404`. Responses advertise
+`Cache-Control: public, max-age=60, stale-while-revalidate=300`.
 
 ### `DELETE /api/pages/:id`
 
@@ -159,9 +210,9 @@ Deletes a page.
    the Base64-encoded PEM. The API verifies the server certificate and hostname
    when this value is set. It is optional for local databases.
 3. Generate Prisma Client with `npm run db:generate`.
-4. Create/apply a development migration with
-   `npm run db:migrate -- --name init`; deploy committed migrations with
-   `npm run db:deploy`.
+4. Apply committed migrations, including the PageVersion table, with
+   `npm run db:deploy`. For local schema changes, create and apply a migration
+   with `npm run db:migrate -- --name <migration-name>`.
 5. Start the API with `npm run server`.
 
 The Prisma schema is in `prisma/schema.prisma`. Do not expose database

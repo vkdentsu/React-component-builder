@@ -32,6 +32,20 @@ const idParameter = {
   description: 'Resource ID returned by the API.',
   schema: { type: 'string' },
 }
+const versionIdParameter = {
+  name: 'versionId',
+  in: 'path',
+  required: true,
+  description: 'Snapshot ID returned by the page versions endpoint.',
+  schema: { type: 'string' },
+}
+const slugParameter = {
+  name: 'slug',
+  in: 'path',
+  required: true,
+  description: 'Unique slug of a published page.',
+  schema: { type: 'string' },
+}
 const text = { type: 'string', minLength: 1, pattern: '\\S', description: 'Non-blank text. Leading and trailing whitespace is trimmed.' }
 const timestamps = {
   createdAt: { type: 'string', format: 'date-time', readOnly: true },
@@ -78,6 +92,7 @@ const openapi = {
     { name: 'Health', description: 'Backend and database availability.' },
     { name: 'Themes', description: 'Theme configuration and page counts.' },
     { name: 'Pages', description: 'Page content, versions, and publishing.' },
+    { name: 'Public Content', description: 'Published page delivery for external consumers.' },
   ],
   paths: {
     '/api/health': {
@@ -181,8 +196,52 @@ const openapi = {
         tags: ['Pages'],
         operationId: 'publishPage',
         summary: 'Publish a page',
-        description: 'Sets status to PUBLISHED without changing version. No request body is required; already-published pages remain published.',
+        description: 'Sets status to PUBLISHED and creates an immutable snapshot of the current content and version. Repeated publishes create additional snapshots. No request body is required.',
         responses: { 200: dataResponse('Published page.', 'Page'), ...notFound, ...readErrors },
+      },
+    },
+    '/api/pages/{id}/duplicate': {
+      parameters: [idParameter],
+      post: {
+        tags: ['Pages'],
+        operationId: 'duplicatePage',
+        summary: 'Duplicate a page',
+        description: 'Creates a DRAFT copy with the same theme and content, version 1, and a unique slug based on the source slug with a -copy suffix.',
+        responses: { 201: dataResponse('Duplicated page.', 'Page'), ...notFound, ...writeErrors },
+      },
+    },
+    '/api/pages/{id}/versions': {
+      parameters: [idParameter],
+      get: {
+        tags: ['Pages'],
+        operationId: 'listPageVersions',
+        summary: 'List page version history',
+        description: 'Returns immutable publish snapshots, newest first.',
+        responses: { 200: dataResponse('Page snapshots.', 'PageVersion', true), ...notFound, ...readErrors },
+      },
+    },
+    '/api/pages/{id}/rollback/{versionId}': {
+      parameters: [idParameter, versionIdParameter],
+      post: {
+        tags: ['Pages'],
+        operationId: 'rollbackPage',
+        summary: 'Roll back a page',
+        description: 'Restores contentJson from a snapshot belonging to this page and increments the page version counter. No request body is required.',
+        responses: { 200: dataResponse('Page restored from the snapshot.', 'Page'), ...notFound, ...readErrors },
+      },
+    },
+    '/api/public/pages/{slug}': {
+      parameters: [slugParameter],
+      get: {
+        tags: ['Public Content'],
+        operationId: 'getPublicPage',
+        summary: 'Get published page content',
+        description: 'Returns a read-only delivery payload for a published page. seo is read from contentJson.seo when it is an object, and defaults to an empty object otherwise. Responses may be cached for 60 seconds.',
+        responses: {
+          200: jsonResponse('Published page delivery payload.', schemaRef('PublicPageDelivery')),
+          ...notFound,
+          ...readErrors,
+        },
       },
     },
   },
@@ -225,6 +284,51 @@ const openapi = {
       },
       PageWithTheme: {
         allOf: [schemaRef('Page'), { type: 'object', required: ['theme'], properties: { theme: schemaRef('ThemeSummary') } }],
+      },
+      PageVersion: {
+        type: 'object',
+        required: ['id', 'pageId', 'version', 'contentJson', 'createdAt'],
+        properties: {
+          id: { type: 'string', format: 'uuid', readOnly: true },
+          pageId: { type: 'string', format: 'uuid' },
+          version: { type: 'integer', minimum: 1 },
+          contentJson: schemaRef('JsonDocument'),
+          createdAt: { type: 'string', format: 'date-time', readOnly: true },
+        },
+      },
+      PublicPageDelivery: {
+        type: 'object',
+        required: ['data'],
+        properties: {
+          data: {
+            type: 'object',
+            required: ['page', 'theme', 'seo'],
+            properties: {
+              page: {
+                type: 'object',
+                required: ['id', 'name', 'slug', 'contentJson', 'version'],
+                properties: {
+                  id: { type: 'string', format: 'uuid' },
+                  name: { type: 'string' },
+                  slug: { type: 'string' },
+                  contentJson: schemaRef('JsonDocument'),
+                  version: { type: 'integer', minimum: 1 },
+                },
+              },
+              theme: {
+                type: 'object',
+                required: ['id', 'name', 'slug', 'configJson'],
+                properties: {
+                  id: { type: 'string', format: 'uuid' },
+                  name: { type: 'string' },
+                  slug: { type: 'string' },
+                  configJson: schemaRef('JsonDocument'),
+                },
+              },
+              seo: { type: 'object', additionalProperties: true },
+            },
+          },
+        },
       },
       CreateTheme: {
         type: 'object',
