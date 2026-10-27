@@ -9,7 +9,7 @@ import {
   pointerWithin,
   rectIntersection,
 } from '@dnd-kit/core';
-import { CheckCircle2, AlertCircle, X, FileText, Save } from 'lucide-react';
+import { CheckCircle2, AlertCircle, X, FileText } from 'lucide-react';
 
 import useBuilderStore, { makeElement } from '../store/builderStore';
 import { DRAG_TYPES } from '../utils/palette';
@@ -75,6 +75,9 @@ export default function CustomBuilder() {
     setActiveDbPageId,
     loadPageFromDb,
     initNewDbPage,
+    fetchThemes,
+    isThemeModalOpen,
+    closeThemeModal,
   } = useBuilderStore();
 
   // Load database page if pageId is in URL
@@ -113,7 +116,7 @@ export default function CustomBuilder() {
     return () => {
       cancelled = true;
     };
-  }, [pageIdFromUrl]);
+  }, [pageIdFromUrl, activeDbPageId, initNewDbPage, loadPageFromDb, searchParams]);
 
   // Save Page to Database Handler
   const handleSavePage = async (overrideMeta) => {
@@ -202,10 +205,6 @@ export default function CustomBuilder() {
       setIsSaving(false);
     }
   };
-    fetchThemes,
-    isThemeModalOpen,
-    closeThemeModal,
-  } = useBuilderStore();
 
   useEffect(() => {
     fetchThemes();
