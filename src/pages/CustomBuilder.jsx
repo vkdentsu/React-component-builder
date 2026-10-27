@@ -24,6 +24,7 @@ import ExportModal from '../components/ExportModal';
 import ExportJsonModal from '../components/ExportJsonModal';
 import ImportJsonModal from '../components/ImportJsonModal';
 import PreviewModal from '../components/PreviewModal';
+import ThemeModal from '../components/ThemeModal';
 import ElementPreview from '../components/ElementPreview';
 import { loadGoogleFont } from "../utils/loadGoogleFont";
 
@@ -53,7 +54,14 @@ export default function CustomBuilder() {
     canUndo,
     canRedo,
     globalFont,
+    fetchThemes,
+    isThemeModalOpen,
+    closeThemeModal,
   } = useBuilderStore();
+
+  useEffect(() => {
+    fetchThemes();
+  }, [fetchThemes]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -280,6 +288,7 @@ if (activeData?.dragType === DRAG_TYPES.LAYOUT) {
       <ExportJsonModal open={exportJsonOpen} onClose={() => setExportJsonOpen(false)} />
       <ImportJsonModal open={importJsonOpen} onClose={() => setImportJsonOpen(false)} />
       <PreviewModal open={previewOpen} onClose={() => setPreviewOpen(false)} />
+      {isThemeModalOpen && <ThemeModal onClose={closeThemeModal} />}
     </DndContext>
   );
 }
