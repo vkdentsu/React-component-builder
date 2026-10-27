@@ -192,6 +192,14 @@ export default function Home() {
             >
               Build Custom Component
             </button>
+
+            <button
+              type="button"
+              className="btn btn-dark"
+              onClick={() => navigate("/dashboard")}
+            >
+              Dashboard
+            </button>
           </div>
         </header>
 

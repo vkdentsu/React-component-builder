@@ -1,14 +1,16 @@
-import { Monitor, Tablet, Smartphone, Trash2, Code2, Undo2, Redo2, Eye, Upload, FileJson } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Monitor, Tablet, Smartphone, Trash2, Code2, Undo2, Redo2, Eye, Upload, FileJson, ArrowLeft, Save } from 'lucide-react';
 import useBuilderStore from '../store/builderStore';
 import DocumentSwitcher from './DocumentSwitcher';
 
 const DEVICES = [
-  { id: 'desktop', label: 'Desktop', Icon: Monitor  },
-  { id: 'tablet',  label: 'Tablet',  Icon: Tablet   },
-  { id: 'mobile',  label: 'Mobile',  Icon: Smartphone },
+  { id: 'desktop', label: 'Desktop', Icon: Monitor },
+  { id: 'tablet', label: 'Tablet', Icon: Tablet },
+  { id: 'mobile', label: 'Mobile', Icon: Smartphone },
 ];
 
-export default function Toolbar({ onExport, onExportJson, onImportJson, onPreview, canUndo, canRedo }) {
+export default function Toolbar({ onExport, onExportJson, onImportJson, onPreview, canUndo, canRedo, onSavePage, isSaving, pageMeta, onEditPageSettings }) {
+  const navigate = useNavigate();
   const { device, setDevice, rows, clearAll, undo, redo } = useBuilderStore();
 
   const elCount = rows.reduce((acc, r) => acc + r.cols.reduce((a, c) => a + c.elements.length, 0), 0);
@@ -17,16 +19,27 @@ export default function Toolbar({ onExport, onExportJson, onImportJson, onPrevie
     <header className="h-12 bg-white border-b border-gray-200 flex items-center justify-between px-4 shrink-0 gap-4">
       {/* Brand + document switcher */}
       <div className="flex items-center gap-2 shrink-0">
+        <button
+          onClick={() => navigate('/dashboard')}
+          className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors mr-1"
+          title="Return to Dashboard"
+        >
+          <ArrowLeft size={13} /><span>Dashboard</span>
+        </button>
+
         <div className="w-6 h-6 rounded-md bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center">
           <Code2 size={13} className="text-white" />
         </div>
         <span className="font-semibold text-sm text-gray-800 hidden lg:inline">Compify</span>
+
+
+
         <div className="ml-1">
           <DocumentSwitcher />
         </div>
-        <span className="hidden xl:inline text-xs text-gray-400 ml-1">
+        {/* <span className="hidden xl:inline text-xs text-gray-400 ml-1">
           {rows.length} row{rows.length !== 1 ? 's' : ''} · {elCount} element{elCount !== 1 ? 's' : ''}
-        </span>
+        </span> */}
       </div>
 
       {/* Device switcher */}
@@ -115,6 +128,19 @@ export default function Toolbar({ onExport, onExportJson, onImportJson, onPrevie
           <span className="hidden sm:inline">Export JSON</span>
           <span className="sm:hidden">Export</span>
         </button>
+
+        {/* Save Page */}
+        {onSavePage && (
+          <button
+            onClick={onSavePage}
+            disabled={isSaving}
+            title="Save page structure and components to database"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-lg transition-colors duration-150 shadow-xs"
+          >
+            <Save size={13} />
+            <span>{isSaving ? 'Saving...' : 'Save'}</span>
+          </button>
+        )}
 
         {/* Export JSX */}
         <button

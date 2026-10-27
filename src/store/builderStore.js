@@ -367,6 +367,71 @@ const useBuilderStore = create(
       documents: [makeDocument('My Component')],
       activeDocId: null, // set on first access below
 
+      // Database Page Integration
+      activeDbPageId: null,
+      pageMeta: { name: 'My Page', slug: 'my-page', themeId: '', status: 'DRAFT' },
+
+      setPageMeta: (patch) =>
+        set((s) => ({
+          pageMeta: { ...s.pageMeta, ...patch },
+        })),
+
+      setActiveDbPageId: (id) => set({ activeDbPageId: id }),
+
+      loadPageFromDb: (pageRecord) => {
+        if (!pageRecord) return;
+        const rawContent = pageRecord.contentJson || {};
+        const rawRows = Array.isArray(rawContent.rows)
+          ? rawContent.rows
+          : Array.isArray(rawContent)
+          ? rawContent
+          : [];
+        const sanitizedRows = migrateRows(sanitizeRows(rawRows));
+        const docName = pageRecord.name || 'Page';
+
+        const pageDoc = {
+          id: pageRecord.id || nanoid(),
+          name: docName,
+          rows: sanitizedRows,
+        };
+
+        set({
+          activeDbPageId: pageRecord.id,
+          pageMeta: {
+            name: pageRecord.name || 'Untitled Page',
+            slug: pageRecord.slug || '',
+            themeId: pageRecord.themeId || '',
+            status: pageRecord.status || 'DRAFT',
+          },
+          documents: [pageDoc],
+          activeDocId: pageDoc.id,
+          rows: sanitizedRows,
+          selectedId: null,
+          selectedType: null,
+          _history: { past: [], future: [] },
+          ...(rawContent.globalFont ? { globalFont: rawContent.globalFont } : {}),
+        });
+      },
+
+      initNewDbPage: ({ name = 'New Page', slug = 'new-page', themeId = '' } = {}) => {
+        const doc = makeDocument(name);
+        set({
+          activeDbPageId: null,
+          pageMeta: {
+            name,
+            slug,
+            themeId,
+            status: 'DRAFT',
+          },
+          documents: [doc],
+          activeDocId: doc.id,
+          rows: [],
+          selectedId: null,
+          selectedType: null,
+          _history: { past: [], future: [] },
+        });
+      },
+
       rows: [],
       selectedId: null,
       selectedType: null,
@@ -959,6 +1024,8 @@ const useBuilderStore = create(
           device: state.device,
           globalFont: state.globalFont,
           customFonts: state.customFonts,
+          activeDbPageId: state.activeDbPageId,
+          pageMeta: state.pageMeta,
         };
       },
       onRehydrateStorage: () => (state) => {
