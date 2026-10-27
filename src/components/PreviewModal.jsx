@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { X, Monitor, Tablet, Smartphone } from 'lucide-react';
 import ElementPreview from './ElementPreview';
 import useBuilderStore from '../store/builderStore';
+import { tokensToCssVars } from '../utils/themeDefaults';
 
 const DEVICES = [
   { id: 'desktop', label: 'Desktop', Icon: Monitor,    width: '100%'  },
@@ -155,11 +156,15 @@ function PreviewRows({ rows, device }) {
 }
 
 export default function PreviewModal({ open, onClose }) {
-  const { rows, documents, activeDocId, globalFont } = useBuilderStore();
+  const { rows, documents, activeDocId, globalFont, activeTheme } = useBuilderStore();
   const [device, setDevice] = useState('desktop');
 
   const activeDoc = documents.find((d) => d.id === activeDocId);
   const deviceWidth = DEVICES.find((d) => d.id === device)?.width || '100%';
+
+  const themeVars = useMemo(() => {
+    return tokensToCssVars(activeTheme?.configJson);
+  }, [activeTheme]);
 
   if (!open) return null;
 
@@ -203,7 +208,14 @@ export default function PreviewModal({ open, onClose }) {
       <div className="flex-1 overflow-auto flex justify-center py-8 px-4 bg-[#1a1a2e]">
         {/* Device frame */}
         <div
-          style={{ width: deviceWidth, transition: 'width 0.3s ease' }}
+          style={{
+            width: deviceWidth,
+            transition: 'width 0.3s ease',
+            fontFamily: activeTheme?.configJson?.typography?.fontFamily
+              ? `'${activeTheme.configJson.typography.fontFamily}', sans-serif`
+              : 'inherit',
+            ...themeVars,
+          }}
           className="bg-white rounded-2xl shadow-2xl overflow-hidden min-h-[200px] flex flex-col"
         >
           {/* Browser chrome */}

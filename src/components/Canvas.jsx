@@ -1,5 +1,8 @@
+import { useMemo, useEffect } from 'react';
 import RowsCanvas from './RowsCanvas';
 import useBuilderStore from '../store/builderStore';
+import { tokensToCssVars } from '../utils/themeDefaults';
+import { loadGoogleFont } from '../utils/loadGoogleFont';
 
 const DEVICE_WIDTHS = {
   mobile:  '375px',
@@ -8,12 +11,30 @@ const DEVICE_WIDTHS = {
 };
 
 export default function Canvas() {
-  const { rows, device, deselect } = useBuilderStore();
+  const { rows, device, deselect, activeTheme } = useBuilderStore();
+
+  const themeVars = useMemo(() => {
+    return tokensToCssVars(activeTheme?.configJson);
+  }, [activeTheme]);
+
+  useEffect(() => {
+    const font = activeTheme?.configJson?.typography?.fontFamily;
+    if (font) {
+      loadGoogleFont(font);
+    }
+  }, [activeTheme?.configJson?.typography?.fontFamily]);
 
   return (
     <div className="flex-1 min-h-0 overflow-auto bg-[#f1f5f9] flex justify-center p-6">
       <div
-        style={{ width: DEVICE_WIDTHS[device], transition: 'width 0.3s ease' }}
+        style={{
+          width: DEVICE_WIDTHS[device],
+          transition: 'width 0.3s ease',
+          fontFamily: activeTheme?.configJson?.typography?.fontFamily
+            ? `'${activeTheme.configJson.typography.fontFamily}', sans-serif`
+            : 'inherit',
+          ...themeVars,
+        }}
         /* Remove overflow-hidden here — let the inner content grow naturally */
         className="bg-white rounded-2xl shadow-sm border border-gray-200 min-h-[520px] flex flex-col self-start"
       >

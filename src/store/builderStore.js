@@ -10,6 +10,10 @@ import {
   findElementById,
 } from '../utils/treeHelpers';
 import { validateImportJson, sanitizeRows } from '../utils/jsonImporter';
+import {
+  THEME_PRESETS,
+  normalizeThemeConfig,
+} from '../utils/themeDefaults';
 
 const defaultElementProps = {
   button: {
@@ -457,6 +461,260 @@ const useBuilderStore = create(
           writeStoredCustomFonts(nextFonts);
           return { customFonts: nextFonts };
         }),
+
+      // ── Themes ─────────────────────────────────────────────────
+      activeTheme: {
+        id: 'preset-0',
+        name: THEME_PRESETS[0].name,
+        slug: THEME_PRESETS[0].slug,
+        configJson: normalizeThemeConfig(THEME_PRESETS[0].configJson),
+        _count: { pages: 0 },
+      },
+      availableThemes: THEME_PRESETS.map((p, idx) => ({
+        id: `preset-${idx}`,
+        name: p.name,
+        slug: p.slug,
+        configJson: normalizeThemeConfig(p.configJson),
+        _count: { pages: 0 },
+      })),
+      isThemeModalOpen: false,
+      themeModalInitialTab: 'palette',
+      themeLoading: false,
+      themeError: null,
+
+      openThemeModal: (tab = 'palette') =>
+        set({ isThemeModalOpen: true, themeModalInitialTab: tab }),
+
+      closeThemeModal: () =>
+        set({ isThemeModalOpen: false }),
+
+      fetchThemes: async () => {
+        set({ themeLoading: true, themeError: null });
+        try {
+          const res = await fetch('/api/themes');
+          if (!res.ok) throw new Error('Failed to fetch themes');
+          const json = await res.json();
+          const serverThemes = (json.data || []).map((t) => ({
+            ...t,
+            configJson: normalizeThemeConfig(t.configJson),
+          }));
+
+          const presets = THEME_PRESETS.map((p, idx) => ({
+            id: `preset-${idx}`,
+            name: p.name,
+            slug: p.slug,
+            configJson: normalizeThemeConfig(p.configJson),
+            _count: { pages: 0 },
+          }));
+
+          const combined = serverThemes.length > 0 ? serverThemes : presets;
+          const currentActive = get().activeTheme;
+          let nextActive = currentActive;
+
+          if (!currentActive || !combined.some((t) => t.id === currentActive.id)) {
+            nextActive = combined[0];
+          } else {
+            const match = combined.find((t) => t.id === currentActive.id);
+            if (match) nextActive = match;
+          }
+
+          set({
+            availableThemes: combined,
+            activeTheme: nextActive,
+            themeLoading: false,
+          });
+          return combined;
+        } catch (err) {
+          console.warn('fetchThemes fallback to presets:', err.message);
+          const presets = THEME_PRESETS.map((p, idx) => ({
+            id: `preset-${idx}`,
+            name: p.name,
+            slug: p.slug,
+            configJson: normalizeThemeConfig(p.configJson),
+            _count: { pages: 0 },
+          }));
+          const fallbackList = get().availableThemes?.length > 0 ? get().availableThemes : presets;
+          set({
+            themeLoading: false,
+            themeError: err.message,
+            availableThemes: fallbackList,
+            activeTheme: get().activeTheme || fallbackList[0],
+          });
+          return fallbackList;
+        }
+      },
+
+      selectTheme: (themeId) =>
+        set((state) => {
+          const target = state.availableThemes.find((t) => t.id === themeId);
+          if (!target) return {};
+          return {
+            activeTheme: {
+              ...target,
+              configJson: normalizeThemeConfig(target.configJson),
+            },
+          };
+        }),
+
+      createTheme: async ({ name, configJson }) => {
+        set({ themeLoading: true, themeError: null });
+        try {
+          const slug =
+            name
+              .trim()
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, '-')
+              .replace(/^-|-$/g, '') || `theme-${Date.now()}`;
+          const normalizedTokens = normalizeThemeConfig(configJson);
+
+          const res = await fetch('/api/themes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: name.trim(),
+              slug,
+              configJson: normalizedTokens,
+            }),
+          });
+          const json = await res.json();
+          if (!res.ok) throw new Error(json.error?.message || 'Failed to create theme');
+
+          const newTheme = {
+            ...json.data,
+            configJson: normalizeThemeConfig(json.data.configJson),
+            _count: { pages: 0 },
+          };
+
+          set((s) => ({
+            availableThemes: [newTheme, ...s.availableThemes.filter((t) => !String(t.id).startsWith('preset-'))],
+            activeTheme: newTheme,
+            themeLoading: false,
+          }));
+          return newTheme;
+        } catch (err) {
+          set({ themeLoading: false, themeError: err.message });
+          throw err;
+        }
+      },
+
+      updateTheme: async (id, { name, configJson }) => {
+        set({ themeLoading: true, themeError: null });
+        try {
+          // If editing a preset, automatically fork it as a new custom theme
+          if (String(id).startsWith('preset-')) {
+            return await get().createTheme({
+              name: `${name || get().activeTheme?.name} (Custom)`,
+              configJson: configJson || get().activeTheme?.configJson,
+            });
+          }
+
+          const data = {};
+          if (name) {
+            data.name = name.trim();
+            data.slug =
+              name
+                .trim()
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-|-$/g, '') || `theme-${Date.now()}`;
+          }
+          if (configJson) {
+            data.configJson = normalizeThemeConfig(configJson);
+          }
+
+          const res = await fetch(`/api/themes/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+          });
+          const json = await res.json();
+          if (!res.ok) throw new Error(json.error?.message || 'Failed to update theme');
+
+          const updated = {
+            ...json.data,
+            configJson: normalizeThemeConfig(json.data.configJson),
+          };
+
+          set((s) => ({
+            availableThemes: s.availableThemes.map((t) => (t.id === id ? { ...t, ...updated } : t)),
+            activeTheme: s.activeTheme?.id === id ? { ...s.activeTheme, ...updated } : s.activeTheme,
+            themeLoading: false,
+          }));
+          return updated;
+        } catch (err) {
+          set({ themeLoading: false, themeError: err.message });
+          throw err;
+        }
+      },
+
+      cloneTheme: async (themeId, newName) => {
+        set({ themeLoading: true, themeError: null });
+        try {
+          const source =
+            get().availableThemes.find((t) => t.id === themeId) || get().activeTheme;
+          const name = newName || `${source.name} (Copy)`;
+          const slug =
+            name
+              .trim()
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, '-')
+              .replace(/^-|-$/g, '') || `copy-${Date.now()}`;
+
+          const res = await fetch('/api/themes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name,
+              slug,
+              configJson: normalizeThemeConfig(source.configJson),
+            }),
+          });
+          const json = await res.json();
+          if (!res.ok) throw new Error(json.error?.message || 'Failed to clone theme');
+
+          const cloned = {
+            ...json.data,
+            configJson: normalizeThemeConfig(json.data.configJson),
+            _count: { pages: 0 },
+          };
+
+          set((s) => ({
+            availableThemes: [cloned, ...s.availableThemes],
+            activeTheme: cloned,
+            themeLoading: false,
+          }));
+          return cloned;
+        } catch (err) {
+          set({ themeLoading: false, themeError: err.message });
+          throw err;
+        }
+      },
+
+      deleteTheme: async (id) => {
+        set({ themeLoading: true, themeError: null });
+        try {
+          if (!String(id).startsWith('preset-')) {
+            const res = await fetch(`/api/themes/${id}`, { method: 'DELETE' });
+            if (!res.ok) {
+              const json = await res.json().catch(() => ({}));
+              throw new Error(json.error?.message || 'Failed to delete theme');
+            }
+          }
+
+          set((s) => {
+            const nextList = s.availableThemes.filter((t) => t.id !== id);
+            const nextActive = s.activeTheme?.id === id ? nextList[0] || null : s.activeTheme;
+            return {
+              availableThemes: nextList,
+              activeTheme: nextActive,
+              themeLoading: false,
+            };
+          });
+        } catch (err) {
+          set({ themeLoading: false, themeError: err.message });
+          throw err;
+        }
+      },
 
 
       _history: { past: [], future: [] },
@@ -979,7 +1237,7 @@ const useBuilderStore = create(
       },
 
       getExportJson: (scope = 'current') => {
-        const { documents, activeDocId, rows, globalFont, customFonts, device } = get();
+        const { documents, activeDocId, rows, globalFont, customFonts, device, activeTheme, availableThemes } = get();
         const activeDoc = documents.find((d) => d.id === activeDocId) || documents[0] || { name: 'My Component', id: nanoid() };
 
         if (scope === 'current') {
@@ -988,6 +1246,7 @@ const useBuilderStore = create(
             name: activeDoc.name,
             rows,
             globalFont,
+            theme: activeTheme,
           };
         }
 
@@ -1003,6 +1262,8 @@ const useBuilderStore = create(
             globalFont,
             customFonts,
             device,
+            theme: activeTheme,
+            themes: availableThemes,
           },
         };
       },
@@ -1026,6 +1287,8 @@ const useBuilderStore = create(
           customFonts: state.customFonts,
           activeDbPageId: state.activeDbPageId,
           pageMeta: state.pageMeta,
+          activeTheme: state.activeTheme,
+          availableThemes: state.availableThemes,
         };
       },
       onRehydrateStorage: () => (state) => {
@@ -1049,6 +1312,29 @@ const useBuilderStore = create(
 
         if (!Array.isArray(state.customFonts) || state.customFonts.length === 0) {
           state.customFonts = readStoredCustomFonts();
+        }
+
+        if (!state.activeTheme || !state.activeTheme.configJson) {
+          const defaultPreset = THEME_PRESETS[0];
+          state.activeTheme = {
+            id: 'preset-0',
+            name: defaultPreset.name,
+            slug: defaultPreset.slug,
+            configJson: normalizeThemeConfig(defaultPreset.configJson),
+            _count: { pages: 0 },
+          };
+        } else {
+          state.activeTheme.configJson = normalizeThemeConfig(state.activeTheme.configJson);
+        }
+
+        if (!Array.isArray(state.availableThemes) || state.availableThemes.length === 0) {
+          state.availableThemes = THEME_PRESETS.map((p, idx) => ({
+            id: `preset-${idx}`,
+            name: p.name,
+            slug: p.slug,
+            configJson: normalizeThemeConfig(p.configJson),
+            _count: { pages: 0 },
+          }));
         }
       },
     }

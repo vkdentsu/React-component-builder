@@ -26,6 +26,7 @@ import ExportModal from '../components/ExportModal';
 import ExportJsonModal from '../components/ExportJsonModal';
 import ImportJsonModal from '../components/ImportJsonModal';
 import PreviewModal from '../components/PreviewModal';
+import ThemeModal from '../components/ThemeModal';
 import ElementPreview from '../components/ElementPreview';
 import { loadGoogleFont } from "../utils/loadGoogleFont";
 
@@ -201,6 +202,14 @@ export default function CustomBuilder() {
       setIsSaving(false);
     }
   };
+    fetchThemes,
+    isThemeModalOpen,
+    closeThemeModal,
+  } = useBuilderStore();
+
+  useEffect(() => {
+    fetchThemes();
+  }, [fetchThemes]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -523,6 +532,7 @@ if (activeData?.dragType === DRAG_TYPES.LAYOUT) {
           </div>
         </div>
       )}
+      {isThemeModalOpen && <ThemeModal onClose={closeThemeModal} />}
     </DndContext>
   );
 }

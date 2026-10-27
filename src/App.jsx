@@ -7,6 +7,7 @@ import GeneratedProject from "./pages/GeneratedProject";
 import CustomBuilder from "./pages/CustomBuilder";
 import Preview from "./pages/Preview";
 import Dashboard from "./pages/Dashboard";
+import ThemesPage from "./pages/ThemesPage";
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
         <Route path="/themes" element={<Dashboard initialTab="themes" />} />
         <Route path="/media" element={<Dashboard initialTab="media" />} />
         <Route path="/settings" element={<Dashboard initialTab="settings" />} />
+        <Route path="/themes" element={<ThemesPage />} />
       </Routes>
     </BrowserRouter>
   );
