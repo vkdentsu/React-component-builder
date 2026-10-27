@@ -9,6 +9,7 @@ import {
   findRowLocation,
   findElementById,
 } from '../utils/treeHelpers';
+import { validateImportJson, sanitizeRows } from '../utils/jsonImporter';
 
 const defaultElementProps = {
   button: {
@@ -813,6 +814,132 @@ const useBuilderStore = create(
           rows: JSON.parse(JSON.stringify(source.rows)),
         };
         set({ documents: [...syncedDocs, copy] });
+      },
+
+      importJson: (input, { mode = 'replace', docName } = {}) => {
+        const validation = validateImportJson(input);
+        if (!validation.isValid) {
+          throw new Error(validation.error || 'Invalid JSON format');
+        }
+
+        const { type, data } = validation;
+        const current = get();
+
+        // If full project state
+        if (type === 'full-project') {
+          const documents = (data.documents || []).map((doc, idx) => ({
+            id: doc.id || nanoid(),
+            name: doc.name || `Component ${idx + 1}`,
+            rows: migrateRows(sanitizeRows(doc.rows || [])),
+          }));
+          const fallbackDocs = documents.length > 0 ? documents : [makeDocument('My Component')];
+          const activeDocId = (data.activeDocId && fallbackDocs.some((d) => d.id === data.activeDocId))
+            ? data.activeDocId
+            : fallbackDocs[0].id;
+          const activeDoc = fallbackDocs.find((d) => d.id === activeDocId) || fallbackDocs[0];
+
+          set({
+            documents: fallbackDocs,
+            activeDocId,
+            rows: activeDoc.rows,
+            selectedId: null,
+            selectedType: null,
+            _history: { past: [], future: [] },
+            ...(data.globalFont ? { globalFont: data.globalFont } : {}),
+            ...(Array.isArray(data.customFonts) ? { customFonts: data.customFonts } : {}),
+            ...(data.device ? { device: data.device } : {}),
+          });
+
+          return {
+            success: true,
+            type: 'full-project',
+            count: fallbackDocs.length,
+            message: `Loaded full project with ${fallbackDocs.length} component(s)`,
+          };
+        }
+
+        // Single document or rows array
+        const rawRows = Array.isArray(data.rows) ? data.rows : Array.isArray(data) ? data : [];
+        const sanitizedRows = migrateRows(sanitizeRows(rawRows));
+        const componentName = docName || data.name || 'Imported Component';
+
+        if (mode === 'new') {
+          const newDoc = {
+            id: nanoid(),
+            name: componentName,
+            rows: sanitizedRows,
+          };
+          const syncedDocs = current.documents.map((d) => (d.id === current.activeDocId ? { ...d, rows: current.rows } : d));
+          set({
+            documents: [...syncedDocs, newDoc],
+            activeDocId: newDoc.id,
+            rows: newDoc.rows,
+            selectedId: null,
+            selectedType: null,
+            _history: { past: [], future: [] },
+            ...(data.globalFont ? { globalFont: data.globalFont } : {}),
+          });
+
+          return {
+            success: true,
+            type: 'new-document',
+            docName: newDoc.name,
+            rowsCount: newDoc.rows.length,
+            message: `Created new component "${newDoc.name}" with ${newDoc.rows.length} row(s)`,
+          };
+        }
+
+        // Default: mode === 'replace'
+        current._pushHistory();
+        const updatedDocs = current.documents.map((d) =>
+          d.id === current.activeDocId ? { ...d, name: docName || d.name, rows: sanitizedRows } : d
+        );
+
+        set({
+          documents: updatedDocs,
+          rows: sanitizedRows,
+          selectedId: null,
+          selectedType: null,
+          ...(data.globalFont ? { globalFont: data.globalFont } : {}),
+        });
+
+        const activeDoc = updatedDocs.find((d) => d.id === current.activeDocId);
+        return {
+          success: true,
+          type: 'replace',
+          docName: activeDoc?.name || 'Component',
+          rowsCount: sanitizedRows.length,
+          message: `Rendered ${sanitizedRows.length} row(s) to "${activeDoc?.name || 'Component'}"`,
+        };
+      },
+
+      getExportJson: (scope = 'current') => {
+        const { documents, activeDocId, rows, globalFont, customFonts, device } = get();
+        const activeDoc = documents.find((d) => d.id === activeDocId) || documents[0] || { name: 'My Component', id: nanoid() };
+
+        if (scope === 'current') {
+          return {
+            id: activeDoc.id,
+            name: activeDoc.name,
+            rows,
+            globalFont,
+          };
+        }
+
+        const syncedDocs = documents.map((d) =>
+          d.id === activeDocId ? { ...d, rows } : d
+        );
+
+        return {
+          state: {
+            documents: syncedDocs,
+            activeDocId,
+            rows,
+            globalFont,
+            customFonts,
+            device,
+          },
+        };
       },
     }),
     {

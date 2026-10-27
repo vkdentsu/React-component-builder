@@ -58,12 +58,50 @@ export default function Home() {
     setShowBuilder(false);
   };
 
-  const handleContinue = (event) => {
+  const handleContinue = async (event) => {
     event.preventDefault();
 
-    navigate("/custom-builder", {
-      state: { theme, fontType, customFont },
-    });
+    try {
+      const response = await fetch("/api/themes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: theme.projectName.trim(),
+          slug: theme.projectName
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-|-$/g, ""),
+          configJson: {
+            description: theme.description,
+          },
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.error?.message || "Failed to save project"
+        );
+      }
+
+      console.log("Configuration saved");
+
+      navigate("/custom-builder", {
+        state: {
+          theme,
+          fontType,
+          customFont,
+          savedTheme: result.data,
+        },
+      });
+    } catch (error) {
+      console.log(`Could not save configuration: ${error.message}`);
+      console.error("Error saving project:", error);
+    }
   };
 
   const isValidHex = (value) => /^#[0-9a-fA-F]{6}$/.test(value);
