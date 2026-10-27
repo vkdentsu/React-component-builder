@@ -1,6 +1,7 @@
 import { Monitor, Tablet, Smartphone, Trash2, Code2, Undo2, Redo2, Eye, Upload, FileJson } from 'lucide-react';
 import useBuilderStore from '../store/builderStore';
 import DocumentSwitcher from './DocumentSwitcher';
+import ThemeSelector from './ThemeSelector';
 
 const DEVICES = [
   { id: 'desktop', label: 'Desktop', Icon: Monitor  },
@@ -21,8 +22,9 @@ export default function Toolbar({ onExport, onExportJson, onImportJson, onPrevie
           <Code2 size={13} className="text-white" />
         </div>
         <span className="font-semibold text-sm text-gray-800 hidden lg:inline">Compify</span>
-        <div className="ml-1">
+        <div className="ml-1 flex items-center gap-1.5">
           <DocumentSwitcher />
+          <ThemeSelector />
         </div>
         <span className="hidden xl:inline text-xs text-gray-400 ml-1">
           {rows.length} row{rows.length !== 1 ? 's' : ''} · {elCount} element{elCount !== 1 ? 's' : ''}

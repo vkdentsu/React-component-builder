@@ -6,6 +6,7 @@ import Processing from "./pages/Processing";
 import GeneratedProject from "./pages/GeneratedProject";
 import CustomBuilder from "./pages/CustomBuilder";
 import Preview from "./pages/Preview";
+import ThemesPage from "./pages/ThemesPage";
 
 function App() {
   return (
@@ -17,7 +18,7 @@ function App() {
         <Route path="/generated" element={<GeneratedProject />} />
         <Route path="/custom-builder" element={<CustomBuilder />} />
         <Route path="/preview" element={<Preview />} />
-
+        <Route path="/themes" element={<ThemesPage />} />
       </Routes>
     </BrowserRouter>
   );

@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import "./Home.scss";
 import logo from "../assets/logo.png";
 import GOOGLE_FONTS from "../utils/googleFonts";
+import { normalizeThemeConfig } from "../utils/themeDefaults";
+import useBuilderStore from "../store/builderStore";
 
 const DEFAULT_THEME = {
   projectName: "",
@@ -62,6 +64,24 @@ export default function Home() {
     event.preventDefault();
 
     try {
+      const tokensPayload = normalizeThemeConfig({
+        colors: {
+          primary: theme.primaryButtonBackground || '#2f6bff',
+          secondary: theme.secondaryButtonBackground || '#18c7b5',
+          background: theme.primaryBackgroundColor || '#ffffff',
+          surface: theme.secondaryBackgroundColor || '#f8fafc',
+          text: theme.primaryFontColor || '#2f6bff',
+          textMuted: theme.secondaryFontColor || '#18c7b5',
+        },
+        typography: {
+          fontFamily: theme.googleFont || 'Inter',
+          fontSource: fontType,
+        },
+        borderRadius: {
+          md: `${theme.primaryButtonRadius || 8}px`,
+        },
+      });
+
       const response = await fetch("/api/themes", {
         method: "POST",
         headers: {
@@ -74,9 +94,7 @@ export default function Home() {
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, "-")
             .replace(/^-|-$/g, ""),
-          configJson: {
-            description: theme.description,
-          },
+          configJson: tokensPayload,
         }),
       });
 
@@ -89,6 +107,9 @@ export default function Home() {
       }
 
       console.log("Configuration saved");
+      if (result.data) {
+        useBuilderStore.getState().setActiveTheme(result.data);
+      }
 
       navigate("/custom-builder", {
         state: {
