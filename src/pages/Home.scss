@@ -24,6 +24,21 @@
     justify-content: space-between;
     align-items: center;
     padding: $size-22 0;
+    .navLinks {
+      display: flex;
+      gap: 20px;
+      a {
+        color: $color-navy;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 16px;
+        transition: $transition-fast;
+
+        &:hover {
+          color: $color-blue;
+        }
+      }
+    }
   }
 
   .logo {
