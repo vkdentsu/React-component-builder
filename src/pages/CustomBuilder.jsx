@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
+
 import {
   DndContext,
   DragOverlay,
@@ -9,6 +11,7 @@ import {
   rectIntersection,
 } from '@dnd-kit/core';
 
+import { CheckCircle2, AlertCircle, X, FileText } from 'lucide-react';
 import useBuilderStore, { makeElement } from '../store/builderStore';
 import { DRAG_TYPES } from '../utils/palette';
 import {
@@ -27,13 +30,24 @@ import PreviewModal from '../components/PreviewModal';
 import ThemeModal from '../components/ThemeModal';
 import ElementPreview from '../components/ElementPreview';
 import { loadGoogleFont } from "../utils/loadGoogleFont";
+import { getApiUrl } from '../utils/api';
 
 export default function CustomBuilder() {
+  const [searchParams] = useSearchParams();
+  const pageIdFromUrl = searchParams.get('pageId');
   const [exportOpen, setExportOpen] = useState(false);
   const [exportJsonOpen, setExportJsonOpen] = useState(false);
   const [importJsonOpen, setImportJsonOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [pageSettingsOpen, setPageSettingsOpen] = useState(false);
   const [activeDrag, setActiveDrag] = useState(null);
+  // Saving & Toast states
+  const [isSaving, setIsSaving] = useState(false);
+  const [toast, setToast] = useState(null);
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
+  };
 
   const handleClose = () => setExportOpen(false);
 
@@ -54,10 +68,142 @@ export default function CustomBuilder() {
     canUndo,
     canRedo,
     globalFont,
+    activeDbPageId,
+    pageMeta,
+    setPageMeta,
+    setActiveDbPageId,
+    loadPageFromDb,
+    initNewDbPage,
     fetchThemes,
     isThemeModalOpen,
     closeThemeModal,
   } = useBuilderStore();
+
+  // Load database page if pageId is in URL
+  useEffect(() => {
+    if (!pageIdFromUrl) return;
+
+    if (pageIdFromUrl === 'new') {
+      const name = searchParams.get('name') || 'New Page';
+      const slug = searchParams.get('slug') || 'new-page';
+      const themeId = searchParams.get('themeId') || '';
+      initNewDbPage({ name, slug, themeId });
+      return;
+    }
+
+    // Only load if different from activeDbPageId to prevent overwriting in-memory edits
+    if (pageIdFromUrl === activeDbPageId) return;
+
+    let cancelled = false;
+    const fetchPage = async () => {
+      try {
+        const res = await fetch(getApiUrl(`/api/pages/${pageIdFromUrl}`));
+        if (!res.ok) throw new Error('Page was not found in database');
+        const json = await res.json();
+        if (!cancelled && json.data) {
+          loadPageFromDb(json.data);
+          showToast(`Loaded page "${json.data.name}" from database.`);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          showToast(err.message, 'error');
+        }
+      }
+    };
+
+    fetchPage();
+    return () => {
+      cancelled = true;
+    };
+  }, [pageIdFromUrl, activeDbPageId, initNewDbPage, loadPageFromDb, searchParams]);
+
+  // Save Page to Database Handler
+  const handleSavePage = async (overrideMeta) => {
+    const meta = overrideMeta || pageMeta;
+    if (!meta?.name?.trim()) {
+      setPageSettingsOpen(true);
+      return;
+    }
+    if (!meta?.slug?.trim()) {
+      setPageSettingsOpen(true);
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+
+      const contentJson = {
+        rows,
+        globalFont,
+        customFonts: useBuilderStore.getState().customFonts,
+        device: useBuilderStore.getState().device,
+      };
+
+      if (activeDbPageId) {
+        // Update existing page in database
+        const res = await fetch(getApiUrl(`/api/pages/${activeDbPageId}`), {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: meta.name.trim(),
+            slug: meta.slug.trim(),
+            contentJson,
+            ...(meta.themeId ? { themeId: meta.themeId } : {}),
+            status: meta.status || 'DRAFT',
+          }),
+        });
+
+        const json = await res.json();
+        if (!res.ok) {
+          throw new Error(json.error?.message || 'Failed to update page in database');
+        }
+
+        setPageMeta(json.data);
+        showToast(`Page "${json.data.name}" saved to database!`);
+      } else {
+        // Create new page in database
+        let themeIdToUse = meta.themeId;
+        if (!themeIdToUse) {
+          const themesRes = await fetch(getApiUrl('/api/themes'));
+          const themesJson = await themesRes.json();
+          themeIdToUse = themesJson.data?.[0]?.id;
+        }
+
+        if (!themeIdToUse) {
+          throw new Error('Please configure at least one theme before saving.');
+        }
+
+        const res = await fetch(getApiUrl('/api/pages'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: meta.name.trim(),
+            slug: meta.slug.trim(),
+            themeId: themeIdToUse,
+            contentJson,
+            status: meta.status || 'DRAFT',
+          }),
+        });
+
+        const json = await res.json();
+        if (!res.ok) {
+          throw new Error(json.error?.message || 'Failed to create page in database');
+        }
+
+        setActiveDbPageId(json.data.id);
+        setPageMeta(json.data);
+        window.history.replaceState(null, '', `/custom-builder?pageId=${json.data.id}`);
+        showToast(`Page "${json.data.name}" created and saved!`);
+      }
+
+      setPageSettingsOpen(false);
+    } catch (err) {
+      console.error('Save page error:', err);
+      showToast(err.message, 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   useEffect(() => {
     fetchThemes();
@@ -104,7 +250,7 @@ export default function CustomBuilder() {
     const activeData = active.data.current;
     const overId = String(over.id);
 
-if (activeData?.dragType === DRAG_TYPES.LAYOUT) {
+    if (activeData?.dragType === DRAG_TYPES.LAYOUT) {
       const rootParsed = parseRootDroppableId(overId);
       if (rootParsed) { addRow(activeData.cols, rootParsed.hops); return; }
 
@@ -260,7 +406,7 @@ if (activeData?.dragType === DRAG_TYPES.LAYOUT) {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex flex-col h-screen overflow-hidden bg-gray-50" style={{fontFamily: globalFont,}}>
+      <div className="flex flex-col h-screen overflow-hidden bg-gray-50" style={{ fontFamily: globalFont, }}>
         <Toolbar
           onExport={() => setExportOpen(true)}
           onExportJson={() => setExportJsonOpen(true)}
@@ -268,6 +414,11 @@ if (activeData?.dragType === DRAG_TYPES.LAYOUT) {
           onPreview={() => setPreviewOpen(true)}
           canUndo={canUndo()}
           canRedo={canRedo()}
+          onSavePage={() => handleSavePage()}
+          isSaving={isSaving}
+          pageMeta={pageMeta}
+          onEditPageSettings={() => setPageSettingsOpen(true)}
+
         />
         <div className="flex flex-1 min-h-0">
           <Sidebar />
@@ -288,6 +439,98 @@ if (activeData?.dragType === DRAG_TYPES.LAYOUT) {
       <ExportJsonModal open={exportJsonOpen} onClose={() => setExportJsonOpen(false)} />
       <ImportJsonModal open={importJsonOpen} onClose={() => setImportJsonOpen(false)} />
       <PreviewModal open={previewOpen} onClose={() => setPreviewOpen(false)} />
+
+      {/* Floating Toast Notification */}
+      {toast && (
+        <div
+          className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-xl shadow-2xl text-xs font-semibold text-white animate-in fade-in slide-in-from-bottom-3 ${toast.type === 'error' ? 'bg-rose-600' : 'bg-emerald-600'
+            }`}
+        >
+          {toast.type === 'error' ? <AlertCircle size={16} /> : <CheckCircle2 size={16} />}
+          <span>{toast.message}</span>
+          <button onClick={() => setToast(null)} className="ml-2 text-white/80 hover:text-white">
+            <X size={13} />
+          </button>
+        </div>
+      )}
+
+      {/* Page Settings Modal */}
+      {pageSettingsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-200">
+            <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <div className="flex items-center gap-2">
+                <FileText size={16} className="text-blue-600" />
+                <h3 className="font-bold text-sm text-slate-800">Page Properties</h3>
+              </div>
+              <button
+                onClick={() => setPageSettingsOpen(false)}
+                className="text-slate-400 hover:text-slate-600 p-1"
+              >
+                <X size={15} />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-3.5">
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  Page Name *
+                </label>
+                <input
+                  type="text"
+                  value={pageMeta?.name || ''}
+                  onChange={(e) => {
+                    const name = e.target.value;
+                    const slug = name
+                      .toLowerCase()
+                      .trim()
+                      .replace(/[^a-z0-9]+/g, '-')
+                      .replace(/^-|-$/g, '');
+                    setPageMeta({ name, slug });
+                  }}
+                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  URL Route Slug *
+                </label>
+                <div className="flex items-center rounded-lg border border-slate-300 overflow-hidden bg-slate-50">
+                  <span className="px-2.5 py-2 text-xs text-slate-400 font-mono bg-slate-100 border-r border-slate-200">
+                    /
+                  </span>
+                  <input
+                    type="text"
+                    value={pageMeta?.slug || ''}
+                    onChange={(e) => setPageMeta({ slug: e.target.value })}
+                    className="flex-1 px-3 py-2 text-xs bg-white font-mono focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setPageSettingsOpen(false)}
+                  className="px-3.5 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSavePage()}
+                  disabled={isSaving}
+                  className="px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs"
+                >
+                  {isSaving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isThemeModalOpen && <ThemeModal onClose={closeThemeModal} />}
     </DndContext>
   );
