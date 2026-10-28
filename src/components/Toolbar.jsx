@@ -10,11 +10,9 @@ const DEVICES = [
   { id: 'mobile', label: 'Mobile', Icon: Smartphone },
 ];
 
-export default function Toolbar({ onExport, onExportJson, onImportJson, onPreview, canUndo, canRedo, onSavePage, isSaving, pageMeta, onEditPageSettings }) {
+export default function Toolbar({ onExport, onExportJson, onImportJson, onPreview, canUndo, canRedo, onSavePage, isSaving }) {
   const navigate = useNavigate();
-  const { rows, device, setDevice, clearAll, undo, redo } = useBuilderStore();
-
-  const elCount = rows.reduce((acc, r) => acc + r.cols.reduce((a, c) => a + c.elements.length, 0), 0);
+  const { device, setDevice, clearAll, undo, redo } = useBuilderStore();
 
   return (
     <header className="h-12 bg-white border-b border-gray-200 flex items-center justify-between px-4 shrink-0 gap-4">

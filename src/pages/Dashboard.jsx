@@ -11,22 +11,15 @@ import {
     Edit3,
     Trash2,
     Copy,
-    ExternalLink,
-    Calendar,
-    Clock,
-    Layers,
     ChevronDown,
     User,
     Sliders,
     Sparkles,
     HelpCircle,
     LogOut,
-    Check,
     X,
     AlertCircle,
-    Filter,
     CheckCircle2,
-    FolderOpen,
     Database,
     Activity,
     Code2,
@@ -53,6 +46,12 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
     };
 
     const [activeTab, setActiveTab] = useState(determineInitialTab);
+    const [prevInitialTab, setPrevInitialTab] = useState(initialTab);
+    if (prevInitialTab !== initialTab) {
+        setPrevInitialTab(initialTab);
+        setActiveTab(determineInitialTab());
+    }
+
     const [profileOpen, setProfileOpen] = useState(false);
     const profileRef = useRef(null);
 
@@ -87,13 +86,6 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
         setTimeout(() => setToast(null), 3500);
     };
 
-    // Sync tab with URL if prop changes
-    useEffect(() => {
-        if (initialTab && initialTab !== activeTab) {
-            setActiveTab(initialTab);
-        }
-    }, [initialTab]);
-
     // Click outside listener for profile dropdown
     useEffect(() => {
         const handleClickOutside = (e) => {
@@ -106,31 +98,56 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
     }, []);
 
     // Fetch initial data
-    const loadData = async () => {
+    const loadData = () => {
         setLoading(true);
         setError(null);
-        try {
-            const [pagesRes, themesRes, healthRes] = await Promise.all([
-                fetch(getApiUrl('/api/pages')).then((r) => r.json()),
-                fetch(getApiUrl('/api/themes')).then((r) => r.json()),
-                fetch(getApiUrl('/api/health')).then((r) => r.json()).catch(() => ({ status: 'error', database: 'unavailable' })),
-            ]);
-
+        return Promise.all([
+            fetch(getApiUrl('/api/pages')).then((r) => r.json()),
+            fetch(getApiUrl('/api/themes')).then((r) => r.json()),
+            fetch(getApiUrl('/api/health')).then((r) => r.json()).catch(() => ({ status: 'error', database: 'unavailable' })),
+        ]).then(([pagesRes, themesRes, healthRes]) => {
             if (pagesRes.data) setPages(pagesRes.data);
             if (themesRes.data) {
                 setThemes(themesRes.data);
             }
             if (healthRes) setHealth(healthRes);
-        } catch (err) {
+        }).catch((err) => {
             console.error('Failed to load dashboard data:', err);
             setError('Could not connect to the backend API. Please make sure the server is running on port 3001.');
-        } finally {
+        }).finally(() => {
             setLoading(false);
-        }
+        });
+    };
+
+    const handleRefresh = () => {
+        loadData();
     };
 
     useEffect(() => {
-        loadData();
+        let isMounted = true;
+        Promise.all([
+            fetch(getApiUrl('/api/pages')).then((r) => r.json()),
+            fetch(getApiUrl('/api/themes')).then((r) => r.json()),
+            fetch(getApiUrl('/api/health')).then((r) => r.json()).catch(() => ({ status: 'error', database: 'unavailable' })),
+        ]).then(([pagesRes, themesRes, healthRes]) => {
+            if (!isMounted) return;
+            if (pagesRes.data) setPages(pagesRes.data);
+            if (themesRes.data) {
+                setThemes(themesRes.data);
+            }
+            if (healthRes) setHealth(healthRes);
+            setLoading(false);
+        }).catch((err) => {
+            console.error('Failed to load dashboard data:', err);
+            if (isMounted) {
+                setError('Could not connect to the backend API. Please make sure the server is running on port 3001.');
+                setLoading(false);
+            }
+        });
+
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
     // Handle auto-slug creation
@@ -746,7 +763,7 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                     </select>
 
                                     <button
-                                        onClick={loadData}
+                                        onClick={handleRefresh}
                                         title="Reload from database"
                                         className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors"
                                     >
@@ -1297,7 +1314,7 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                             Database: {health.database}
                         </span>
                         <button
-                            onClick={loadData}
+                            onClick={handleRefresh}
                             title="Refresh"
                             className="hover:text-white transition-colors"
                         >
