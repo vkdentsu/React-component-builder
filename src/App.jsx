@@ -7,6 +7,7 @@ import GeneratedProject from "./pages/GeneratedProject";
 import CustomBuilder from "./pages/CustomBuilder";
 import Preview from "./pages/Preview";
 import ThemesPage from "./pages/ThemesPage";
+import Auth from "./pages/Auth";
 
 function App() {
   return (
@@ -19,6 +20,8 @@ function App() {
         <Route path="/custom-builder" element={<CustomBuilder />} />
         <Route path="/preview" element={<Preview />} />
         <Route path="/themes" element={<ThemesPage />} />
+        <Route path="/login" element={<Auth mode="login" />} />
+        <Route path="/register" element={<Auth mode="register" />} />
       </Routes>
     </BrowserRouter>
   );

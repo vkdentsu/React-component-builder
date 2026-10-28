@@ -7,6 +7,7 @@ import GOOGLE_FONTS from "../utils/googleFonts";
 import { normalizeThemeConfig } from "../utils/themeDefaults";
 import useBuilderStore from "../store/builderStore";
 import { getApiUrl } from "../utils/api";
+import { AUTH_TOKEN_KEY } from "../utils/auth";
 
 const DEFAULT_THEME = {
   projectName: "",
@@ -176,6 +177,17 @@ export default function Home() {
         <nav>
           <div className="logo">
             <img src={logo} alt="Compify" />
+          </div>
+          <div className="auth-links">
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.removeItem(AUTH_TOKEN_KEY);
+                navigate("/login", { replace: true });
+              }}
+            >
+              Sign out
+            </button>
           </div>
         </nav>
 
