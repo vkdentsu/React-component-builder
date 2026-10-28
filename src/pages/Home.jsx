@@ -6,6 +6,7 @@ import logo from "../assets/logo.png";
 import GOOGLE_FONTS from "../utils/googleFonts";
 import { normalizeThemeConfig } from "../utils/themeDefaults";
 import useBuilderStore from "../store/builderStore";
+import { getApiUrl } from "../utils/api";
 
 const DEFAULT_THEME = {
   projectName: "",
@@ -82,7 +83,7 @@ export default function Home() {
         },
       });
 
-      const response = await fetch("/api/themes", {
+      const response = await fetch(getApiUrl("/api/themes"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
