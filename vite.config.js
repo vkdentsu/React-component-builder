@@ -61,6 +61,7 @@ function sassGlobImports() {
 
 export default defineConfig({
   plugins: [sassGlobImports(), react()],
+  envPrefix: ['VITE_', 'Vite_BACKEND_URL'],
 
   css: {
     preprocessorOptions: {

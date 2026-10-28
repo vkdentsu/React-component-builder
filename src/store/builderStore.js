@@ -14,6 +14,7 @@ import {
   THEME_PRESETS,
   normalizeThemeConfig,
 } from '../utils/themeDefaults';
+import { getApiUrl } from '../utils/api';
 
 const defaultElementProps = {
   button: {
@@ -491,7 +492,7 @@ const useBuilderStore = create(
       fetchThemes: async () => {
         set({ themeLoading: true, themeError: null });
         try {
-          const res = await fetch('/api/themes');
+          const res = await fetch(getApiUrl('/api/themes'));
           if (!res.ok) throw new Error('Failed to fetch themes');
           const json = await res.json();
           const serverThemes = (json.data || []).map((t) => ({
@@ -567,7 +568,7 @@ const useBuilderStore = create(
               .replace(/^-|-$/g, '') || `theme-${Date.now()}`;
           const normalizedTokens = normalizeThemeConfig(configJson);
 
-          const res = await fetch('/api/themes', {
+          const res = await fetch(getApiUrl('/api/themes'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -622,7 +623,7 @@ const useBuilderStore = create(
             data.configJson = normalizeThemeConfig(configJson);
           }
 
-          const res = await fetch(`/api/themes/${id}`, {
+          const res = await fetch(getApiUrl(`/api/themes/${id}`), {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
@@ -660,7 +661,7 @@ const useBuilderStore = create(
               .replace(/[^a-z0-9]+/g, '-')
               .replace(/^-|-$/g, '') || `copy-${Date.now()}`;
 
-          const res = await fetch('/api/themes', {
+          const res = await fetch(getApiUrl('/api/themes'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -694,7 +695,7 @@ const useBuilderStore = create(
         set({ themeLoading: true, themeError: null });
         try {
           if (!String(id).startsWith('preset-')) {
-            const res = await fetch(`/api/themes/${id}`, { method: 'DELETE' });
+            const res = await fetch(getApiUrl(`/api/themes/${id}`), { method: 'DELETE' });
             if (!res.ok) {
               const json = await res.json().catch(() => ({}));
               throw new Error(json.error?.message || 'Failed to delete theme');
