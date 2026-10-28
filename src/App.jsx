@@ -6,6 +6,7 @@ import Processing from "./pages/Processing";
 import GeneratedProject from "./pages/GeneratedProject";
 import CustomBuilder from "./pages/CustomBuilder";
 import Preview from "./pages/Preview";
+import Dashboard from "./pages/Dashboard";
 import ThemesPage from "./pages/ThemesPage";
 
 function App() {
@@ -18,7 +19,11 @@ function App() {
         <Route path="/generated" element={<GeneratedProject />} />
         <Route path="/custom-builder" element={<CustomBuilder />} />
         <Route path="/preview" element={<Preview />} />
-        <Route path="/themes" element={<ThemesPage />} />
+        <Route path="/dashboard" element={<Dashboard initialTab="dashboard" />} />
+        <Route path="/pages" element={<Dashboard initialTab="pages" />} />
+        <Route path="/themes" element={<Dashboard initialTab="ThemesPage" />} />
+        <Route path="/media" element={<Dashboard initialTab="media" />} />
+        <Route path="/settings" element={<Dashboard initialTab="settings" />} />
       </Routes>
     </BrowserRouter>
   );
