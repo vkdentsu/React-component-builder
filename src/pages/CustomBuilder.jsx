@@ -30,7 +30,7 @@ import PreviewModal from '../components/PreviewModal';
 import ThemeModal from '../components/ThemeModal';
 import ElementPreview from '../components/ElementPreview';
 import { loadGoogleFont } from "../utils/loadGoogleFont";
-import { getApiUrl } from '../utils/api';
+import { authenticatedFetch } from '../utils/api';
 
 export default function CustomBuilder() {
   const [searchParams] = useSearchParams();
@@ -97,7 +97,7 @@ export default function CustomBuilder() {
     let cancelled = false;
     const fetchPage = async () => {
       try {
-        const res = await fetch(getApiUrl(`/api/pages/${pageIdFromUrl}`));
+        const res = await authenticatedFetch(`/api/pages/${pageIdFromUrl}`);
         if (!res.ok) throw new Error('Page was not found in database');
         const json = await res.json();
         if (!cancelled && json.data) {
@@ -141,7 +141,7 @@ export default function CustomBuilder() {
 
       if (activeDbPageId) {
         // Update existing page in database
-        const res = await fetch(getApiUrl(`/api/pages/${activeDbPageId}`), {
+        const res = await authenticatedFetch(`/api/pages/${activeDbPageId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -164,7 +164,7 @@ export default function CustomBuilder() {
         // Create new page in database
         let themeIdToUse = meta.themeId;
         if (!themeIdToUse) {
-          const themesRes = await fetch(getApiUrl('/api/themes'));
+          const themesRes = await authenticatedFetch('/api/themes');
           const themesJson = await themesRes.json();
           themeIdToUse = themesJson.data?.[0]?.id;
         }
@@ -173,7 +173,7 @@ export default function CustomBuilder() {
           throw new Error('Please configure at least one theme before saving.');
         }
 
-        const res = await fetch(getApiUrl('/api/pages'), {
+        const res = await authenticatedFetch('/api/pages', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

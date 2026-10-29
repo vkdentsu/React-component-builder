@@ -1,27 +1,60 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import logo from "../assets/logo.png";
+import { getApiUrl } from "../utils/api";
+import { saveAuthSession } from "../utils/auth";
 import "./Auth.scss";
 
 export default function Auth({ mode }) {
   const isRegister = mode === "register";
+  const navigate = useNavigate();
+  const location = useLocation();
   const [message, setMessage] = useState("");
-  const [messageType, setMessageType] = useState("info");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [password, setPassword] = useState("");
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     setMessage("");
     const formData = new FormData(event.currentTarget);
 
     if (isRegister && password !== formData.get("confirmPassword")) {
-      setMessageType("error");
       setMessage("Passwords do not match.");
       return;
     }
 
-    setMessageType("info");
-    setMessage("Authentication is not connected yet. Your details were not submitted.");
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(
+        getApiUrl(`/api/auth/${isRegister ? "register" : "login"}`),
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: formData.get("email"),
+            password,
+          }),
+        },
+      );
+      const result = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          result?.error?.message || "Unable to authenticate. Please try again.",
+        );
+      }
+
+      saveAuthSession(result?.data);
+      const returnLocation = location.state?.from;
+      const returnPath = returnLocation?.pathname?.startsWith("/")
+        ? `${returnLocation.pathname}${returnLocation.search || ""}${returnLocation.hash || ""}`
+        : "/dashboard";
+      navigate(returnPath, { replace: true });
+    } catch (error) {
+      setMessage(error.message || "Unable to connect to the authentication service.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -42,29 +75,15 @@ export default function Auth({ mode }) {
         </p>
 
         <form className="auth-form" onSubmit={handleSubmit}>
-          <label htmlFor="username">Username</label>
+          <label htmlFor="email">Email</label>
           <input
-            id="username"
-            name="username"
-            type="text"
-            autoComplete="username"
-            placeholder="Your username"
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            placeholder="you@example.com"
             required
           />
-
-          {isRegister && (
-            <>
-              <label htmlFor="email">Email</label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                placeholder="you@example.com"
-                required
-              />
-            </>
-          )}
 
           <label htmlFor="password">Password</label>
           <input
@@ -93,16 +112,17 @@ export default function Auth({ mode }) {
           )}
 
           {message && (
-            <p
-              className={`auth-message auth-message-${messageType}`}
-              role={messageType === "error" ? "alert" : "status"}
-            >
+            <p className="auth-message auth-message-error" role="alert">
               {message}
             </p>
           )}
 
-          <button className="auth-submit" type="submit">
-            {isRegister ? "Create account" : "Sign in"}
+          <button className="auth-submit" type="submit" disabled={isSubmitting}>
+            {isSubmitting
+              ? "Please wait..."
+              : isRegister
+                ? "Create account"
+                : "Sign in"}
           </button>
         </form>
 
