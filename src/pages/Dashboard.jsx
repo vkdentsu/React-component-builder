@@ -28,6 +28,7 @@ import {
     Upload,
 } from 'lucide-react';
 import { getApiUrl } from '../utils/api';
+import ConfigurationAndThemes from "./ConfigurationAndThemes";
 
 export default function Dashboard({ initialTab = 'dashboard' }) {
     const navigate = useNavigate();
@@ -917,102 +918,8 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                     {/* ========================================================================= */}
                     {/* TAB 3: THEMES VIEW                                                        */}
                     {/* ========================================================================= */}
-                    {activeTab === 'themes' && (
-                        <div className="space-y-6 animate-in fade-in duration-200">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <h1 className="text-2xl font-bold text-slate-800">Themes</h1>
-                                    <p className="text-xs text-slate-500 mt-0.5">
-                                        Configured themes stored in the database for typography and color palettes.
-                                    </p>
-                                </div>
-                                <button
-                                    onClick={() => navigate('/')}
-                                    className="px-3.5 py-2 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-semibold transition-colors"
-                                >
-                                    Configure New Theme
-                                </button>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                                {themes.map((theme) => {
-                                    const colors = theme.configJson?.colors || {};
-                                    return (
-                                        <div
-                                            key={theme.id}
-                                            className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col justify-between"
-                                        >
-                                            <div>
-                                                <div className="flex items-center justify-between mb-3">
-                                                    <h3 className="text-sm font-bold text-slate-800">
-                                                        {theme.name}
-                                                    </h3>
-                                                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-500">
-                                                        /{theme.slug}
-                                                    </span>
-                                                </div>
-
-                                                {/* Color Swatches */}
-                                                <div className="flex items-center gap-2 mb-4">
-                                                    {colors.primary && (
-                                                        <span
-                                                            style={{ backgroundColor: colors.primary }}
-                                                            className="w-6 h-6 rounded-md shadow-xs border border-black/10"
-                                                            title={`Primary: ${colors.primary}`}
-                                                        />
-                                                    )}
-                                                    {colors.secondary && (
-                                                        <span
-                                                            style={{ backgroundColor: colors.secondary }}
-                                                            className="w-6 h-6 rounded-md shadow-xs border border-black/10"
-                                                            title={`Secondary: ${colors.secondary}`}
-                                                        />
-                                                    )}
-                                                    {colors.surface && (
-                                                        <span
-                                                            style={{ backgroundColor: colors.surface }}
-                                                            className="w-6 h-6 rounded-md shadow-xs border border-black/10"
-                                                            title={`Surface: ${colors.surface}`}
-                                                        />
-                                                    )}
-                                                    {colors.background && (
-                                                        <span
-                                                            style={{ backgroundColor: colors.background }}
-                                                            className="w-6 h-6 rounded-md shadow-xs border border-black/10"
-                                                            title={`Background: ${colors.background}`}
-                                                        />
-                                                    )}
-                                                </div>
-
-                                                <div className="space-y-1.5 text-[11px] text-slate-500">
-                                                    <p>
-                                                        <span className="text-slate-400">Font:</span>{' '}
-                                                        <span className="font-medium text-slate-700">
-                                                            {theme.configJson?.typography?.fontFamily ||
-                                                                theme.configJson?.googleFont ||
-                                                                'Inter'}
-                                                        </span>
-                                                    </p>
-                                                    <p>
-                                                        <span className="text-slate-400">Connected Pages:</span>{' '}
-                                                        <span className="font-semibold text-blue-600">
-                                                            {theme._count?.pages ?? 0}
-                                                        </span>
-                                                    </p>
-                                                </div>
-                                            </div>
-
-                                            <div className="mt-5 pt-3 border-t border-slate-100 text-[10px] text-slate-400 flex items-center justify-between">
-                                                <span>
-                                                    Created {new Date(theme.createdAt).toLocaleDateString()}
-                                                </span>
-                                                <span className="text-emerald-600 font-medium">Ready</span>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
+                    {activeTab === "themes" && (
+                        <ConfigurationAndThemes themes={themes} onRefresh={loadData} />
                     )}
 
                     {/* ========================================================================= */}
