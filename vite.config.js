@@ -18,7 +18,7 @@ function sassGlobImports() {
         return null
       }
 
-      const importPattern = /@import\s+(["'])([^"']*\*[^"']*)\1\s*;/g
+      const importPattern = /@use\s+(["'])([^"']*\*[^"']*)\1\s*;/g
       const matches = [...code.matchAll(importPattern)]
 
       if (matches.length === 0) {
@@ -44,7 +44,7 @@ function sassGlobImports() {
               .split(path.sep)
               .join('/')
 
-            return `@import '${relativePath}';`
+            return `@use '${relativePath}';`
           })
           .join('\n')
 
