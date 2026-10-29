@@ -1,175 +1,174 @@
 
-import { useState } from "react";
+// import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Home.scss";
 import logo from "../assets/logo.png";
-import GOOGLE_FONTS from "../utils/googleFonts";
-import { normalizeThemeConfig } from "../utils/themeDefaults";
-import useBuilderStore from "../store/builderStore";
-import { getApiUrl } from "../utils/api";
-import { AUTH_TOKEN_KEY } from "../utils/auth";
+// import GOOGLE_FONTS from "../utils/googleFonts";
+// import { normalizeThemeConfig } from "../utils/themeDefaults";
+// import useBuilderStore from "../store/builderStore";
+// import { getApiUrl } from "../utils/api";
 
-const DEFAULT_THEME = {
-  projectName: "",
-  description: "",
-  googleFont: "Inter",
-  primaryFontColor: "#2f6bff",
-  secondaryFontColor: "#18c7b5",
-  primaryBackgroundColor: "#ffffff",
-  secondaryBackgroundColor: "#0b1b33",
-  primaryButtonBackground: "#2f6bff",
-  primaryButtonText: "#ffffff",
-  primaryButtonRadius: 8,
-  primaryButtonWidth: 180,
-  secondaryButtonBackground: "#18c7b5",
-  secondaryButtonText: "#ffffff",
-  secondaryButtonRadius: 8,
-  secondaryButtonWidth: 180,
-  tabletBreakpoint: 576,
-  desktopBreakpoint: 767,
-  largeBreakpoint: 1200,
-};
+// const DEFAULT_THEME = {
+//   projectName: "",
+//   description: "",
+//   googleFont: "Inter",
+//   primaryFontColor: "#2f6bff",
+//   secondaryFontColor: "#18c7b5",
+//   primaryBackgroundColor: "#ffffff",
+//   secondaryBackgroundColor: "#0b1b33",
+//   primaryButtonBackground: "#2f6bff",
+//   primaryButtonText: "#ffffff",
+//   primaryButtonRadius: 8,
+//   primaryButtonWidth: 180,
+//   secondaryButtonBackground: "#18c7b5",
+//   secondaryButtonText: "#ffffff",
+//   secondaryButtonRadius: 8,
+//   secondaryButtonWidth: 180,
+//   tabletBreakpoint: 576,
+//   desktopBreakpoint: 767,
+//   largeBreakpoint: 1200,
+// };
 
 export default function Home() {
   const navigate = useNavigate();
 
-  const [showBuilder, setShowBuilder] = useState(false);
-  const [fontType, setFontType] = useState("google");
-  const [customFont, setCustomFont] = useState(null);
-  const [fileInputKey, setFileInputKey] = useState(0);
-  const [activeButtonStyle, setActiveButtonStyle] = useState(null);
-  const [theme, setTheme] = useState({ ...DEFAULT_THEME });
+  // const [showBuilder, setShowBuilder] = useState(false);
+  // const [fontType, setFontType] = useState("google");
+  // const [customFont, setCustomFont] = useState(null);
+  // const [fileInputKey, setFileInputKey] = useState(0);
+  // const [activeButtonStyle, setActiveButtonStyle] = useState(null);
+  // const [theme, setTheme] = useState({ ...DEFAULT_THEME });
 
-  const updateTheme = (event) => {
-    const { name, value, type } = event.target;
+  // const updateTheme = (event) => {
+  //   const { name, value, type } = event.target;
 
-    setTheme((previous) => ({
-      ...previous,
-      [name]: type === "number" ? (value === "" ? "" : Number(value)) : value,
-    }));
-  };
+  //   setTheme((previous) => ({
+  //     ...previous,
+  //     [name]: type === "number" ? (value === "" ? "" : Number(value)) : value,
+  //   }));
+  // };
 
-  const resetConfiguration = () => {
-    setTheme({ ...DEFAULT_THEME });
-    setFontType("google");
-    setCustomFont(null);
-    setFileInputKey((previous) => previous + 1);
-    setActiveButtonStyle(null);
-  };
+  // const resetConfiguration = () => {
+  //   setTheme({ ...DEFAULT_THEME });
+  //   setFontType("google");
+  //   setCustomFont(null);
+  //   setFileInputKey((previous) => previous + 1);
+  //   setActiveButtonStyle(null);
+  // };
 
-  const closeConfiguration = () => {
-    resetConfiguration();
-    setShowBuilder(false);
-  };
+  // const closeConfiguration = () => {
+  //   resetConfiguration();
+  //   setShowBuilder(false);
+  // };
 
-  const handleContinue = async (event) => {
-    event.preventDefault();
+  // const handleContinue = async (event) => {
+  //   event.preventDefault();
 
-    try {
-      const tokensPayload = normalizeThemeConfig({
-        colors: {
-          primary: theme.primaryButtonBackground || '#2f6bff',
-          secondary: theme.secondaryButtonBackground || '#18c7b5',
-          background: theme.primaryBackgroundColor || '#ffffff',
-          surface: theme.secondaryBackgroundColor || '#f8fafc',
-          text: theme.primaryFontColor || '#2f6bff',
-          textMuted: theme.secondaryFontColor || '#18c7b5',
-        },
-        typography: {
-          fontFamily: theme.googleFont || 'Inter',
-          fontSource: fontType,
-        },
-        borderRadius: {
-          md: `${theme.primaryButtonRadius || 8}px`,
-        },
-      });
+  //   try {
+  //     const tokensPayload = normalizeThemeConfig({
+  //       colors: {
+  //         primary: theme.primaryButtonBackground || '#2f6bff',
+  //         secondary: theme.secondaryButtonBackground || '#18c7b5',
+  //         background: theme.primaryBackgroundColor || '#ffffff',
+  //         surface: theme.secondaryBackgroundColor || '#f8fafc',
+  //         text: theme.primaryFontColor || '#2f6bff',
+  //         textMuted: theme.secondaryFontColor || '#18c7b5',
+  //       },
+  //       typography: {
+  //         fontFamily: theme.googleFont || 'Inter',
+  //         fontSource: fontType,
+  //       },
+  //       borderRadius: {
+  //         md: `${theme.primaryButtonRadius || 8}px`,
+  //       },
+  //     });
 
-      const response = await fetch(getApiUrl("/api/themes"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: theme.projectName.trim(),
-          slug: theme.projectName
-            .trim()
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, "-")
-            .replace(/^-|-$/g, ""),
-          configJson: tokensPayload,
-        }),
-      });
+  //     const response = await fetch(getApiUrl("/api/themes"), {
+  //       method: "POST",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //       },
+  //       body: JSON.stringify({
+  //         name: theme.projectName.trim(),
+  //         slug: theme.projectName
+  //           .trim()
+  //           .toLowerCase()
+  //           .replace(/[^a-z0-9]+/g, "-")
+  //           .replace(/^-|-$/g, ""),
+  //         configJson: tokensPayload,
+  //       }),
+  //     });
 
-      const result = await response.json();
+  //     const result = await response.json();
 
-      if (!response.ok) {
-        throw new Error(
-          result.error?.message || "Failed to save project"
-        );
-      }
+  //     if (!response.ok) {
+  //       throw new Error(
+  //         result.error?.message || "Failed to save project"
+  //       );
+  //     }
 
-      console.log("Configuration saved");
-      if (result.data) {
-        useBuilderStore.getState().setActiveTheme(result.data);
-      }
+  //     console.log("Configuration saved");
+  //     if (result.data) {
+  //       useBuilderStore.getState().setActiveTheme(result.data);
+  //     }
 
-      navigate("/custom-builder", {
-        state: {
-          theme,
-          fontType,
-          customFont,
-          savedTheme: result.data,
-        },
-      });
-    } catch (error) {
-      console.log(`Could not save configuration: ${error.message}`);
-      console.error("Error saving project:", error);
-    }
-  };
+  //     navigate("/custom-builder", {
+  //       state: {
+  //         theme,
+  //         fontType,
+  //         customFont,
+  //         savedTheme: result.data,
+  //       },
+  //     });
+  //   } catch (error) {
+  //     console.log(`Could not save configuration: ${error.message}`);
+  //     console.error("Error saving project:", error);
+  //   }
+  // };
 
-  const isValidHex = (value) => /^#[0-9a-fA-F]{6}$/.test(value);
+  // const isValidHex = (value) => /^#[0-9a-fA-F]{6}$/.test(value);
 
-  const updateButtonStyle = (buttonType, property, value) => {
-    const name = `${buttonType}Button${property}`;
+  // const updateButtonStyle = (buttonType, property, value) => {
+  //   const name = `${buttonType}Button${property}`;
 
-    setTheme((previous) => ({
-      ...previous,
-      [name]: value,
-    }));
-  };
+  //   setTheme((previous) => ({
+  //     ...previous,
+  //     [name]: value,
+  //   }));
+  // };
 
-  const renderButtonStyleCard = (buttonType, label) => (
-    <button
-      type="button"
-      className={
-        activeButtonStyle === buttonType
-          ? "styleChoice active"
-          : "styleChoice"
-      }
-      aria-expanded={activeButtonStyle === buttonType}
-      onClick={() =>
-        setActiveButtonStyle((current) =>
-          current === buttonType ? null : buttonType
-        )
-      }
-    >
-      <span
-        className="styleSample"
-        style={{
-          backgroundColor: theme[`${buttonType}ButtonBackground`],
-          color: theme[`${buttonType}ButtonText`],
-          borderRadius: `${theme[`${buttonType}ButtonRadius`]}px`,
-          width: `${theme[`${buttonType}ButtonWidth`]}px`,
-          maxWidth: "100%",
-        }}
-      >
-        {label}
-      </span>
-      <span className="styleChoiceLabel">
-        {activeButtonStyle === buttonType ? "Editing styles" : "Configure"}
-      </span>
-    </button>
-  );
+  // const renderButtonStyleCard = (buttonType, label) => (
+  //   <button
+  //     type="button"
+  //     className={
+  //       activeButtonStyle === buttonType
+  //         ? "styleChoice active"
+  //         : "styleChoice"
+  //     }
+  //     aria-expanded={activeButtonStyle === buttonType}
+  //     onClick={() =>
+  //       setActiveButtonStyle((current) =>
+  //         current === buttonType ? null : buttonType
+  //       )
+  //     }
+  //   >
+  //     <span
+  //       className="styleSample"
+  //       style={{
+  //         backgroundColor: theme[`${buttonType}ButtonBackground`],
+  //         color: theme[`${buttonType}ButtonText`],
+  //         borderRadius: `${theme[`${buttonType}ButtonRadius`]}px`,
+  //         width: `${theme[`${buttonType}ButtonWidth`]}px`,
+  //         maxWidth: "100%",
+  //       }}
+  //     >
+  //       {label}
+  //     </span>
+  //     <span className="styleChoiceLabel">
+  //       {activeButtonStyle === buttonType ? "Editing styles" : "Configure"}
+  //     </span>
+  //   </button>
+  // );
 
   return (
     <div className="compifyHome">
@@ -178,16 +177,9 @@ export default function Home() {
           <div className="logo">
             <img src={logo} alt="Compify" />
           </div>
-          <div className="auth-links">
-            <button
-              type="button"
-              onClick={() => {
-                localStorage.removeItem(AUTH_TOKEN_KEY);
-                navigate("/login", { replace: true });
-              }}
-            >
-              Sign out
-            </button>
+          <div className="navLinks">
+            <a href="#features">Features</a>
+            <a href="#cta">Get started</a>
           </div>
         </nav>
 
@@ -212,7 +204,7 @@ export default function Home() {
               Build Using Design
             </button>
 
-            <button
+            {/* <button
               type="button"
               className="btn btn-green"
               onClick={() => {
@@ -225,13 +217,20 @@ export default function Home() {
               }}
             >
               Build Custom Component
+            </button> */}
+            <button
+              type="button"
+              className="btn btn-dark"
+              onClick={() => navigate("/dashboard")}
+            >
+              Dashboard
             </button>
           </div>
         </header>
 
-        {showBuilder && (
+        {/* {showBuilder && (
           <section className="themeSetup" id="theme-setup">
-            <div className="setupHeader">
+            <div className="setupHeader"> 
               <div>
                 <span className="setupEyebrow">
                   STEP 01 · CONFIGURATION
@@ -615,7 +614,7 @@ export default function Home() {
               </div>
             </form>
           </section>
-        )}
+        )}*/}
 
         <footer>
           <span>© 2026 Compify</span>

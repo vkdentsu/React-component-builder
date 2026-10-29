@@ -8,6 +8,7 @@ import CustomBuilder from "./pages/CustomBuilder";
 import Preview from "./pages/Preview";
 import ThemesPage from "./pages/ThemesPage";
 import Auth from "./pages/Auth";
+import Dashboard from "./pages/Dashboard";
 
 function App() {
   return (
@@ -22,6 +23,11 @@ function App() {
         <Route path="/themes" element={<ThemesPage />} />
         <Route path="/login" element={<Auth mode="login" />} />
         <Route path="/register" element={<Auth mode="register" />} />
+        <Route path="/dashboard" element={<Dashboard initialTab="dashboard" />} />
+        <Route path="/pages" element={<Dashboard initialTab="pages" />} />
+        <Route path="/themes" element={<Dashboard initialTab="themes" />} />
+        <Route path="/media" element={<Dashboard initialTab="media" />} />
+        <Route path="/settings" element={<Dashboard initialTab="settings" />} />
       </Routes>
     </BrowserRouter>
   );
