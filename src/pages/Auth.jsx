@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import logo from "../assets/logo.png";
 import { getApiUrl } from "../utils/api";
 import { saveAuthSession } from "../utils/auth";
@@ -7,7 +7,6 @@ import "./Auth.scss";
 
 export default function Auth({ mode }) {
   const isRegister = mode === "register";
-  const navigate = useNavigate();
   const location = useLocation();
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -49,7 +48,7 @@ export default function Auth({ mode }) {
       const returnPath = returnLocation?.pathname?.startsWith("/")
         ? `${returnLocation.pathname}${returnLocation.search || ""}${returnLocation.hash || ""}`
         : "/dashboard";
-      navigate(returnPath, { replace: true });
+      window.location.replace(returnPath);
     } catch (error) {
       setMessage(error.message || "Unable to connect to the authentication service.");
     } finally {

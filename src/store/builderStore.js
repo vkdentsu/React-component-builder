@@ -15,6 +15,13 @@ import {
   normalizeThemeConfig,
 } from '../utils/themeDefaults';
 import { authenticatedFetch } from '../utils/api';
+import { getAuthUserId } from '../utils/auth';
+
+const userScopedStorage = {
+  getItem: (name) => localStorage.getItem(`${name}:${getAuthUserId() || 'anonymous'}`),
+  setItem: (name, value) => localStorage.setItem(`${name}:${getAuthUserId() || 'anonymous'}`, value),
+  removeItem: (name) => localStorage.removeItem(`${name}:${getAuthUserId() || 'anonymous'}`),
+};
 
 const defaultElementProps = {
   button: {
@@ -294,6 +301,28 @@ const makeDocument = (name = 'My Component') => ({
   rows: [],
 });
 
+function getUniqueThemeSlug(name, themes, attempt = 0) {
+  const baseSlug = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '') || 'theme';
+  const usedSlugs = new Set(
+    themes
+      .filter((theme) => !String(theme.id).startsWith('preset-'))
+      .map((theme) => theme.slug),
+  );
+  let suffix = attempt;
+  let slug = suffix === 0 ? baseSlug : `${baseSlug}-${suffix + 1}`;
+
+  while (usedSlugs.has(slug)) {
+    suffix += 1;
+    slug = `${baseSlug}-${suffix + 1}`;
+  }
+
+  return slug;
+}
+
 const responsiveTypographyFields = {
   input: { fontSize: { desktop: 12, tablet: 11, mobile: 10 }, fontWeight: { desktop: 'medium', tablet: 'medium', mobile: 'normal' }, lineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 } },
   navbar: { fontSize: { desktop: 14, tablet: 13, mobile: 12 }, fontWeight: { desktop: 'medium', tablet: 'medium', mobile: 'medium' }, lineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 } },
@@ -341,13 +370,14 @@ function migrateRows(rows = []) {
 }
 
 const HISTORY_LIMIT = 50;
-const CUSTOM_FONTS_STORAGE_KEY = 'component-builder-custom-fonts';
+const customFontsStorageKey = () =>
+  `component-builder-custom-fonts:${getAuthUserId() || 'anonymous'}`;
 
 const readStoredCustomFonts = () => {
   if (typeof window === 'undefined') return [];
 
   try {
-    const stored = window.localStorage.getItem(CUSTOM_FONTS_STORAGE_KEY);
+    const stored = window.localStorage.getItem(customFontsStorageKey());
     return stored ? JSON.parse(stored) : [];
   } catch (error) {
     console.warn('Failed to read stored custom fonts', error);
@@ -359,7 +389,7 @@ const writeStoredCustomFonts = (fonts) => {
   if (typeof window === 'undefined') return;
 
   try {
-    window.localStorage.setItem(CUSTOM_FONTS_STORAGE_KEY, JSON.stringify(fonts));
+    window.localStorage.setItem(customFontsStorageKey(), JSON.stringify(fonts));
   } catch (error) {
     console.warn('Failed to save custom fonts', error);
   }
@@ -560,25 +590,41 @@ const useBuilderStore = create(
       createTheme: async ({ name, configJson }) => {
         set({ themeLoading: true, themeError: null });
         try {
-          const slug =
-            name
-              .trim()
-              .toLowerCase()
-              .replace(/[^a-z0-9]+/g, '-')
-              .replace(/^-|-$/g, '') || `theme-${Date.now()}`;
-          const normalizedTokens = normalizeThemeConfig(configJson);
+          const trimmedName = typeof name === 'string' ? name.trim() : '';
+          if (!trimmedName) throw new Error('Please enter a theme name.');
 
-          const res = await authenticatedFetch('/api/themes', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              name: name.trim(),
-              slug,
-              configJson: normalizedTokens,
-            }),
-          });
-          const json = await res.json();
-          if (!res.ok) throw new Error(json.error?.message || 'Failed to create theme');
+          const normalizedTokens = normalizeThemeConfig(configJson);
+          let json;
+          let response;
+          let slug = getUniqueThemeSlug(trimmedName, get().availableThemes);
+
+          for (let attempt = 0; attempt < 5; attempt += 1) {
+            response = await authenticatedFetch('/api/themes', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                name: trimmedName,
+                slug,
+                configJson: normalizedTokens,
+              }),
+            });
+            json = await response.json();
+
+            if (response.ok) {
+              if (!json?.data?.id) {
+                throw new Error('The server did not return the created theme.');
+              }
+              break;
+            }
+            if (response.status !== 409 || attempt === 4) {
+              throw new Error(json.error?.message || 'Failed to create theme');
+            }
+
+            slug = getUniqueThemeSlug(
+              trimmedName,
+              [...get().availableThemes, { id: 'pending', slug }],
+            );
+          }
 
           const newTheme = {
             ...json.data,
@@ -653,38 +699,11 @@ const useBuilderStore = create(
         try {
           const source =
             get().availableThemes.find((t) => t.id === themeId) || get().activeTheme;
-          const name = newName || `${source.name} (Copy)`;
-          const slug =
-            name
-              .trim()
-              .toLowerCase()
-              .replace(/[^a-z0-9]+/g, '-')
-              .replace(/^-|-$/g, '') || `copy-${Date.now()}`;
-
-          const res = await authenticatedFetch('/api/themes', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              name,
-              slug,
-              configJson: normalizeThemeConfig(source.configJson),
-            }),
+          if (!source) throw new Error('Select a theme to duplicate.');
+          return await get().createTheme({
+            name: newName || `${source.name} (Copy)`,
+            configJson: source.configJson,
           });
-          const json = await res.json();
-          if (!res.ok) throw new Error(json.error?.message || 'Failed to clone theme');
-
-          const cloned = {
-            ...json.data,
-            configJson: normalizeThemeConfig(json.data.configJson),
-            _count: { pages: 0 },
-          };
-
-          set((s) => ({
-            availableThemes: [cloned, ...s.availableThemes],
-            activeTheme: cloned,
-            themeLoading: false,
-          }));
-          return cloned;
         } catch (err) {
           set({ themeLoading: false, themeError: err.message });
           throw err;
@@ -1271,7 +1290,7 @@ const useBuilderStore = create(
     }),
     {
       name: 'component-builder-store',
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => userScopedStorage),
       partialize: (state) => {
         const documents = state.documents.map((d) =>
           d.id === state.activeDocId ? { ...d, rows: state.rows } : d
