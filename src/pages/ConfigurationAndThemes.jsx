@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Edit3 } from "lucide-react";
+import { Edit3, Trash2 } from "lucide-react";
 import { getApiUrl } from "../utils/api";
 
 export default function ConfigurationAndThemes({ themes = [], onRefresh }) {
@@ -10,8 +10,14 @@ export default function ConfigurationAndThemes({ themes = [], onRefresh }) {
   const [nameDraft, setNameDraft] = useState("");
   const [slugDraft, setSlugDraft] = useState("");
   const [descriptionDraft, setDescriptionDraft] = useState("");
-  const [configDraft, setConfigDraft] = useState("");
   const [configFormDraft, setConfigFormDraft] = useState({});
+  const [configNameDrafts, setConfigNameDrafts] = useState({});
+  const [addingConfigGroup, setAddingConfigGroup] = useState(false);
+  const [configGroupName, setConfigGroupName] = useState("");
+  const [addingConfigValueTo, setAddingConfigValueTo] = useState(null);
+  const [configValueName, setConfigValueName] = useState("");
+  const [configValueType, setConfigValueType] = useState("text");
+  const [configValueDraft, setConfigValueDraft] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
 
@@ -27,8 +33,6 @@ export default function ConfigurationAndThemes({ themes = [], onRefresh }) {
       setNameDraft(selectedTheme?.name || "");
     } else if (field === "slug") {
       setSlugDraft(selectedTheme?.slug || "");
-    } else if (field === "configJson") {
-      setConfigDraft(JSON.stringify(selectedTheme?.configJson ?? {}, null, 2));
     } else if (field === "configForm") {
       setConfigFormDraft(
         selectedTheme?.configJson &&
@@ -55,6 +59,181 @@ export default function ConfigurationAndThemes({ themes = [], onRefresh }) {
     });
   };
 
+  const getConfigNameDraftKey = (path, key) =>
+    JSON.stringify([...path, key]);
+
+  const deleteConfigKey = (parentPath, keyToDelete) => {
+    setConfigFormDraft((current) => {
+      const updated = { ...current };
+      let parent = updated;
+      for (const key of parentPath) {
+        parent[key] = { ...parent[key] };
+        parent = parent[key];
+      }
+      delete parent[keyToDelete];
+      return updated;
+    });
+    setConfigNameDrafts((current) => {
+      const updated = { ...current };
+      delete updated[getConfigNameDraftKey(parentPath, keyToDelete)];
+      return updated;
+    });
+    setMessage(null);
+  };
+
+  const renameConfigKey = (parentPath, currentKey) => {
+    const draftKey = getConfigNameDraftKey(parentPath, currentKey);
+    const rawName = configNameDrafts[draftKey];
+    const nextKey =
+      rawName === undefined || rawName === currentKey
+        ? currentKey
+        : configKeyFromLabel(rawName);
+    if (!nextKey) {
+      setMessage({ type: "error", text: "Configuration names cannot be empty." });
+      return;
+    }
+
+    let parent = configFormDraft;
+    for (const key of parentPath) parent = parent[key];
+    if (nextKey !== currentKey && Object.hasOwn(parent, nextKey)) {
+      setMessage({
+        type: "error",
+        text: `A configuration value named "${nextKey}" already exists here.`,
+      });
+      return;
+    }
+
+    if (nextKey !== currentKey) {
+      setConfigFormDraft((current) => {
+        const updated = { ...current };
+        let updatedParent = updated;
+        for (const key of parentPath) {
+          updatedParent[key] = { ...updatedParent[key] };
+          updatedParent = updatedParent[key];
+        }
+        const entries = Object.entries(updatedParent);
+        const renamed = Object.fromEntries(
+          entries.map(([key, value]) => [
+            key === currentKey ? nextKey : key,
+            value,
+          ])
+        );
+        Object.keys(updatedParent).forEach((key) => delete updatedParent[key]);
+        Object.assign(updatedParent, renamed);
+        return updated;
+      });
+    }
+
+    setConfigNameDrafts((current) => {
+      const updated = { ...current };
+      delete updated[draftKey];
+      return updated;
+    });
+    setMessage(null);
+  };
+
+  const renderConfigNameEditor = (key, parentPath, { canDelete = true } = {}) => {
+    const draftKey = getConfigNameDraftKey(parentPath, key);
+    return (
+      <div className="flex items-center gap-2">
+        <input
+          aria-label={`Configuration name ${key}`}
+          value={configNameDrafts[draftKey] ?? key}
+          onChange={(event) =>
+            setConfigNameDrafts((current) => ({
+              ...current,
+              [draftKey]: event.target.value,
+            }))
+          }
+          className="min-w-0 flex-1 rounded-lg border border-slate-300 px-2 py-1.5 text-xs font-medium text-slate-700 focus:border-blue-500 focus:outline-none"
+        />
+        <button
+          type="button"
+          onClick={() => renameConfigKey(parentPath, key)}
+          className="shrink-0 rounded-lg border border-slate-200 px-2 py-1.5 text-[11px] font-semibold text-slate-600 hover:bg-white"
+        >
+          Rename
+        </button>
+        {canDelete && (
+          <button
+            type="button"
+            onClick={() => deleteConfigKey(parentPath, key)}
+            aria-label={`Delete configuration ${key}`}
+            title={`Delete ${key}`}
+            className="shrink-0 rounded-lg border border-rose-100 p-1.5 text-rose-600 hover:bg-rose-50"
+          >
+            <Trash2 size={14} />
+          </button>
+        )}
+      </div>
+    );
+  };
+
+  const configKeyFromLabel = (label) =>
+    label
+      .trim()
+      .split(/\s+/)
+      .map((part, index) =>
+        index === 0
+          ? part.toLowerCase()
+          : part.charAt(0).toUpperCase() + part.slice(1)
+      )
+      .join("");
+
+  const addConfigGroup = () => {
+    const key = configKeyFromLabel(configGroupName);
+    if (!key) {
+      setMessage({ type: "error", text: "Enter a configuration group name." });
+      return;
+    }
+    if (Object.hasOwn(configFormDraft, key)) {
+      setMessage({
+        type: "error",
+        text: `The "${key}" configuration group already exists. Add a value to that group instead.`,
+      });
+      return;
+    }
+
+    setConfigFormDraft((current) => ({ ...current, [key]: {} }));
+    setConfigGroupName("");
+    setAddingConfigGroup(false);
+    setAddingConfigValueTo(key);
+    setMessage(null);
+  };
+
+  const addConfigValue = (groupName) => {
+    const key = configKeyFromLabel(configValueName);
+    if (!key) {
+      setMessage({ type: "error", text: "Enter a value name." });
+      return;
+    }
+    if (Object.hasOwn(configFormDraft[groupName], key)) {
+      setMessage({
+        type: "error",
+        text: `The "${key}" value already exists in this group.`,
+      });
+      return;
+    }
+
+    let value = configValueDraft;
+    if (configValueType === "number") {
+      value = Number(configValueDraft);
+      if (!configValueDraft.trim() || !Number.isFinite(value)) {
+        setMessage({ type: "error", text: "Enter a valid number." });
+        return;
+      }
+    }
+
+    setConfigFormDraft((current) => ({
+      ...current,
+      [groupName]: { ...current[groupName], [key]: value },
+    }));
+    setConfigValueName("");
+    setConfigValueDraft(configValueType === "color" ? "#000000" : "");
+    setAddingConfigValueTo(null);
+    setMessage(null);
+  };
+
   const renderConfigValue = (key, value, path = []) => {
     const currentPath = [...path, key];
     const label = key
@@ -73,6 +252,7 @@ export default function ConfigurationAndThemes({ themes = [], onRefresh }) {
             {label}
           </summary>
           <div className="space-y-3 border-t border-slate-100 p-3">
+            {renderConfigNameEditor(key, path)}
             {Object.entries(value).map(([childKey, childValue]) =>
               renderConfigValue(childKey, childValue, currentPath)
             )}
@@ -82,11 +262,12 @@ export default function ConfigurationAndThemes({ themes = [], onRefresh }) {
     }
 
     return (
-      <label
+      <div
         key={currentPath.join(".")}
-        className="block space-y-1 text-xs font-medium text-slate-600"
+        className="space-y-1 text-xs font-medium text-slate-600"
       >
-        <span>{label}</span>
+        <span className="block">{label}</span>
+        {renderConfigNameEditor(key, path)}
         {typeof value === "boolean" ? (
           <input
             type="checkbox"
@@ -129,6 +310,7 @@ export default function ConfigurationAndThemes({ themes = [], onRefresh }) {
                 />
               )}
             <input
+              aria-label={`${label} value`}
               type={typeof value === "number" ? "number" : "text"}
               value={value ?? ""}
               onChange={(event) =>
@@ -145,7 +327,7 @@ export default function ConfigurationAndThemes({ themes = [], onRefresh }) {
             />
           </div>
         )}
-      </label>
+      </div>
     );
   };
 
@@ -165,38 +347,15 @@ export default function ConfigurationAndThemes({ themes = [], onRefresh }) {
       return;
     }
 
-    let updatedConfig;
-    if (field === "configJson") {
-      try {
-        updatedConfig = JSON.parse(configDraft);
-      } catch {
-        setMessage({ type: "error", text: "Configuration must be valid JSON." });
-        return;
-      }
-      if (
-        updatedConfig === null ||
-        typeof updatedConfig !== "object" ||
-        Array.isArray(updatedConfig)
-      ) {
-        setMessage({
-          type: "error",
-          text: "Configuration must be a JSON object.",
-        });
-        return;
-      }
-    } else if (field === "configForm") {
-      updatedConfig = configFormDraft;
-    }
+    const updatedConfig = configFormDraft;
 
     const body =
       field === "name"
         ? { name: nameDraft.trim() }
         : field === "slug"
           ? { slug: slugDraft.trim() }
-          : field === "configJson"
+          : field === "configForm"
             ? { configJson: updatedConfig }
-            : field === "configForm"
-              ? { configJson: updatedConfig }
             : {
             configJson: {
               ...(selectedTheme.configJson &&
@@ -226,7 +385,7 @@ export default function ConfigurationAndThemes({ themes = [], onRefresh }) {
       setMessage({
         type: "success",
         text:
-          field === "configJson" || field === "configForm"
+          field === "configForm"
             ? "Theme configuration saved."
             : `Project ${field === "name" ? "name" : field} saved.`,
       });
@@ -340,52 +499,6 @@ export default function ConfigurationAndThemes({ themes = [], onRefresh }) {
             )}
 
             <label className="block text-sm font-semibold text-slate-700 mb-1 mt-3">
-              Theme Slug
-            </label>
-            {editingField === "slug" ? (
-              <div className="flex flex-wrap items-center gap-2">
-                <input
-                  autoFocus
-                  value={slugDraft}
-                  onChange={(event) => setSlugDraft(event.target.value)}
-                  aria-label="Theme slug"
-                  className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-blue-500 focus:outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={() => saveField("slug")}
-                  disabled={saving}
-                  className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {saving ? "Saving..." : "Save"}
-                </button>
-                <button
-                  type="button"
-                  onClick={cancelEditing}
-                  disabled={saving}
-                  className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <p className="font-mono text-sm text-slate-700">
-                  /{selectedTheme.slug}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => startEditing("slug")}
-                  aria-label="Edit theme slug"
-                  title="Edit theme slug"
-                  className="rounded-md p-1 text-slate-400 hover:bg-blue-50 hover:text-blue-600"
-                >
-                  <Edit3 size={15} />
-                </button>
-              </div>
-            )}
-
-            <label className="block text-sm font-semibold text-slate-700 mb-1 mt-3">
               Project Description
             </label>
             {editingField === "description" ? (
@@ -435,15 +548,61 @@ export default function ConfigurationAndThemes({ themes = [], onRefresh }) {
               </div>
             )}
 
+            <label className="block text-sm font-semibold text-slate-700 mb-1 mt-3">
+              Theme Slug
+            </label>
+            {editingField === "slug" ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  autoFocus
+                  value={slugDraft}
+                  onChange={(event) => setSlugDraft(event.target.value)}
+                  aria-label="Theme slug"
+                  className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-blue-500 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => saveField("slug")}
+                  disabled={saving}
+                  className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {saving ? "Saving..." : "Save"}
+                </button>
+                <button
+                  type="button"
+                  onClick={cancelEditing}
+                  disabled={saving}
+                  className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <p className="font-mono text-sm text-slate-700">
+                  /{selectedTheme.slug}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => startEditing("slug")}
+                  aria-label="Edit theme slug"
+                  title="Edit theme slug"
+                  className="rounded-md p-1 text-slate-400 hover:bg-blue-50 hover:text-blue-600"
+                >
+                  <Edit3 size={15} />
+                </button>
+              </div>
+            )}
+
             <div className="mt-5 border-t border-slate-100 pt-4">
               <div className="mb-2 flex items-center gap-2">
                 <h2 className="text-sm font-semibold text-slate-700">
                   Theme Configuration
                 </h2>
-                {editingField !== "configJson" && (
+                {editingField !== "configForm" && (
                   <button
                     type="button"
-                    onClick={() => startEditing("configJson")}
+                    onClick={() => startEditing("configForm")}
                     aria-label="Edit theme configuration"
                     title="Edit theme configuration"
                     className="rounded-md p-1 text-slate-400 hover:bg-blue-50 hover:text-blue-600"
@@ -454,12 +613,198 @@ export default function ConfigurationAndThemes({ themes = [], onRefresh }) {
               </div>
               <p className="mb-2 text-xs text-slate-500">
                 Edit individual values such as colors, typography, buttons, and
-                content. Use the advanced JSON editor for complex values.
+                content. Add configuration groups and values using the controls
+                below.
               </p>
               {editingField === "configForm" ? (
                 <div className="space-y-3">
-                  {Object.entries(configFormDraft).map(([key, value]) =>
-                    renderConfigValue(key, value)
+                  {Object.entries(configFormDraft)
+                    .filter(([key]) => key !== "description")
+                    .map(([groupName, groupValue]) => (
+                      <details
+                        key={groupName}
+                        open
+                        className="rounded-lg border border-slate-200 bg-white"
+                      >
+                        <summary className="cursor-pointer px-3 py-2 text-sm font-semibold text-slate-700">
+                          {groupName}
+                        </summary>
+                        <div className="space-y-3 border-t border-slate-100 p-3">
+                          {renderConfigNameEditor(groupName, [], {
+                            canDelete: false,
+                          })}
+                          <button
+                            type="button"
+                            onClick={() => deleteConfigKey([], groupName)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-rose-100 px-2 py-1.5 text-[11px] font-semibold text-rose-600 hover:bg-rose-50"
+                          >
+                            <Trash2 size={13} />
+                            Delete configuration group
+                          </button>
+                          {groupValue &&
+                          typeof groupValue === "object" &&
+                          !Array.isArray(groupValue) ? (
+                            Object.entries(groupValue).map(([key, value]) =>
+                              renderConfigValue(key, value, [groupName])
+                            )
+                          ) : (
+                            renderConfigValue(groupName, groupValue)
+                          )}
+
+                          {addingConfigValueTo === groupName ? (
+                            <div className="grid gap-3 rounded-lg bg-slate-50 p-3 sm:grid-cols-3">
+                              <label className="space-y-1 text-xs font-medium text-slate-600">
+                                Value type
+                                <select
+                                  value={configValueType}
+                                  onChange={(event) => {
+                                    const nextType = event.target.value;
+                                    setConfigValueType(nextType);
+                                    setConfigValueDraft(
+                                      nextType === "color" ? "#000000" : ""
+                                    );
+                                  }}
+                                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                                >
+                                  <option value="text">Text</option>
+                                  <option value="color">Color</option>
+                                  <option value="number">Number</option>
+                                </select>
+                              </label>
+                              <label className="space-y-1 text-xs font-medium text-slate-600">
+                                Value name
+                                <input
+                                  value={configValueName}
+                                  onChange={(event) =>
+                                    setConfigValueName(event.target.value)
+                                  }
+                                  placeholder="e.g. primary, fontSize"
+                                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                                />
+                              </label>
+                              <label className="space-y-1 text-xs font-medium text-slate-600">
+                                Value
+                                <div className="flex gap-2">
+                                  {configValueType === "color" && (
+                                    <input
+                                      type="color"
+                                      value={
+                                        /^#[0-9a-f]{6}$/i.test(configValueDraft)
+                                          ? configValueDraft
+                                          : "#000000"
+                                      }
+                                      onChange={(event) =>
+                                        setConfigValueDraft(event.target.value)
+                                      }
+                                      aria-label="Choose value color"
+                                      className="h-10 w-12 cursor-pointer rounded border border-slate-300 p-1"
+                                    />
+                                  )}
+                                  <input
+                                    type={
+                                      configValueType === "number"
+                                        ? "number"
+                                        : configValueType === "color"
+                                          ? "text"
+                                          : "text"
+                                    }
+                                    value={configValueDraft}
+                                    onChange={(event) =>
+                                      setConfigValueDraft(event.target.value)
+                                    }
+                                    placeholder={
+                                      configValueType === "color"
+                                        ? "#2563eb"
+                                        : configValueType === "number"
+                                          ? "16"
+                                          : "Enter value"
+                                    }
+                                    className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                                  />
+                                </div>
+                              </label>
+                              <div className="flex gap-2 sm:col-span-3">
+                                <button
+                                  type="button"
+                                  onClick={() => addConfigValue(groupName)}
+                                  className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700"
+                                >
+                                  Add value
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setAddingConfigValueTo(null);
+                                    setMessage(null);
+                                  }}
+                                  className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAddingConfigValueTo(groupName);
+                                setConfigValueName("");
+                                setConfigValueType("text");
+                                setConfigValueDraft("");
+                                setMessage(null);
+                              }}
+                              className="rounded-lg border border-dashed border-slate-300 px-3 py-2 text-xs font-semibold text-slate-600 hover:border-blue-400 hover:text-blue-600"
+                            >
+                              + Add value to {groupName}
+                            </button>
+                          )}
+                        </div>
+                      </details>
+                    ))}
+
+                  {addingConfigGroup ? (
+                    <div className="flex flex-wrap items-end gap-2 rounded-lg bg-slate-50 p-3">
+                      <label className="min-w-48 flex-1 space-y-1 text-xs font-medium text-slate-600">
+                        Configuration group name
+                        <input
+                          autoFocus
+                          value={configGroupName}
+                          onChange={(event) =>
+                            setConfigGroupName(event.target.value)
+                          }
+                          placeholder="e.g. colors, typography, buttons"
+                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={addConfigGroup}
+                        className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700"
+                      >
+                        Create group
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAddingConfigGroup(false);
+                          setMessage(null);
+                        }}
+                        className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAddingConfigGroup(true);
+                        setMessage(null);
+                      }}
+                      className="rounded-lg border border-dashed border-blue-300 px-3 py-2 text-xs font-semibold text-blue-600 hover:bg-blue-50"
+                    >
+                      + Add configuration
+                    </button>
                   )}
                   <div className="flex gap-2">
                     <button
@@ -469,44 +814,6 @@ export default function ConfigurationAndThemes({ themes = [], onRefresh }) {
                       className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
                     >
                       {saving ? "Saving..." : "Save values"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={cancelEditing}
-                      disabled={saving}
-                      className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => startEditing("configJson")}
-                      disabled={saving}
-                      className="ml-auto rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50"
-                    >
-                      Advanced JSON
-                    </button>
-                  </div>
-                </div>
-              ) : editingField === "configJson" ? (
-                <div className="space-y-2">
-                  <textarea
-                    autoFocus
-                    value={configDraft}
-                    onChange={(event) => setConfigDraft(event.target.value)}
-                    aria-label="Theme configuration JSON"
-                    rows={12}
-                    spellCheck={false}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-xs text-slate-800 focus:border-blue-500 focus:outline-none"
-                  />
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => saveField("configJson")}
-                      disabled={saving}
-                      className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
-                    >
-                      {saving ? "Saving..." : "Save"}
                     </button>
                     <button
                       type="button"
@@ -544,14 +851,6 @@ export default function ConfigurationAndThemes({ themes = [], onRefresh }) {
                     className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
                   >
                     Edit values
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => startEditing("configJson")}
-                    aria-label="Edit theme configuration JSON"
-                    className="ml-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
-                  >
-                    Advanced JSON
                   </button>
                 </div>
               )}
