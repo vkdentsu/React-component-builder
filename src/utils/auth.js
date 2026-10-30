@@ -5,15 +5,25 @@ export function getAuthToken() {
   return localStorage.getItem(AUTH_TOKEN_KEY);
 }
 
+export function getAuthUserId() {
+  try {
+    const user = JSON.parse(localStorage.getItem(AUTH_USER_KEY) || "null");
+    return typeof user?.id === "string" && user.id ? user.id : null;
+  } catch {
+    return null;
+  }
+}
+
 export function saveAuthSession(session) {
   if (!session || typeof session.accessToken !== "string" || !session.accessToken) {
     throw new Error("The authentication response did not include an access token.");
   }
+  if (!session.user || typeof session.user.id !== "string" || !session.user.id) {
+    throw new Error("The authentication response did not include a user ID.");
+  }
 
   localStorage.setItem(AUTH_TOKEN_KEY, session.accessToken);
-  if (session.user) {
-    localStorage.setItem(AUTH_USER_KEY, JSON.stringify(session.user));
-  }
+  localStorage.setItem(AUTH_USER_KEY, JSON.stringify(session.user));
 }
 
 export function clearAuthSession() {

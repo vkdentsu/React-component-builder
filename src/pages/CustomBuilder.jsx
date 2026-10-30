@@ -31,6 +31,7 @@ import ThemeModal from '../components/ThemeModal';
 import ElementPreview from '../components/ElementPreview';
 import { loadGoogleFont } from "../utils/loadGoogleFont";
 import { authenticatedFetch } from '../utils/api';
+import { ensureUserTheme } from '../utils/ensureUserTheme';
 
 export default function CustomBuilder() {
   const [searchParams] = useSearchParams();
@@ -140,6 +141,9 @@ export default function CustomBuilder() {
       };
 
       if (activeDbPageId) {
+        if (!meta.themeId) {
+          throw new Error('Please select a theme before saving.');
+        }
         // Update existing page in database
         const res = await authenticatedFetch(`/api/pages/${activeDbPageId}`, {
           method: 'PATCH',
@@ -161,17 +165,8 @@ export default function CustomBuilder() {
         setPageMeta(json.data);
         showToast(`Page "${json.data.name}" saved to database!`);
       } else {
-        // Create new page in database
-        let themeIdToUse = meta.themeId;
-        if (!themeIdToUse) {
-          const themesRes = await authenticatedFetch('/api/themes');
-          const themesJson = await themesRes.json();
-          themeIdToUse = themesJson.data?.[0]?.id;
-        }
-
-        if (!themeIdToUse) {
-          throw new Error('Please configure at least one theme before saving.');
-        }
+        const theme = meta.themeId ? null : await ensureUserTheme();
+        const themeIdToUse = meta.themeId || theme.id;
 
         const res = await authenticatedFetch('/api/pages', {
           method: 'POST',

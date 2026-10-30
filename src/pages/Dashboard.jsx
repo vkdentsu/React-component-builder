@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { authenticatedFetch, getApiUrl } from '../utils/api';
 import { clearAuthSession } from '../utils/auth';
+import { ensureUserTheme } from '../utils/ensureUserTheme';
 
 export default function Dashboard({ initialTab = 'dashboard' }) {
     const navigate = useNavigate();
@@ -178,16 +179,8 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
         setCreateError('');
 
         try {
-            // Find fallback theme if required by current Prisma schema
-            let themeIdToUse = themes[0]?.id;
-            if (!themeIdToUse) {
-                try {
-                    const themesRes = await authenticatedFetch('/api/themes').then((r) => r.json());
-                    themeIdToUse = themesRes.data?.[0]?.id;
-                } catch (themeErr) {
-                    console.warn('Could not fetch default theme:', themeErr);
-                }
-            }
+            const theme = themes[0]?.id ? themes[0] : await ensureUserTheme();
+            const themeIdToUse = theme.id;
 
             const res = await authenticatedFetch('/api/pages', {
                 method: 'POST',
@@ -195,7 +188,7 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                 body: JSON.stringify({
                     name: newPageName.trim(),
                     slug: newPageSlug.trim(),
-                    ...(themeIdToUse ? { themeId: themeIdToUse } : {}),
+                    themeId: themeIdToUse,
                     contentJson: { rows: [] },
                     status: 'DRAFT',
                 }),
