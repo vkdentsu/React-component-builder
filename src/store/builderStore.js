@@ -26,7 +26,7 @@ const userScopedStorage = {
 const defaultElementProps = {
   button: {
     label: 'Click me',
-    bg: '#3b82f6',
+    bg: 'var(--theme-primary)',
     color: '#ffffff',
     fontSize: { desktop: 14, tablet: 13, mobile: 12 },
     fontWeight: { desktop: 'medium', tablet: 'medium', mobile: 'medium' },
@@ -36,7 +36,7 @@ const defaultElementProps = {
   },
   text: {
     label: 'Paragraph text here.',
-    color: '#374151',
+    color: 'var(--theme-text)',
     fontSize: { desktop: 14, tablet: 13, mobile: 12 },
     fontWeight: { desktop: 'normal', tablet: 'normal', mobile: 'normal' },
     lineHeight: { desktop: 1.2, tablet: 1.3, mobile: 1.5 },
@@ -47,7 +47,7 @@ const defaultElementProps = {
     group: "group1",
     value: "option1",
     checked: false,
-    color: "#2563eb",
+    color: "var(--theme-primary)",
     fontSize: { desktop: 14, tablet: 13, mobile: 12 },
     fontWeight: { desktop: 'normal', tablet: 'normal', mobile: 'normal' },
     lineHeight: { desktop: 1.2, tablet: 1.3, mobile: 1.5 },
@@ -57,7 +57,7 @@ const defaultElementProps = {
     label: "Checkbox",
     checked: false,
     value: "option1",
-    color: "#2563eb",
+    color: "var(--theme-primary)",
     fontSize: { desktop: 14, tablet: 13, mobile: 12 },
     fontWeight: { desktop: 'normal', tablet: 'normal', mobile: 'normal' },
     lineHeight: { desktop: 1.2, tablet: 1.3, mobile: 1.5 },
@@ -65,7 +65,7 @@ const defaultElementProps = {
   },
   heading: {
     label: 'Section Heading',
-    color: '#111827',
+    color: 'var(--theme-text)',
     fontSize: { desktop: 24, tablet: 20, mobile: 18 },
     fontWeight: { desktop: 'bold', tablet: 'medium', mobile: 'normal' },
     lineHeight: { desktop: 1.2, tablet: 1.3, mobile: 1.5 },
@@ -78,13 +78,12 @@ const defaultElementProps = {
     lineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 },
   },
   image: { src: 'https://placehold.co/600x300/e0e7ff/6366f1?text=Image', alt: 'Image', rounded: 'md', objectFit: 'cover' },
-  // card: { image: '', imageAlt: '', title: 'Card title', subtitle: 'Supporting description text.', bg: '#ffffff', ctaLabel: '', ctaBg: '#3b82f6', ctaColor: '#ffffff', link: '' },
   card: {
     image: '',
     imageAlt: '',
 
     title: 'Card title',
-    titleColor: '#111827',
+    titleColor: 'var(--theme-text)',
     titleFontSize: {
       desktop: 24,
       tablet: 20,
@@ -102,7 +101,7 @@ const defaultElementProps = {
     },
 
     subtitle: 'Supporting description text.',
-    subtitleColor: '#6b7280',
+    subtitleColor: 'var(--theme-text-muted)',
     subtitleFontSize: {
       desktop: 16,
       tablet: 15,
@@ -121,7 +120,7 @@ const defaultElementProps = {
 
     ctaLabel: 'Learn More',
 
-    ctaBg: '#3b82f6',
+    ctaBg: 'var(--theme-primary)',
     ctaColor: '#ffffff',
 
     ctaFontSize: {
@@ -140,13 +139,13 @@ const defaultElementProps = {
       mobile: 1.4,
     },
 
-    bg: '#ffffff',
+    bg: 'var(--theme-surface)',
     rounded: 'lg',
 
     link: '',
   },
   badge: {
-    label: 'Badge', bg: '#ede9fe', color: '#6d28d9',
+    label: 'Badge', bg: 'var(--theme-surface)', color: 'var(--theme-primary)',
     fontSize: { desktop: 12, tablet: 11, mobile: 10 },
     fontWeight: { desktop: 'medium', tablet: 'medium', mobile: 'normal' },
     lineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 },
@@ -164,27 +163,27 @@ const defaultElementProps = {
   toggle: {
     label: 'Toggle',
     checked: false,
-    color: '#3b82f6',
-    labelColor: '#000000',
+    color: 'var(--theme-primary)',
+    labelColor: 'var(--theme-text)',
     fontSize: { desktop: 14, tablet: 13, mobile: 12 },
     fontWeight: { desktop: '500', tablet: '500', mobile: '400' },
     lineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 },
     align: 'left',
   },
-  divider: { color: '#e5e7eb', thickness: 1 },
-  loader: { loaderType: "spinner", size: "md", color: "#3b82f6", speed: 1, label: "Loading...", showLabel: true },
+  divider: { color: 'var(--theme-border)', thickness: 1 },
+  loader: { loaderType: "spinner", size: "md", color: "var(--theme-primary)", speed: 1, label: "Loading...", showLabel: true },
   modal: {
-    modalButtonLabel: 'Open Modal', modalButtonType: 'button', modalButtonBg: '#3b82f6', modalButtonColor: '#ffffff',
+    modalButtonLabel: 'Open Modal', modalButtonType: 'button', modalButtonBg: 'var(--theme-primary)', modalButtonColor: '#ffffff',
     modalButtonFontSize: { desktop: 14, tablet: 13, mobile: 12 },
     modalButtonFontWeight: { desktop: 'medium', tablet: 'medium', mobile: 'medium' },
     modalButtonLineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 },
     modalTitleFontSize: { desktop: 18, tablet: 16, mobile: 14 },
     modalTitleFontWeight: { desktop: '600', tablet: '600', mobile: '600' },
     modalTitleLineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 },
-    modalContenttitle: 'Modal Title', modalContentbg: '#ffffff', modalContentwidth: '500px',
+    modalContenttitle: 'Modal Title', modalContentbg: 'var(--theme-surface)', modalContentwidth: '500px',
   },
   popover: {
-    popoverButtonLabel: 'Open Popover', popoverButtonType: 'button', popoverButtonBg: '#3b82f6', popoverButtonColor: '#ffffff',
+    popoverButtonLabel: 'Open Popover', popoverButtonType: 'button', popoverButtonBg: 'var(--theme-primary)', popoverButtonColor: '#ffffff',
     popoverButtonFontSize: { desktop: 14, tablet: 13, mobile: 12 },
     popoverButtonFontWeight: { desktop: 'medium', tablet: 'medium', mobile: 'medium' },
     popoverButtonLineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 },
@@ -194,10 +193,10 @@ const defaultElementProps = {
     popoverTextFontSize: { desktop: 12, tablet: 11, mobile: 10 },
     popoverTextFontWeight: { desktop: 'normal', tablet: 'normal', mobile: 'normal' },
     popoverTextLineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 },
-    popoverContentTitle: 'Popover', popoverContentText: 'This is a popover.', popoverContentPosition: 'bottom', popoverContentBg: '#ffffff', popoverContentColor: '#111827', popoverContentWidth: '280px',
+    popoverContentTitle: 'Popover', popoverContentText: 'This is a popover.', popoverContentPosition: 'bottom', popoverContentBg: 'var(--theme-surface)', popoverContentColor: 'var(--theme-text)', popoverContentWidth: '280px',
   },
   navbar: {
-    brand: 'Brand', logoUrl: '', logoAlign: 'left', links: 'Home, Features, Pricing, Contact', submenus: '', bg: '#ffffff', color: '#111827', shadow: true,
+    brand: 'Brand', logoUrl: '', logoAlign: 'left', links: 'Home, Features, Pricing, Contact', submenus: '', bg: 'var(--theme-surface)', color: 'var(--theme-text)', shadow: true,
     fontSize: { desktop: 14, tablet: 13, mobile: 12 },
     fontWeight: { desktop: 'medium', tablet: 'medium', mobile: 'medium' },
     lineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 },
@@ -206,20 +205,20 @@ const defaultElementProps = {
     title: 'Build something great',
     titleTag: 'h1',
     titleSize: { desktop: 40, tablet: 32, mobile: 24 },
-    titleColor: '#111827',
+    titleColor: 'var(--theme-text)',
     titleWeight: { desktop: 'bold', tablet: 'medium', mobile: 'normal' },
     titleLineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 },
     subtitle: 'A short supporting line about your product or page.',
     subtitleSize: { desktop: 18, tablet: 16, mobile: 14 },
-    subtitleColor: '#6b7280',
+    subtitleColor: 'var(--theme-text-muted)',
     subtitleLineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 },
     ctaLabel: 'Get started',
-    ctaBg: '#3b82f6',
+    ctaBg: 'var(--theme-primary)',
     ctaColor: '#ffffff',
     ctaSize: { desktop: 15, tablet: 14, mobile: 13 },
     ctaLineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 },
     ctaRounded: 'md',
-    bg: '#eef2ff',
+    bg: 'var(--theme-surface)',
     bgImageMobile: '',
     bgImageTablet: '',
     bgImageDesktop: '',
@@ -233,6 +232,10 @@ const defaultElementProps = {
   },
   formgroup: {
     title: 'Contact us',
+    buttonLabel: 'Submit',
+    buttonBg: 'var(--theme-primary)',
+    buttonColor: '#ffffff',
+    titleColor: 'var(--theme-text)',
     titleFontSize: { desktop: 18, tablet: 16, mobile: 14 },
     titleFontWeight: { desktop: 'bold', tablet: 'bold', mobile: 'bold' },
     titleLineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 },
@@ -251,7 +254,6 @@ const defaultElementProps = {
       { label: 'Role', type: 'dropdown', options: 'View, Edit' },
       { label: 'Subscribe', type: 'checkbox' },
     ],
-    buttonLabel: 'Submit',
   },
 };
 
@@ -430,12 +432,26 @@ const useBuilderStore = create(
           rows: sanitizedRows,
         };
 
-        set({
+        const targetThemeId = pageRecord.themeId || pageRecord.theme?.id || '';
+
+        // Extract theme from pageRecord.theme or current availableThemes
+        let themeToApply = null;
+        if (pageRecord.theme && pageRecord.theme.configJson) {
+          themeToApply = {
+            ...pageRecord.theme,
+            configJson: normalizeThemeConfig(pageRecord.theme.configJson),
+            _count: pageRecord.theme._count || { pages: 0 },
+          };
+        } else if (targetThemeId) {
+          themeToApply = get().availableThemes.find((t) => t.id === targetThemeId) || null;
+        }
+
+        const stateUpdates = {
           activeDbPageId: pageRecord.id,
           pageMeta: {
             name: pageRecord.name || 'Untitled Page',
             slug: pageRecord.slug || '',
-            themeId: pageRecord.themeId || '',
+            themeId: targetThemeId,
             status: pageRecord.status || 'DRAFT',
           },
           documents: [pageDoc],
@@ -445,17 +461,57 @@ const useBuilderStore = create(
           selectedType: null,
           _history: { past: [], future: [] },
           ...(rawContent.globalFont ? { globalFont: rawContent.globalFont } : {}),
-        });
+        };
+
+        if (themeToApply) {
+          stateUpdates.activeTheme = themeToApply;
+          if (!get().availableThemes.some((t) => t.id === themeToApply.id)) {
+            stateUpdates.availableThemes = [themeToApply, ...get().availableThemes];
+          }
+        }
+
+        set(stateUpdates);
+
+        // If theme is not loaded into availableThemes yet and we have a themeId, fetch it
+        if (!themeToApply && targetThemeId) {
+          authenticatedFetch(`/api/themes/${targetThemeId}`)
+            .then((r) => r.json())
+            .then((json) => {
+              if (json?.data) {
+                const fetchedTheme = {
+                  ...json.data,
+                  configJson: normalizeThemeConfig(json.data.configJson),
+                };
+                set((s) => ({
+                  activeTheme: fetchedTheme,
+                  availableThemes: [
+                    fetchedTheme,
+                    ...s.availableThemes.filter((t) => t.id !== fetchedTheme.id),
+                  ],
+                }));
+              }
+            })
+            .catch((err) => {
+              console.warn('Failed to fetch page theme:', err);
+            });
+        }
       },
 
       initNewDbPage: ({ name = 'New Page', slug = 'new-page', themeId = '' } = {}) => {
         const doc = makeDocument(name);
+        const resolvedTheme =
+          (themeId && get().availableThemes.find((t) => t.id === themeId)) ||
+          get().activeTheme ||
+          get().availableThemes[0] ||
+          null;
+        const resolvedThemeId = themeId || resolvedTheme?.id || '';
+
         set({
           activeDbPageId: null,
           pageMeta: {
             name,
             slug,
-            themeId,
+            themeId: resolvedThemeId,
             status: 'DRAFT',
           },
           documents: [doc],
@@ -464,8 +520,10 @@ const useBuilderStore = create(
           selectedId: null,
           selectedType: null,
           _history: { past: [], future: [] },
+          ...(resolvedTheme ? { activeTheme: resolvedTheme } : {}),
         });
       },
+
 
       rows: [],
       selectedId: null,
@@ -539,19 +597,33 @@ const useBuilderStore = create(
           }));
 
           const combined = serverThemes.length > 0 ? serverThemes : presets;
-          const currentActive = get().activeTheme;
-          let nextActive = currentActive;
 
-          if (!currentActive || !combined.some((t) => t.id === currentActive.id)) {
-            nextActive = combined[0];
-          } else {
-            const match = combined.find((t) => t.id === currentActive.id);
-            if (match) nextActive = match;
+          // Priority 1: If current page has a saved themeId, prioritize it!
+          const targetThemeId = get().pageMeta?.themeId || get().activeTheme?.id;
+          let nextActive = null;
+
+          if (targetThemeId) {
+            nextActive = combined.find((t) => t.id === targetThemeId) || null;
           }
+
+          if (!nextActive) {
+            const currentActive = get().activeTheme;
+            if (currentActive && combined.some((t) => t.id === currentActive.id)) {
+              nextActive = combined.find((t) => t.id === currentActive.id);
+            } else {
+              nextActive = combined[0];
+            }
+          }
+
+          const currentMeta = get().pageMeta;
+          const nextMeta = currentMeta && nextActive
+            ? { ...currentMeta, themeId: currentMeta.themeId || nextActive.id }
+            : currentMeta;
 
           set({
             availableThemes: combined,
             activeTheme: nextActive,
+            pageMeta: nextMeta,
             themeLoading: false,
           });
           return combined;
@@ -565,11 +637,17 @@ const useBuilderStore = create(
             _count: { pages: 0 },
           }));
           const fallbackList = get().availableThemes?.length > 0 ? get().availableThemes : presets;
+          const targetThemeId = get().pageMeta?.themeId || get().activeTheme?.id;
+          const fallbackActive =
+            (targetThemeId && fallbackList.find((t) => t.id === targetThemeId)) ||
+            get().activeTheme ||
+            fallbackList[0];
+
           set({
             themeLoading: false,
             themeError: err.message,
             availableThemes: fallbackList,
-            activeTheme: get().activeTheme || fallbackList[0],
+            activeTheme: fallbackActive,
           });
           return fallbackList;
         }
@@ -579,13 +657,19 @@ const useBuilderStore = create(
         set((state) => {
           const target = state.availableThemes.find((t) => t.id === themeId);
           if (!target) return {};
+          const normalized = {
+            ...target,
+            configJson: normalizeThemeConfig(target.configJson),
+          };
           return {
-            activeTheme: {
-              ...target,
-              configJson: normalizeThemeConfig(target.configJson),
+            activeTheme: normalized,
+            pageMeta: {
+              ...state.pageMeta,
+              themeId: target.id,
             },
           };
         }),
+
 
       createTheme: async ({ name, configJson }) => {
         set({ themeLoading: true, themeError: null });

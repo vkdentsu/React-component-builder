@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Palette,
@@ -10,17 +10,14 @@ import {
   Trash2,
   Check,
   Save,
-  Sliders,
   Code2,
   RefreshCw,
   Search,
   ExternalLink,
   AlertCircle,
   CheckCircle2,
-  ArrowRight,
   Sparkles,
   Layers,
-  HelpCircle,
   CheckCheck,
 } from 'lucide-react';
 import useBuilderStore from '../store/builderStore';
@@ -28,9 +25,7 @@ import GOOGLE_FONTS from '../utils/googleFonts';
 import { loadGoogleFont } from '../utils/loadGoogleFont';
 import {
   THEME_PRESETS,
-  DEFAULT_THEME_TOKENS,
   normalizeThemeConfig,
-  tokensToCssVars,
   tokensToCssString,
 } from '../utils/themeDefaults';
 import FontUpload from '../components/FontUpload';
@@ -179,20 +174,28 @@ export default function ConfigurationAndThemes({ themes: initialThemes = [], onR
   const [selectedPresetForNew, setSelectedPresetForNew] = useState(THEME_PRESETS[0].name);
 
   // Sync state whenever selectedThemeId changes
-  useEffect(() => {
+  const [prevSelectedId, setPrevSelectedId] = useState(selectedThemeId);
+  if (prevSelectedId !== selectedThemeId) {
+    setPrevSelectedId(selectedThemeId);
     if (currentTheme) {
       setThemeName(currentTheme.name);
       setTokens(normalizeThemeConfig(currentTheme.configJson));
       setStatusMessage(null);
     }
-  }, [currentTheme]);
+  }
 
   // Dynamic Google font loader
   useEffect(() => {
     if (tokens?.typography?.fontFamily) {
       loadGoogleFont(tokens.typography.fontFamily);
     }
-  }, [tokens?.typography?.fontFamily]);
+    if (tokens?.typography?.fontHeading) {
+      loadGoogleFont(tokens.typography.fontHeading);
+    }
+    if (tokens?.typography?.fontBody) {
+      loadGoogleFont(tokens.typography.fontBody);
+    }
+  }, [tokens?.typography?.fontFamily, tokens?.typography?.fontHeading, tokens?.typography?.fontBody]);
 
   // Handle Token Updates
   const updateColor = (key, val) => {
@@ -895,6 +898,43 @@ export default function ConfigurationAndThemes({ themes: initialThemes = [], onR
                         style={{ fontFamily: tokens.typography?.fontFamily || 'Inter' }}
                       >
                         {tokens.typography?.fontFamily || 'Inter'} Typeface Preview
+                      </div>
+                    </div>
+
+                    {/* Font Heading & Font Body Tokens */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3 pt-3 border-t border-slate-100">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Heading Font Token (<code className="text-blue-600">--theme-font-heading</code>)
+                        </label>
+                        <select
+                          value={tokens.typography?.fontHeading || tokens.typography?.fontFamily || 'Inter'}
+                          onChange={(e) => updateTypography('fontHeading', e.target.value)}
+                          className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 bg-white text-slate-800 focus:border-blue-500 focus:outline-none"
+                        >
+                          {GOOGLE_FONTS.map((font) => (
+                            <option key={font.value} value={font.value}>
+                              {font.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Body Font Token (<code className="text-blue-600">--theme-font-body</code>)
+                        </label>
+                        <select
+                          value={tokens.typography?.fontBody || tokens.typography?.fontFamily || 'Inter'}
+                          onChange={(e) => updateTypography('fontBody', e.target.value)}
+                          className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 bg-white text-slate-800 focus:border-blue-500 focus:outline-none"
+                        >
+                          {GOOGLE_FONTS.map((font) => (
+                            <option key={font.value} value={font.value}>
+                              {font.label}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     </div>
 

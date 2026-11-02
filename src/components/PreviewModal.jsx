@@ -210,13 +210,13 @@ export default function PreviewModal({ open, onClose }) {
         <div
           style={{
             width: deviceWidth,
-            transition: 'width 0.3s ease',
-            fontFamily: activeTheme?.configJson?.typography?.fontFamily
-              ? `'${activeTheme.configJson.typography.fontFamily}', sans-serif`
-              : 'inherit',
+            transition: 'width 0.3s ease, background-color 0.2s ease, color 0.2s ease',
+            fontFamily: 'var(--theme-font-body, var(--theme-font, inherit))',
+            backgroundColor: 'var(--theme-bg, #ffffff)',
+            color: 'var(--theme-text, #0f172a)',
             ...themeVars,
           }}
-          className="bg-white rounded-2xl shadow-2xl overflow-hidden min-h-[200px] flex flex-col"
+          className="rounded-2xl shadow-2xl overflow-hidden min-h-[200px] flex flex-col"
         >
           {/* Browser chrome */}
           <div className="flex items-center gap-1.5 px-4 py-2.5 bg-gray-100 border-b border-gray-200 shrink-0">

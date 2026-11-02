@@ -172,7 +172,14 @@ function NavbarPreview({ el, device }) {
         <img src={el.logoUrl} alt="logo" className="h-7 w-auto object-contain"
           onError={(e) => { e.target.style.display = 'none'; }} />
       )}
-      {el.brand && <span className={`font-bold whitespace-nowrap ${getResponsiveTypographyClasses(el, device)}`}>{el.brand}</span>}
+      {el.brand && (
+        <span
+          className={`font-bold whitespace-nowrap ${getResponsiveTypographyClasses(el, device)}`}
+          style={{ fontFamily: 'var(--theme-font-heading, var(--theme-font, inherit))' }}
+        >
+          {el.brand}
+        </span>
+      )}
     </div>
   );
 
@@ -188,19 +195,33 @@ function NavbarPreview({ el, device }) {
               onMouseEnter={() => hasSub && setOpenMenu(link)}
               onMouseLeave={() => setOpenMenu(null)}
               className={`flex items-center gap-0.5 px-2 py-1 rounded hover:bg-black/5 transition-colors whitespace-nowrap ${getResponsiveTypographyClasses(el, device)}`}
-              style={{ color: el.color }}
+              style={{
+                color: el.color || 'var(--theme-text)',
+                fontFamily: 'var(--theme-font-body, var(--theme-font, inherit))',
+              }}
             >
               {link}
               {hasSub && <ChevronDown size={11} />}
             </button>
             {hasSub && openMenu === link && (
               <div
-                className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-50 min-w-[140px]"
+                className="absolute top-full left-0 mt-1 rounded-lg shadow-lg border py-1 z-50 min-w-[140px]"
+                style={{
+                  background: 'var(--theme-surface, #ffffff)',
+                  borderColor: 'var(--theme-border, #f1f5f9)',
+                  color: 'var(--theme-text, #0f172a)',
+                }}
                 onMouseEnter={() => setOpenMenu(link)}
                 onMouseLeave={() => setOpenMenu(null)}
               >
                 {subItems.map((sub, j) => (
-                  <div key={j} className={`px-3 py-1.5 text-gray-700 hover:bg-gray-50 cursor-pointer whitespace-nowrap ${getResponsiveTypographyClasses(el, device)}`}>
+                  <div
+                    key={j}
+                    className={`px-3 py-1.5 hover:bg-black/5 cursor-pointer whitespace-nowrap ${getResponsiveTypographyClasses(el, device)}`}
+                    style={{
+                      fontFamily: 'var(--theme-font-body, var(--theme-font, inherit))',
+                    }}
+                  >
                     {sub}
                   </div>
                 ))}
@@ -225,7 +246,10 @@ function NavbarPreview({ el, device }) {
             <button
               onClick={() => setOpenMenu(expanded ? null : (hasSub ? link : null))}
               className={`w-full flex items-center justify-between px-2 py-2 rounded hover:bg-black/5 text-left ${getResponsiveTypographyClasses(el, device)}`}
-              style={{ color: el.color }}
+              style={{
+                color: el.color || 'var(--theme-text)',
+                fontFamily: 'var(--theme-font-body, var(--theme-font, inherit))',
+              }}
             >
               {link}
               {hasSub && <ChevronDown size={13} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} />}
@@ -233,7 +257,16 @@ function NavbarPreview({ el, device }) {
             {hasSub && expanded && (
               <div className="flex flex-col pl-4 pb-1">
                 {subItems.map((sub, j) => (
-                  <div key={j} className={`px-2 py-1.5 text-gray-600 ${getResponsiveTypographyClasses(el, device)}`}>{sub}</div>
+                  <div
+                    key={j}
+                    className={`px-2 py-1.5 ${getResponsiveTypographyClasses(el, device)}`}
+                    style={{
+                      color: 'var(--theme-text-muted, #64748b)',
+                      fontFamily: 'var(--theme-font-body, var(--theme-font, inherit))',
+                    }}
+                  >
+                    {sub}
+                  </div>
                 ))}
               </div>
             )}
@@ -253,14 +286,23 @@ function NavbarPreview({ el, device }) {
   const rightCell = align === 'right' ? logoArea : navLinks;
 
   if (isCompact) {
-    // Compact layout: logo on one side, hamburger toggle on the other —
-    // alignment still controls which side the logo sits on.
     return (
-      <div className="w-full rounded-lg overflow-hidden" style={{ background: el.bg }}>
+      <div
+        className="w-full rounded-lg overflow-hidden border"
+        style={{
+          background: el.bg || 'var(--theme-surface, #ffffff)',
+          color: el.color || 'var(--theme-text, #0f172a)',
+          borderColor: 'var(--theme-border, #e2e8f0)',
+        }}
+      >
         <div className={`flex items-center justify-between px-4 py-3 ${el.shadow ? 'shadow-md' : ''}`}>
           {align === 'right' ? (
             <>
-              <button onClick={() => setMobileMenuOpen((o) => !o)} className="p-1 rounded hover:bg-black/5" style={{ color: el.color }}>
+              <button
+                onClick={() => setMobileMenuOpen((o) => !o)}
+                className="p-1 rounded hover:bg-black/5"
+                style={{ color: el.color || 'var(--theme-text)' }}
+              >
                 {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
               </button>
               {logoArea}
@@ -268,14 +310,24 @@ function NavbarPreview({ el, device }) {
           ) : (
             <>
               {logoArea}
-              <button onClick={() => setMobileMenuOpen((o) => !o)} className="p-1 rounded hover:bg-black/5" style={{ color: el.color }}>
+              <button
+                onClick={() => setMobileMenuOpen((o) => !o)}
+                className="p-1 rounded hover:bg-black/5"
+                style={{ color: el.color || 'var(--theme-text)' }}
+              >
                 {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
               </button>
             </>
           )}
         </div>
         {mobileMenuOpen && (
-          <div className="border-t border-black/5 bg-white/95">
+          <div
+            className="border-t"
+            style={{
+              background: 'var(--theme-surface, #ffffff)',
+              borderColor: 'var(--theme-border, #f1f5f9)',
+            }}
+          >
             {mobileLinks}
           </div>
         )}
@@ -285,8 +337,12 @@ function NavbarPreview({ el, device }) {
 
   return (
     <div
-      className={`w-full grid grid-cols-3 items-center px-4 py-3 rounded-lg ${el.shadow ? 'shadow-md' : ''}`}
-      style={{ background: el.bg, color: el.color }}
+      className={`w-full grid grid-cols-3 items-center px-4 py-3 rounded-lg border ${el.shadow ? 'shadow-md' : ''}`}
+      style={{
+        background: el.bg || 'var(--theme-surface, #ffffff)',
+        color: el.color || 'var(--theme-text, #0f172a)',
+        borderColor: 'var(--theme-border, #e2e8f0)',
+      }}
     >
       <div className="flex items-center justify-start">{leftCell}</div>
       <div className="flex items-center justify-center">{centerCell}</div>
@@ -346,7 +402,7 @@ function HeroPreview({ el, device }) {
         backgroundPosition: 'center',
         ...heightStyle,
       }
-    : { background: el.bg, ...heightStyle };
+    : { background: el.bg || 'var(--theme-surface, #eef2ff)', ...heightStyle };
 
   const textColorWhenBgImage = bgImage ? '#ffffff' : undefined;
 
@@ -364,20 +420,30 @@ function HeroPreview({ el, device }) {
       <Tag
         className={getResponsiveTypographyClasses({ fontSize: el.titleSize, fontWeight: el.titleWeight, lineHeight: el.titleLineHeight }, device)}
         style={{
-          color: el.titleColor || textColorWhenBgImage || '#111827',
+          color: el.titleColor || textColorWhenBgImage || 'var(--theme-text, #111827)',
+          fontFamily: 'var(--theme-font-heading, var(--theme-font, inherit))',
           margin: 0,
         }}
       >
         {el.title}
       </Tag>
-      <p className={getResponsiveTypographyClasses({ fontSize: el.subtitleSize, fontWeight: el.subtitleFontWeight, lineHeight: el.subtitleLineHeight }, device)} style={{ color: el.subtitleColor || textColorWhenBgImage || '#6b7280', margin: 0, maxWidth: 560 }}>
+      <p
+        className={getResponsiveTypographyClasses({ fontSize: el.subtitleSize, fontWeight: el.subtitleFontWeight, lineHeight: el.subtitleLineHeight }, device)}
+        style={{
+          color: el.subtitleColor || textColorWhenBgImage || 'var(--theme-text-muted, #6b7280)',
+          fontFamily: 'var(--theme-font-body, var(--theme-font, inherit))',
+          margin: 0,
+          maxWidth: 560,
+        }}
+      >
         {el.subtitle}
       </p>
       <button
         className={`mt-1 ${getResponsiveTypographyClasses({ fontSize: el.ctaSize, fontWeight: el.ctaFontWeight, lineHeight: el.ctaLineHeight }, device)} ${roundedCls[el.ctaRounded] || 'rounded-md'}`}
         style={{
-          background: el.ctaBg || '#3b82f6',
+          background: el.ctaBg || 'var(--theme-primary, #3b82f6)',
           color: el.ctaColor || '#ffffff',
+          fontFamily: 'var(--theme-font-body, var(--theme-font, inherit))',
           padding: '10px 24px',
           border: 'none',
           pointerEvents: 'none',
@@ -412,7 +478,17 @@ export default function ElementPreview({ el, device }) {
       return (
         <button
           className={`text-sm ${roundedCls[el.rounded] || 'rounded-md'} ${el.padding === 'sm' ? 'px-3 py-1.5' : el.padding === 'lg' ? 'px-6 py-3' : 'px-4 py-2'}`}
-          style={{ background: el.bg, color: el.color, fontSize: typography.fontSize, fontWeight: typography.fontWeight, lineHeight: typography.lineHeight, pointerEvents: 'none', border: 'none', cursor: 'default' }}
+          style={{
+            background: el.bg || 'var(--theme-primary)',
+            color: el.color || '#ffffff',
+            fontFamily: el.fontFamily || 'var(--theme-font-body, var(--theme-font, inherit))',
+            fontSize: typography.fontSize,
+            fontWeight: typography.fontWeight,
+            lineHeight: typography.lineHeight,
+            pointerEvents: 'none',
+            border: 'none',
+            cursor: 'default',
+          }}
         >
           {el.label}
         </button>
@@ -424,7 +500,14 @@ export default function ElementPreview({ el, device }) {
       return (
         <p
           className={`leading-relaxed ${getResponsiveTypographyClassName(el, device)} ${el.align === 'center' ? 'text-center' : el.align === 'right' ? 'text-right' : 'text-left'}`}
-          style={{ color: el.color, fontSize: typography.fontSize, fontWeight: typography.fontWeight, lineHeight: typography.lineHeight, margin: 0 }}
+          style={{
+            color: el.color || 'var(--theme-text)',
+            fontFamily: el.fontFamily || 'var(--theme-font-body, var(--theme-font, inherit))',
+            fontSize: typography.fontSize,
+            fontWeight: typography.fontWeight,
+            lineHeight: typography.lineHeight,
+            margin: 0,
+          }}
         >
           {el.label}
         </p>
@@ -445,12 +528,20 @@ export default function ElementPreview({ el, device }) {
                   .updateRadioSelection(el.id, true)
               }
               style={{
-                accentColor: el.color,
+                accentColor: el.color || 'var(--theme-primary)',
                 textAlign: el.align,
               }}
             />
 
-            <span className={`${getResponsiveTypographyClasses({ fontSize: el.fontSize, fontWeight: el.fontWeight, lineHeight: el.lineHeight }, device)} ${el.align === 'center' ? 'text-center' : el.align === 'right' ? 'text-right' : 'text-left'}`} style={{ color: el.color }}>{el.label}</span>
+            <span
+              className={`${getResponsiveTypographyClasses({ fontSize: el.fontSize, fontWeight: el.fontWeight, lineHeight: el.lineHeight }, device)} ${el.align === 'center' ? 'text-center' : el.align === 'right' ? 'text-right' : 'text-left'}`}
+              style={{
+                color: el.color && el.color !== 'var(--theme-primary)' ? el.color : 'var(--theme-text)',
+                fontFamily: el.fontFamily || 'var(--theme-font-body, var(--theme-font, inherit))',
+              }}
+            >
+              {el.label}
+            </span>
           </label>
         );
     }
@@ -477,12 +568,15 @@ export default function ElementPreview({ el, device }) {
                     checked: e.target.checked,
                   })
                 }
-                style={{ accentColor: el.color }}
+                style={{ accentColor: el.color || 'var(--theme-primary)' }}
               />
 
               <span
                 className={`${getResponsiveTypographyClasses({ fontSize: el.fontSize, fontWeight: el.fontWeight, lineHeight: el.lineHeight }, device)} ${el.align === 'center' ? 'text-center' : el.align === 'right' ? 'text-right' : 'text-left'}`}
-                style={{ color: el.color }}
+                style={{
+                  color: el.color && el.color !== 'var(--theme-primary)' ? el.color : 'var(--theme-text)',
+                  fontFamily: el.fontFamily || 'var(--theme-font-body, var(--theme-font, inherit))',
+                }}
               >
                 {el.label}
               </span>
@@ -497,7 +591,14 @@ export default function ElementPreview({ el, device }) {
       return (
         <Tag
           className={`leading-tight ${getResponsiveTypographyClassName(el, device)} ${el.align === 'center' ? 'text-center' : el.align === 'right' ? 'text-right' : 'text-left'}`}
-          style={{ color: el.color, fontSize: typography.fontSize, fontWeight: typography.fontWeight, lineHeight: typography.lineHeight, margin: 0 }}
+          style={{
+            color: el.color || 'var(--theme-text)',
+            fontFamily: el.fontFamily || 'var(--theme-font-heading, var(--theme-font, inherit))',
+            fontSize: typography.fontSize,
+            fontWeight: typography.fontWeight,
+            lineHeight: typography.lineHeight,
+            margin: 0,
+          }}
         >
           {el.label}
         </Tag>
@@ -509,9 +610,30 @@ export default function ElementPreview({ el, device }) {
       const typography = getResponsiveTypographyStyles(el, device);
       return (
         <div className="flex flex-col gap-1 w-full">
-          <label className={`text-xs font-medium text-gray-600 ${getResponsiveTypographyClasses(el, device)}`} style={{ fontSize: typography.fontSize, fontWeight: typography.fontWeight, lineHeight: typography.lineHeight }}>{el.label}</label>
-          <input type="text" placeholder={el.placeholder} disabled
-            className="border border-gray-300 rounded-md px-3 py-2 text-sm bg-white w-full" />
+          <label
+            className={`text-xs font-medium ${getResponsiveTypographyClasses(el, device)}`}
+            style={{
+              color: 'var(--theme-text-muted, #64748b)',
+              fontFamily: 'var(--theme-font-body, var(--theme-font, inherit))',
+              fontSize: typography.fontSize,
+              fontWeight: typography.fontWeight,
+              lineHeight: typography.lineHeight,
+            }}
+          >
+            {el.label}
+          </label>
+          <input
+            type="text"
+            placeholder={el.placeholder}
+            disabled
+            className="rounded-md px-3 py-2 text-sm w-full border"
+            style={{
+              borderColor: 'var(--theme-border, #e2e8f0)',
+              backgroundColor: 'var(--theme-surface, #ffffff)',
+              color: 'var(--theme-text, #0f172a)',
+              fontFamily: 'var(--theme-font-body, var(--theme-font, inherit))',
+            }}
+          />
         </div>
       );
       }
@@ -555,8 +677,11 @@ export default function ElementPreview({ el, device }) {
 
   return (
     <div
-      className="border border-gray-200 rounded-xl overflow-hidden shadow-md w-full flex flex-col"
-      style={{ background: el.bg }}
+      className="border rounded-xl overflow-hidden shadow-md w-full flex flex-col"
+      style={{
+        background: el.bg || 'var(--theme-surface, #ffffff)',
+        borderColor: 'var(--theme-border, #e2e8f0)',
+      }}
     >
       {el.image && (
         <img
@@ -576,7 +701,8 @@ export default function ElementPreview({ el, device }) {
         <p
           style={{
             margin: 0,
-            color: "#111827",
+            color: el.titleColor || 'var(--theme-text, #0f172a)',
+            fontFamily: 'var(--theme-font-heading, var(--theme-font, inherit))',
             fontSize: titleTypography.fontSize,
             fontWeight: titleTypography.fontWeight,
             lineHeight: titleTypography.lineHeight,
@@ -589,7 +715,8 @@ export default function ElementPreview({ el, device }) {
         <p
           style={{
             margin: 0,
-            color: "#6b7280",
+            color: el.subtitleColor || 'var(--theme-text-muted, #64748b)',
+            fontFamily: 'var(--theme-font-body, var(--theme-font, inherit))',
             fontSize: subtitleTypography.fontSize,
             fontWeight: subtitleTypography.fontWeight,
             lineHeight: subtitleTypography.lineHeight,
@@ -603,8 +730,9 @@ export default function ElementPreview({ el, device }) {
           <button
             className="mt-3 self-start px-3 py-1.5 rounded-md"
             style={{
-              background: el.ctaBg,
-              color: el.ctaColor,
+              background: el.ctaBg || 'var(--theme-primary, #2563eb)',
+              color: el.ctaColor || "#ffffff",
+              fontFamily: 'var(--theme-font-body, var(--theme-font, inherit))',
               border: "none",
               pointerEvents: "none",
               cursor: "default",
@@ -621,7 +749,8 @@ export default function ElementPreview({ el, device }) {
         {el.link && !el.ctaLabel && (
           <span
             style={{
-              color: el.ctaBg || "#3b82f6",
+              color: el.ctaBg || "var(--theme-primary, #2563eb)",
+              fontFamily: 'var(--theme-font-body, var(--theme-font, inherit))',
               fontSize: ctaTypography.fontSize,
               fontWeight: ctaTypography.fontWeight,
               lineHeight: ctaTypography.lineHeight,
@@ -639,8 +768,18 @@ export default function ElementPreview({ el, device }) {
       {
         const typography = getResponsiveTypographyStyles(el, device);
       return (
-        <span className={`inline-flex items-center px-3 py-1 rounded-full ${getResponsiveTypographyClasses(el, device)}`}
-          style={{ background: el.bg, color: el.color, fontSize: typography.fontSize, fontWeight: typography.fontWeight, lineHeight: typography.lineHeight }}>
+        <span
+          className={`inline-flex items-center px-3 py-1 rounded-full border ${getResponsiveTypographyClasses(el, device)}`}
+          style={{
+            background: el.bg || 'var(--theme-surface, #f8fafc)',
+            color: el.color || 'var(--theme-primary, #2563eb)',
+            borderColor: 'var(--theme-border, #e2e8f0)',
+            fontFamily: 'var(--theme-font-body, var(--theme-font, inherit))',
+            fontSize: typography.fontSize,
+            fontWeight: typography.fontWeight,
+            lineHeight: typography.lineHeight,
+          }}
+        >
           {el.label}
         </span>
       );
@@ -662,11 +801,11 @@ export default function ElementPreview({ el, device }) {
                       : "bg-blue-50 border-blue-300 text-blue-700"
               }`}
           >
-              <div className={getResponsiveTypographyClasses({ fontSize: el.titleFontSize || el.fontSize || { desktop: 16, tablet: 15, mobile: 14 }, fontWeight: el.titleFontWeight || el.fontWeight || { desktop: 'bold', tablet: 'bold', mobile: 'bold' }, lineHeight: el.titleLineHeight || el.lineHeight || { desktop: 1.2, tablet: 1.3, mobile: 1.4 } }, device)} style={{ fontSize: titleTypography.fontSize, fontWeight: titleTypography.fontWeight, lineHeight: titleTypography.lineHeight }}>
+              <div className={getResponsiveTypographyClasses({ fontSize: el.titleFontSize || el.fontSize || { desktop: 16, tablet: 15, mobile: 14 }, fontWeight: el.titleFontWeight || el.fontWeight || { desktop: 'bold', tablet: 'bold', mobile: 'bold' }, lineHeight: el.titleLineHeight || el.lineHeight || { desktop: 1.2, tablet: 1.3, mobile: 1.4 } }, device)} style={{ fontSize: titleTypography.fontSize, fontWeight: titleTypography.fontWeight, lineHeight: titleTypography.lineHeight, fontFamily: 'var(--theme-font-heading, var(--theme-font, inherit))' }}>
                   {el.title}
               </div>
 
-              <div className={`mt-1 ${getResponsiveTypographyClasses({ fontSize: el.messageFontSize || el.fontSize || { desktop: 14, tablet: 13, mobile: 12 }, fontWeight: el.messageFontWeight || el.fontWeight || { desktop: 'normal', tablet: 'normal', mobile: 'normal' }, lineHeight: el.messageLineHeight || el.lineHeight || { desktop: 1.4, tablet: 1.5, mobile: 1.6 } }, device)}`} style={{ fontSize: messageTypography.fontSize, fontWeight: messageTypography.fontWeight, lineHeight: messageTypography.lineHeight }}>
+              <div className={`mt-1 ${getResponsiveTypographyClasses({ fontSize: el.messageFontSize || el.fontSize || { desktop: 14, tablet: 13, mobile: 12 }, fontWeight: el.messageFontWeight || el.fontWeight || { desktop: 'normal', tablet: 'normal', mobile: 'normal' }, lineHeight: el.messageLineHeight || el.lineHeight || { desktop: 1.4, tablet: 1.5, mobile: 1.6 } }, device)}`} style={{ fontSize: messageTypography.fontSize, fontWeight: messageTypography.fontWeight, lineHeight: messageTypography.lineHeight, fontFamily: 'var(--theme-font-body, var(--theme-font, inherit))' }}>
                   {el.message}
               </div>
 
@@ -682,7 +821,15 @@ export default function ElementPreview({ el, device }) {
       case "loader":
         return (
           <div className="w-full flex justify-center">
-            <div className="px-6 py-3 rounded-md border-2 border-dashed border-gray-300 bg-gray-50 text-gray-600 text-sm font-medium">
+            <div
+              className="px-6 py-3 rounded-md border-2 border-dashed text-sm font-medium"
+              style={{
+                borderColor: 'var(--theme-border, #e2e8f0)',
+                backgroundColor: 'var(--theme-surface, #f8fafc)',
+                color: el.color || 'var(--theme-primary, #2563eb)',
+                fontFamily: 'var(--theme-font-body, var(--theme-font, inherit))',
+              }}
+            >
               ⟳ Loader
             </div>
           </div>
@@ -691,16 +838,30 @@ export default function ElementPreview({ el, device }) {
     case "toggle": {
       return (
         <div className="w-full flex justify-center">
-          <div className="px-6 py-3 rounded-md border-2 border-dashed border-gray-300 bg-gray-50 text-gray-600 flex items-center gap-2">
-            <span className="text-base">⏻</span>
-            <span className={`${getResponsiveTypographyClasses({ fontSize: el.fontSize, fontWeight: el.fontWeight, lineHeight: el.lineHeight }, device)} ${el.align === 'center' ? 'text-center' : el.align === 'right' ? 'text-right' : 'text-left'}`}>{el.label}</span>
+          <div
+            className="px-6 py-3 rounded-md border-2 border-dashed flex items-center gap-2"
+            style={{
+              borderColor: 'var(--theme-border, #e2e8f0)',
+              backgroundColor: 'var(--theme-surface, #f8fafc)',
+            }}
+          >
+            <span className="text-base" style={{ color: el.color || 'var(--theme-primary, #2563eb)' }}>⏻</span>
+            <span
+              className={`${getResponsiveTypographyClasses({ fontSize: el.fontSize, fontWeight: el.fontWeight, lineHeight: el.lineHeight }, device)} ${el.align === 'center' ? 'text-center' : el.align === 'right' ? 'text-right' : 'text-left'}`}
+              style={{
+                color: el.labelColor || 'var(--theme-text, #0f172a)',
+                fontFamily: 'var(--theme-font-body, var(--theme-font, inherit))',
+              }}
+            >
+              {el.label}
+            </span>
           </div>
         </div>
       );
     }
 
     case 'divider':
-      return <hr className="w-full" style={{ borderColor: el.color, borderTopWidth: el.thickness, borderTopStyle: 'solid', margin: 0 }} />;
+      return <hr className="w-full" style={{ borderColor: el.color || 'var(--theme-border, #e2e8f0)', borderTopWidth: el.thickness, borderTopStyle: 'solid', margin: 0 }} />;
 
     case 'navbar':
       return <NavbarPreview el={el} device={device} />;
@@ -715,11 +876,35 @@ export default function ElementPreview({ el, device }) {
       const checkboxTypography = { fontSize: el.checkboxFontSize || { desktop: 14, tablet: 13, mobile: 12 }, fontWeight: el.checkboxFontWeight || { desktop: 'normal', tablet: 'normal', mobile: 'normal' }, lineHeight: el.checkboxLineHeight || { desktop: 1.4, tablet: 1.3, mobile: 1.2 } };
       const buttonTypography = { fontSize: el.buttonFontSize || { desktop: 14, tablet: 13, mobile: 12 }, fontWeight: el.buttonFontWeight || { desktop: 'medium', tablet: 'medium', mobile: 'medium' }, lineHeight: el.buttonLineHeight || { desktop: 1.4, tablet: 1.3, mobile: 1.2 } };
       return (
-        <div className="w-full rounded-xl border border-gray-200 p-4 flex flex-col gap-3 bg-white">
-          <p className={`${getResponsiveTypographyClasses(titleTypography, device)} text-gray-900`}>{el.title}</p>
+        <div
+          className="w-full rounded-xl border p-4 flex flex-col gap-3"
+          style={{
+            background: 'var(--theme-surface, #ffffff)',
+            borderColor: 'var(--theme-border, #e2e8f0)',
+          }}
+        >
+          <p
+            className={`${getResponsiveTypographyClasses(titleTypography, device)}`}
+            style={{
+              color: el.titleColor || 'var(--theme-text, #0f172a)',
+              fontFamily: 'var(--theme-font-heading, var(--theme-font, inherit))',
+              margin: 0,
+            }}
+          >
+            {el.title}
+          </p>
           {normalizeFormFields(el.fields).map((field, index) => renderFormFieldPreview(field, index, { labelClass: getResponsiveTypographyClasses(labelTypography, device), checkboxClass: getResponsiveTypographyClasses(checkboxTypography, device) }))}
-          <button className={`mt-1 px-4 py-2 rounded-md ${getResponsiveTypographyClasses(buttonTypography, device)} bg-blue-600 text-white self-start`} style={{ pointerEvents: 'none' }}>
-            {el.buttonLabel}
+          <button
+            className={`mt-1 px-4 py-2 rounded-md ${getResponsiveTypographyClasses(buttonTypography, device)} self-start`}
+            style={{
+              background: el.buttonBg || 'var(--theme-primary, #2563eb)',
+              color: el.buttonColor || '#ffffff',
+              fontFamily: 'var(--theme-font-body, var(--theme-font, inherit))',
+              pointerEvents: 'none',
+              border: 'none',
+            }}
+          >
+            {el.buttonLabel || 'Submit'}
           </button>
         </div>
       );
@@ -727,12 +912,22 @@ export default function ElementPreview({ el, device }) {
 
     case 'modal': {
       return (
-        <div className="w-full flex flex-col gap-2 p-2 border-2 rounded-lg">
+        <div
+          className="w-full flex flex-col gap-2 p-2 border-2 rounded-lg"
+          style={{ borderColor: 'var(--theme-border, #e2e8f0)' }}
+        >
           {el.modalButtonType === 'link' ? (
             <button
               disabled
               className={`underline self-start cursor-default ${getResponsiveTypographyClasses({ fontSize: el.modalButtonFontSize || { desktop: 14, tablet: 13, mobile: 12 }, fontWeight: el.modalButtonFontWeight || { desktop: 'medium', tablet: 'medium', mobile: 'medium' }, lineHeight: el.modalButtonLineHeight || { desktop: 1.4, tablet: 1.3, mobile: 1.2 } }, device)}`}
-              style={{ background: 'none', color: el.modalButtonColor || '#3b82f6',textDecoration: 'none', border: 'none', padding: 0 }}
+              style={{
+                background: 'none',
+                color: el.modalButtonColor || 'var(--theme-primary, #2563eb)',
+                fontFamily: 'var(--theme-font-body, var(--theme-font, inherit))',
+                textDecoration: 'none',
+                border: 'none',
+                padding: 0,
+              }}
             >
               {el.modalButtonLabel}
             </button>
@@ -740,16 +935,33 @@ export default function ElementPreview({ el, device }) {
             <button 
               disabled
               className={`self-start px-3 py-1.5 rounded-md cursor-default ${getResponsiveTypographyClasses({ fontSize: el.modalButtonFontSize || { desktop: 14, tablet: 13, mobile: 12 }, fontWeight: el.modalButtonFontWeight || { desktop: 'medium', tablet: 'medium', mobile: 'medium' }, lineHeight: el.modalButtonLineHeight || { desktop: 1.4, tablet: 1.3, mobile: 1.2 } }, device)}`}
-              style={{ background: el.modalButtonBg || '#3b82f6', color: el.modalButtonColor || '#ffffff', border: 'none' }}
+              style={{
+                background: el.modalButtonBg || 'var(--theme-primary, #2563eb)',
+                color: el.modalButtonColor || '#ffffff',
+                fontFamily: 'var(--theme-font-body, var(--theme-font, inherit))',
+                border: 'none',
+              }}
             >
               {el.modalButtonLabel}
             </button>
           )}
         <div 
           className="mt-4 border-t pt-4"
-          style={{ background: el.modalContentBg || '#ffffff' }}
+          style={{
+            background: el.modalContentBg || 'var(--theme-surface, #ffffff)',
+            borderColor: 'var(--theme-border, #e2e8f0)',
+          }}
         >
-          <p className={`${getResponsiveTypographyClasses({ fontSize: el.modalTitleFontSize || { desktop: 16, tablet: 15, mobile: 14 }, fontWeight: el.modalTitleFontWeight || { desktop: '600', tablet: '600', mobile: '600' }, lineHeight: el.modalTitleLineHeight || { desktop: 1.2, tablet: 1.3, mobile: 1.4 } }, device)}`}>{el.modalContentTitle}</p>
+          <p
+            className={`${getResponsiveTypographyClasses({ fontSize: el.modalTitleFontSize || { desktop: 16, tablet: 15, mobile: 14 }, fontWeight: el.modalTitleFontWeight || { desktop: '600', tablet: '600', mobile: '600' }, lineHeight: el.modalTitleLineHeight || { desktop: 1.2, tablet: 1.3, mobile: 1.4 } }, device)}`}
+            style={{
+              color: 'var(--theme-text, #0f172a)',
+              fontFamily: 'var(--theme-font-heading, var(--theme-font, inherit))',
+              margin: '0 0 8px 0',
+            }}
+          >
+            {el.modalContentTitle || el.modalContenttitle}
+          </p>
           <RowsCanvas
             rows={el.rows || []}
             hops={[el.id]}
@@ -763,7 +975,10 @@ export default function ElementPreview({ el, device }) {
 
 case 'popover': {
   return (
-    <div className="w-full flex flex-col gap-3 p-2 border rounded-lg">
+    <div
+      className="w-full flex flex-col gap-3 p-2 border rounded-lg"
+      style={{ borderColor: 'var(--theme-border, #e2e8f0)' }}
+    >
       {el.popoverButtonType === 'link' ? (
         <button
           disabled
@@ -772,7 +987,8 @@ case 'popover': {
             background: 'none',
             border: 'none',
             padding: 0,
-            color: el.popoverButtonColor || '#2563eb',
+            color: el.popoverButtonColor || 'var(--theme-primary, #2563eb)',
+            fontFamily: 'var(--theme-font-body, var(--theme-font, inherit))',
             textDecoration: 'underline',
             cursor: 'default',
           }}
@@ -784,8 +1000,9 @@ case 'popover': {
           disabled
           className={`px-3 py-2 rounded-md self-start ${getResponsiveTypographyClasses({ fontSize: el.popoverButtonFontSize || { desktop: 14, tablet: 13, mobile: 12 }, fontWeight: el.popoverButtonFontWeight || { desktop: 'medium', tablet: 'medium', mobile: 'medium' }, lineHeight: el.popoverButtonLineHeight || { desktop: 1.4, tablet: 1.3, mobile: 1.2 } }, device)}`}
           style={{
-            background: el.popoverButtonBg || '#2563eb',
+            background: el.popoverButtonBg || 'var(--theme-primary, #2563eb)',
             color: el.popoverButtonColor || '#ffffff',
+            fontFamily: 'var(--theme-font-body, var(--theme-font, inherit))',
             border: 'none',
             cursor: 'default',
           }}
@@ -795,14 +1012,30 @@ case 'popover': {
       )}
 
       <div
-        className="border rounded-md p-3 bg-white shadow-sm"
-        style={{ width: el.popoverContentWidth || '250px' }}
+        className="border rounded-md p-3 shadow-sm"
+        style={{
+          width: el.popoverContentWidth || '250px',
+          background: el.popoverContentBg || 'var(--theme-surface, #ffffff)',
+          borderColor: 'var(--theme-border, #e2e8f0)',
+        }}
       >
-          <p className={`mb-2 ${getResponsiveTypographyClasses({ fontSize: el.popoverTitleFontSize || { desktop: 14, tablet: 13, mobile: 12 }, fontWeight: el.popoverTitleFontWeight || { desktop: 'medium', tablet: 'medium', mobile: 'medium' }, lineHeight: el.popoverTitleLineHeight || { desktop: 1.2, tablet: 1.3, mobile: 1.4 } }, device)}`}>
+        <p
+          className={`mb-2 ${getResponsiveTypographyClasses({ fontSize: el.popoverTitleFontSize || { desktop: 14, tablet: 13, mobile: 12 }, fontWeight: el.popoverTitleFontWeight || { desktop: 'medium', tablet: 'medium', mobile: 'medium' }, lineHeight: el.popoverTitleLineHeight || { desktop: 1.2, tablet: 1.3, mobile: 1.4 } }, device)}`}
+          style={{
+            color: el.popoverContentColor || 'var(--theme-text, #0f172a)',
+            fontFamily: 'var(--theme-font-heading, var(--theme-font, inherit))',
+          }}
+        >
           {el.popoverContentTitle}
         </p>
 
-        <p className={`${getResponsiveTypographyClasses({ fontSize: el.popoverTextFontSize || { desktop: 12, tablet: 11, mobile: 10 }, fontWeight: el.popoverTextFontWeight || { desktop: 'normal', tablet: 'normal', mobile: 'normal' }, lineHeight: el.popoverTextLineHeight || { desktop: 1.4, tablet: 1.5, mobile: 1.6 } }, device)} text-gray-600`}>
+        <p
+          className={`${getResponsiveTypographyClasses({ fontSize: el.popoverTextFontSize || { desktop: 12, tablet: 11, mobile: 10 }, fontWeight: el.popoverTextFontWeight || { desktop: 'normal', tablet: 'normal', mobile: 'normal' }, lineHeight: el.popoverTextLineHeight || { desktop: 1.4, tablet: 1.5, mobile: 1.6 } }, device)}`}
+          style={{
+            color: el.popoverContentColor || 'var(--theme-text-muted, #64748b)',
+            fontFamily: 'var(--theme-font-body, var(--theme-font, inherit))',
+          }}
+        >
           {el.popoverContentText}
         </p>
       </div>

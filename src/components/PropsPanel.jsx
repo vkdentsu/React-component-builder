@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import ImageUploadField from './ImageUploadField';
 import useBuilderStore from '../store/builderStore';
 import { FONT_OPTIONS } from "../utils/fonts";
@@ -9,6 +9,8 @@ import {
   ResponsiveFontWeightControl,
   ResponsiveLineHeightControl,
 } from './ResponsiveTypographyControls';
+import { THEME_COLOR_TOKENS, resolveColorTokenHex } from '../utils/themeDefaults';
+import { Palette } from 'lucide-react';
 
 /* ── Primitive UI controls ─────────────────────────────────────────── */
 const Section = ({ title, children }) => (
@@ -30,14 +32,95 @@ const Inp = ({ value, onChange, type = 'text', min, max, placeholder }) => (
     className="w-full border border-gray-200 rounded-md px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white" />
 );
 
-const ColorPicker = ({ value, onChange }) => (
-  <div className="flex items-center gap-2">
-    <input type="color" value={value || '#000000'} onChange={(e) => onChange(e.target.value)}
-      className="w-7 h-7 rounded cursor-pointer border border-gray-200 p-0.5 shrink-0" />
-    <input type="text" value={value || ''} onChange={(e) => onChange(e.target.value)}
-      className="flex-1 border border-gray-200 rounded-md px-2 py-1 text-[11px] font-mono focus:outline-none focus:ring-2 focus:ring-blue-300" />
-  </div>
-);
+const ColorPicker = ({ value, onChange }) => {
+  const activeTheme = useBuilderStore((state) => state.activeTheme);
+
+  // Check if current value matches a theme token
+  const matchedToken = THEME_COLOR_TOKENS.find(
+    (t) => t.varName === value || t.tokenName === value
+  );
+
+  // Resolve current hex for display and for native input[type="color"]
+  const resolvedHex = useMemo(() => {
+    return resolveColorTokenHex(value, activeTheme?.configJson);
+  }, [value, activeTheme?.configJson]);
+
+  // Ensure valid 7-char #rrggbb for native color picker
+  const validPickerHex = useMemo(() => {
+    if (typeof resolvedHex === 'string' && /^#[0-9a-fA-F]{6}$/.test(resolvedHex)) {
+      return resolvedHex;
+    }
+    return '#2563eb';
+  }, [resolvedHex]);
+
+  return (
+    <div className="flex flex-col gap-1.5 w-full">
+      {/* Token Link Status Pill */}
+      {matchedToken ? (
+        <div className="flex items-center justify-between text-[10px] text-blue-700 bg-blue-50/90 px-2 py-1 rounded-md border border-blue-200">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span
+              className="w-2.5 h-2.5 rounded-full border border-black/20 shadow-xs shrink-0"
+              style={{ backgroundColor: resolvedHex }}
+            />
+            <span className="font-semibold truncate">Theme: {matchedToken.label}</span>
+          </div>
+          <span className="font-mono text-[9px] text-blue-500 shrink-0">{matchedToken.varName}</span>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between text-[10px] text-gray-500 bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
+          <span className="font-medium text-gray-600">Custom Value</span>
+          <span className="font-mono text-[9px] text-gray-500 truncate max-w-[120px]">{value || '#000000'}</span>
+        </div>
+      )}
+
+      {/* Theme Token Quick Swatches */}
+      <div className="flex items-center gap-1 flex-wrap">
+        {THEME_COLOR_TOKENS.map((token) => {
+          const isSelected = value === token.varName || value === token.tokenName;
+          const tokenHex = resolveColorTokenHex(token.varName, activeTheme?.configJson);
+          return (
+            <button
+              key={token.key}
+              type="button"
+              onClick={() => onChange(token.varName)}
+              title={`${token.label}: ${token.description} (${tokenHex})`}
+              className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] transition-all border
+                ${isSelected
+                  ? 'bg-blue-100/90 border-blue-400 text-blue-800 font-bold shadow-xs ring-1 ring-blue-300'
+                  : 'bg-white hover:bg-gray-100 border-gray-200 text-gray-600 hover:border-gray-300'
+                }`}
+            >
+              <span
+                className="w-2.5 h-2.5 rounded-full border border-black/20 shadow-xs shrink-0"
+                style={{ backgroundColor: tokenHex }}
+              />
+              <span>{token.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Custom Picker and Hex / Var Input */}
+      <div className="flex items-center gap-2 mt-0.5">
+        <input
+          type="color"
+          value={validPickerHex}
+          onChange={(e) => onChange(e.target.value)}
+          title="Pick a custom color"
+          className="w-7 h-7 rounded cursor-pointer border border-gray-200 p-0.5 shrink-0 bg-white"
+        />
+        <input
+          type="text"
+          value={value || ''}
+          placeholder="e.g. var(--theme-primary) or #000"
+          onChange={(e) => onChange(e.target.value)}
+          className="flex-1 border border-gray-200 rounded-md px-2 py-1 text-[11px] font-mono focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
+        />
+      </div>
+    </div>
+  );
+};
 
 const Sel = ({ value, onChange, options }) => (
   <select value={value ?? ''} onChange={(e) => onChange(e.target.value)}
@@ -90,6 +173,17 @@ function ButtonProps({ el, update }) {
           min={0.8}
           max={2.5}
         />
+        <Field label="Font family">
+          <Sel
+            value={el.fontFamily || 'var(--theme-font-body)'}
+            onChange={(v) => update({ fontFamily: v })}
+            options={[
+              { value: 'var(--theme-font-body)', label: '✨ Theme Body Font' },
+              { value: 'var(--theme-font-heading)', label: 'Theme Heading Font' },
+              { value: 'inherit', label: 'Inherit' },
+            ]}
+          />
+        </Field>
         <Field label="Rounded">
           <Sel value={el.rounded} onChange={(v) => update({ rounded: v })}
             options={[{value:'none',label:'None'},{value:'sm',label:'Small'},{value:'md',label:'Medium'},{value:'lg',label:'Large'},{value:'full',label:'Full'}]} />
@@ -130,6 +224,17 @@ function TextProps({ el, update }) {
           min={0.8}
           max={2.5}
         />
+        <Field label="Font family">
+          <Sel
+            value={el.fontFamily || 'var(--theme-font-body)'}
+            onChange={(v) => update({ fontFamily: v })}
+            options={[
+              { value: 'var(--theme-font-body)', label: '✨ Theme Body Font' },
+              { value: 'var(--theme-font-heading)', label: 'Theme Heading Font' },
+              { value: 'inherit', label: 'Inherit' },
+            ]}
+          />
+        </Field>
         <Field label="Align">
           <Sel value={el.align} onChange={(v) => update({ align: v })}
             options={[{value:'left',label:'Left'},{value:'center',label:'Center'},{value:'right',label:'Right'}]} />
@@ -170,6 +275,17 @@ function HeadingProps({ el, update }) {
           min={0.8}
           max={2.5}
         />
+        <Field label="Font family">
+          <Sel
+            value={el.fontFamily || 'var(--theme-font-heading)'}
+            onChange={(v) => update({ fontFamily: v })}
+            options={[
+              { value: 'var(--theme-font-heading)', label: '✨ Theme Heading Font' },
+              { value: 'var(--theme-font-body)', label: 'Theme Body Font' },
+              { value: 'inherit', label: 'Inherit' },
+            ]}
+          />
+        </Field>
         <Field label="Align">
           <Sel value={el.align} onChange={(v) => update({ align: v })}
             options={[{value:'left',label:'Left'},{value:'center',label:'Center'},{value:'right',label:'Right'}]} />
@@ -1383,6 +1499,29 @@ export default function PropsPanel() {
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4">
+        {/* Active Theme Status */}
+        <div className="mb-4 p-3 bg-gradient-to-br from-slate-50 to-blue-50/40 rounded-xl border border-blue-100 shadow-xs">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+              <Palette size={12} className="text-blue-600" />
+              Dynamic Theme Engine
+            </span>
+            <span className="flex items-center gap-1 text-[9px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Cascading
+            </span>
+          </div>
+          <div className="flex items-center justify-between text-xs font-semibold text-slate-800">
+            <span>{useBuilderStore.getState().activeTheme?.name || 'Modern Blue'}</span>
+            <span className="text-[10px] font-mono text-slate-400">
+              {useBuilderStore.getState().activeTheme?.configJson?.typography?.fontHeading || 'Inter'}
+            </span>
+          </div>
+          <p className="text-[10px] text-slate-500 mt-1 leading-tight">
+            Theme design tokens are injected as CSS variables and cascade across all linked elements.
+          </p>
+        </div>
+
         <Section title="Global Settings">
           <Field label="Global Font">
             <Sel

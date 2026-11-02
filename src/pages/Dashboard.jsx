@@ -73,8 +73,10 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
     const [createModalOpen, setCreateModalOpen] = useState(false);
     const [newPageName, setNewPageName] = useState('');
     const [newPageSlug, setNewPageSlug] = useState('');
+    const [newPageThemeId, setNewPageThemeId] = useState('');
     const [creatingPage, setCreatingPage] = useState(false);
     const [createError, setCreateError] = useState('');
+
 
     // Delete Confirmation Modal State
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -180,7 +182,9 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
         setCreateError('');
 
         try {
-            const theme = themes[0]?.id ? themes[0] : await ensureUserTheme();
+            const theme = (newPageThemeId && themes.find((t) => t.id === newPageThemeId)) ||
+                          themes[0] ||
+                          (await ensureUserTheme());
             const themeIdToUse = theme.id;
 
             const res = await authenticatedFetch('/api/pages', {
@@ -203,7 +207,8 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
             setCreateModalOpen(false);
             setNewPageName('');
             setNewPageSlug('');
-            showToast(`Page "${json.data.name}" created! Opening builder...`);
+            setNewPageThemeId('');
+            showToast(`Page "${json.data.name}" created with theme "${json.data.theme?.name || theme.name}"! Opening builder...`);
 
             // Refresh list and navigate to builder with newly created page id
             await loadData();
@@ -213,6 +218,7 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
         } finally {
             setCreatingPage(false);
         }
+
     };
 
     // Delete Page Handler
@@ -632,7 +638,13 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                                             >
                                                                 {page.status}
                                                             </span>
+                                                            {page.theme?.name && (
+                                                                <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-200">
+                                                                    {page.theme.name}
+                                                                </span>
+                                                            )}
                                                         </div>
+
                                                         <p className="text-[11px] text-slate-400 font-mono mt-0.5">
                                                             /{page.slug}
                                                         </p>
@@ -1292,6 +1304,27 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                     />
                                 </div>
                             </div>
+
+                            <div>
+                                <label className="block text-xs font-medium text-slate-700 mb-1">
+                                    Theme *
+                                </label>
+                                <select
+                                    value={newPageThemeId || themes[0]?.id || ''}
+                                    onChange={(e) => setNewPageThemeId(e.target.value)}
+                                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white"
+                                >
+                                    {themes.map((t) => (
+                                        <option key={t.id} value={t.id}>
+                                            {t.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                <p className="text-[11px] text-slate-400 mt-1">
+                                    By default, this theme will be added and applied to the new page.
+                                </p>
+                            </div>
+
 
 
 

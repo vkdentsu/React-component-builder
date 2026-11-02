@@ -2,7 +2,7 @@ import { X } from 'lucide-react';
 import useBuilderStore from '../store/builderStore';
 import ConfigurationAndThemes from '../pages/ConfigurationAndThemes';
 
-export default function ThemeModal({ onClose, initialThemeId, onSaved }) {
+export default function ThemeModal({ onClose, onSaved }) {
   const { isThemeModalOpen, closeThemeModal } = useBuilderStore();
 
   if (!isThemeModalOpen && !onClose) return null;

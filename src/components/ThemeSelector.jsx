@@ -29,6 +29,8 @@ export default function ThemeSelector() {
   return (
     <div className="relative" ref={ref}>
       <button
+        id="theme-selector-button"
+        type="button"
         onClick={() => setOpen((o) => !o)}
         title="Active Theme: Click to switch theme"
         className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors duration-150 max-w-[170px]"
@@ -70,13 +72,15 @@ export default function ThemeSelector() {
               const themeColors = theme.configJson?.colors || {};
 
               return (
-                <div
+                <button
+                  type="button"
+                  id={`theme-option-${theme.id}`}
                   key={theme.id}
                   onClick={() => {
                     selectTheme(theme.id);
                     setOpen(false);
                   }}
-                  className={`group flex items-center justify-between px-3 py-2 text-xs cursor-pointer transition-colors duration-100
+                  className={`w-full group flex items-center justify-between px-3 py-2 text-xs cursor-pointer transition-colors duration-100 text-left
                     ${isActive ? 'bg-blue-50/70 text-blue-900 font-medium' : 'hover:bg-gray-50 text-gray-700'}`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
@@ -97,7 +101,7 @@ export default function ThemeSelector() {
                     </div>
 
                     <div className="truncate">
-                      <span className="block truncate">{theme.name}</span>
+                      <span className="block truncate font-medium">{theme.name}</span>
                       <span className="block text-[10px] text-gray-400 font-normal">
                         {theme.configJson?.typography?.fontFamily || 'Inter'}
                       </span>
@@ -107,7 +111,7 @@ export default function ThemeSelector() {
                   <div className="flex items-center gap-1 shrink-0">
                     {isActive && <Check size={14} className="text-blue-600 mr-1" />}
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>

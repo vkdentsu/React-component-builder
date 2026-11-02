@@ -14,9 +14,9 @@ import Processing from "./pages/Processing";
 import GeneratedProject from "./pages/GeneratedProject";
 import CustomBuilder from "./pages/CustomBuilder";
 import Preview from "./pages/Preview";
-import ThemesPage from "./pages/ThemesPage";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
+import ThemeProvider from "./components/ThemeProvider";
 import { clearAuthSession, hasUnexpiredAuthToken } from "./utils/auth";
 
 function RequireAuth({ children }) {
@@ -52,30 +52,32 @@ function AuthRedirector() {
 function App() {
   return (
     <BrowserRouter>
-      <AuthRedirector />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/upload" element={<UploadDesign />} />
-        <Route path="/processing" element={<Processing />} />
-        <Route path="/generated" element={<GeneratedProject />} />
-        <Route
-          path="/custom-builder"
-          element={
-            <RequireAuth>
-              <CustomBuilder />
-            </RequireAuth>
-          }
-        />
-        <Route path="/preview" element={<Preview />} />
+      <ThemeProvider>
+        <AuthRedirector />
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/upload" element={<UploadDesign />} />
+          <Route path="/processing" element={<Processing />} />
+          <Route path="/generated" element={<GeneratedProject />} />
+          <Route
+            path="/custom-builder"
+            element={
+              <RequireAuth>
+                <CustomBuilder />
+              </RequireAuth>
+            }
+          />
+          <Route path="/preview" element={<Preview />} />
 
-        <Route path="/login" element={<Auth mode="login" />} />
-        <Route path="/register" element={<Auth mode="register" />} />
-        <Route path="/dashboard" element={<RequireAuth><Dashboard initialTab="dashboard" /></RequireAuth>} />
-        <Route path="/pages" element={<RequireAuth><Dashboard initialTab="pages" /></RequireAuth>} />
-        <Route path="/themes" element={<RequireAuth><Dashboard initialTab="themes" /></RequireAuth>} />
-        <Route path="/media" element={<RequireAuth><Dashboard initialTab="media" /></RequireAuth>} />
-        <Route path="/settings" element={<RequireAuth><Dashboard initialTab="settings" /></RequireAuth>} />
-      </Routes>
+          <Route path="/login" element={<Auth mode="login" />} />
+          <Route path="/register" element={<Auth mode="register" />} />
+          <Route path="/dashboard" element={<RequireAuth><Dashboard initialTab="dashboard" /></RequireAuth>} />
+          <Route path="/pages" element={<RequireAuth><Dashboard initialTab="pages" /></RequireAuth>} />
+          <Route path="/themes" element={<RequireAuth><Dashboard initialTab="themes" /></RequireAuth>} />
+          <Route path="/media" element={<RequireAuth><Dashboard initialTab="media" /></RequireAuth>} />
+          <Route path="/settings" element={<RequireAuth><Dashboard initialTab="settings" /></RequireAuth>} />
+        </Routes>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }

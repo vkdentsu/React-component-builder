@@ -9,7 +9,7 @@ const DEVICES = [
   { id: 'mobile', label: 'Mobile', Icon: Smartphone },
 ];
 
-export default function Toolbar({ onExport, onExportJson, onImportJson, onPreview, canUndo, canRedo, onSavePage, isSaving }) {
+export default function Toolbar({ onExport, onExportJson, onImportJson, onPreview, canUndo, canRedo, onSavePage, isSaving, pageMeta, onEditPageSettings }) {
   const navigate = useNavigate();
   const { device, setDevice, clearAll, undo, redo } = useBuilderStore();
 
@@ -28,9 +28,21 @@ export default function Toolbar({ onExport, onExportJson, onImportJson, onPrevie
           <Code2 size={13} className="text-white" />
         </div>
         <span className="font-semibold text-sm text-gray-800 hidden lg:inline">Compify</span>
-        <div className="ml-1 flex items-center gap-1.5">
+        {pageMeta?.name && onEditPageSettings && (
+          <button
+            type="button"
+            onClick={onEditPageSettings}
+            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors"
+            title="Edit Page Properties"
+          >
+            <span className="max-w-[130px] truncate">{pageMeta.name}</span>
+          </button>
+        )}
+        <div className="ml-1">
           <DocumentSwitcher />
         </div>
+
+
         {/* <span className="hidden xl:inline text-xs text-gray-400 ml-1">
           {rows.length} row{rows.length !== 1 ? 's' : ''} · {elCount} element{elCount !== 1 ? 's' : ''}
         </span> */}
