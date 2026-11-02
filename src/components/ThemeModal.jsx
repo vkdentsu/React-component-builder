@@ -10,6 +10,7 @@ import {
   Trash2,
   Check,
   Save,
+  Sliders,
 } from 'lucide-react';
 import useBuilderStore from '../store/builderStore';
 import GOOGLE_FONTS from '../utils/googleFonts';
@@ -22,6 +23,7 @@ const TABS = [
   { id: 'typography', label: 'Fonts & Text', Icon: Type },
   { id: 'spacing', label: 'Spacing', Icon: Maximize2 },
   { id: 'radius', label: 'Corner Radius', Icon: Box },
+  { id: 'config', label: 'Config Groups', Icon: Sliders },
 ];
 
 const COLOR_FIELDS = [
@@ -69,7 +71,7 @@ const FONT_WEIGHT_OPTIONS = [
   { label: 'Bold', value: 700 },
 ];
 
-export default function ThemeModal({ onClose }) {
+export default function ThemeModal({ onClose, initialThemeId, onSaved }) {
   const {
     activeTheme,
     availableThemes,
@@ -87,9 +89,14 @@ export default function ThemeModal({ onClose }) {
   } = useBuilderStore();
 
   const initialTheme =
-    availableThemes.find((t) => t.id === activeTheme?.id) || activeTheme || THEME_PRESETS[0];
+    availableThemes.find((t) => t.id === initialThemeId) ||
+    availableThemes.find((t) => t.id === activeTheme?.id) ||
+    activeTheme ||
+    THEME_PRESETS[0];
   const [activeTab, setActiveTab] = useState(themeModalInitialTab || 'palette');
-  const [selectedThemeId, setSelectedThemeId] = useState(initialTheme?.id || 'preset-0');
+  const [selectedThemeId, setSelectedThemeId] = useState(
+    initialThemeId || initialTheme?.id || 'preset-0'
+  );
   const [themeName, setThemeName] = useState(initialTheme?.name || 'Modern Blue');
   const [tokens, setTokens] = useState(() => normalizeThemeConfig(initialTheme?.configJson));
   const [isNewTheme, setIsNewTheme] = useState(false);
@@ -172,6 +179,135 @@ export default function ThemeModal({ onClose }) {
     }));
   };
 
+  const updateConfigValue = (path, value) => {
+    setTokens((current) => {
+      const updated = { ...current };
+      let target = updated;
+      for (const key of path.slice(0, -1)) {
+        target[key] = { ...target[key] };
+        target = target[key];
+      }
+      target[path[path.length - 1]] = value;
+      return updated;
+    });
+  };
+
+  const renderConfigValue = (key, value, path = []) => {
+    const currentPath = [...path, key];
+    const label = key
+      .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+      .replace(/^./, (character) => character.toUpperCase());
+    const fieldClass =
+      'w-full rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-800 focus:border-blue-500 focus:outline-hidden';
+
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      return (
+        <details
+          key={JSON.stringify(currentPath)}
+          className="rounded-xl border border-gray-200 bg-white"
+        >
+          <summary className="cursor-pointer px-3 py-2.5 text-xs font-semibold text-gray-700">
+            {label}
+          </summary>
+          <div className="space-y-3 border-t border-gray-100 p-3">
+            {Object.entries(value).map(([childKey, childValue]) =>
+              renderConfigValue(childKey, childValue, currentPath)
+            )}
+          </div>
+        </details>
+      );
+    }
+
+    if (typeof value === 'boolean') {
+      return (
+        <label
+          key={JSON.stringify(currentPath)}
+          className="flex items-center justify-between gap-3 rounded-lg border border-gray-100 px-3 py-2 text-xs font-medium text-gray-700"
+        >
+          {label}
+          <input
+            type="checkbox"
+            checked={value}
+            onChange={(event) =>
+              updateConfigValue(currentPath, event.target.checked)
+            }
+            className="h-4 w-4 accent-blue-600"
+          />
+        </label>
+      );
+    }
+
+    if (Array.isArray(value)) {
+      return (
+        <label
+          key={JSON.stringify(currentPath)}
+          className="block space-y-1 text-xs font-medium text-gray-700"
+        >
+          <span>{label}</span>
+          <input
+            type="text"
+            value={value.join(', ')}
+            onChange={(event) => {
+              const items = event.target.value
+                .split(',')
+                .map((item) => item.trim())
+                .filter(Boolean);
+              updateConfigValue(
+                currentPath,
+                value.every((item) => typeof item === 'number')
+                  ? items.map(Number)
+                  : items
+              );
+            }}
+            className={fieldClass}
+          />
+        </label>
+      );
+    }
+
+    const isColor =
+      typeof value === 'string' &&
+      currentPath.some((segment) => /color/i.test(segment)) &&
+      /^#[0-9a-f]{6}$/i.test(value);
+
+    return (
+      <label
+        key={JSON.stringify(currentPath)}
+        className="block space-y-1 text-xs font-medium text-gray-700"
+      >
+        <span>{label}</span>
+        <div className="flex items-center gap-2">
+          {isColor && (
+            <input
+              type="color"
+              value={value}
+              onChange={(event) =>
+                updateConfigValue(currentPath, event.target.value)
+              }
+              aria-label={`${label} color`}
+              className="h-9 w-10 cursor-pointer rounded border border-gray-200 p-1"
+            />
+          )}
+          <input
+            type={typeof value === 'number' ? 'number' : 'text'}
+            value={value ?? ''}
+            onChange={(event) =>
+              updateConfigValue(
+                currentPath,
+                typeof value === 'number'
+                  ? event.target.value === ''
+                    ? ''
+                    : Number(event.target.value)
+                  : event.target.value
+              )
+            }
+            className={fieldClass}
+          />
+        </div>
+      </label>
+    );
+  };
+
   const applyPreset = (preset) => {
     setTokens(normalizeThemeConfig(preset.configJson));
     if (isNewTheme) {
@@ -205,6 +341,7 @@ export default function ThemeModal({ onClose }) {
           configJson: tokens,
         });
       }
+      await onSaved?.();
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2500);
     } catch (err) {
@@ -708,6 +845,24 @@ export default function ThemeModal({ onClose }) {
                           />
                         </div>
                       ))}
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'config' && (
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-900">
+                        Configuration Groups
+                      </h3>
+                      <p className="text-xs text-gray-500">
+                        Expand a group to edit its values. Supported theme tokens update the live preview as you edit.
+                      </p>
+                    </div>
+                    <div className="space-y-3">
+                      {Object.entries(tokens).map(([key, value]) =>
+                        renderConfigValue(key, value)
+                      )}
                     </div>
                   </div>
                 )}

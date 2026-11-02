@@ -2,9 +2,13 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Edit3, Trash2 } from "lucide-react";
 import { getApiUrl } from "../utils/api";
+import useBuilderStore from "../store/builderStore";
+import ThemeModal from "../components/ThemeModal";
 
 export default function ConfigurationAndThemes({ themes = [], onRefresh }) {
   const navigate = useNavigate();
+  const fetchThemes = useBuilderStore((state) => state.fetchThemes);
+  const [editingThemeId, setEditingThemeId] = useState(null);
   const [selectedThemeId, setSelectedThemeId] = useState("");
   const [editingField, setEditingField] = useState(null);
   const [nameDraft, setNameDraft] = useState("");
@@ -397,6 +401,12 @@ export default function ConfigurationAndThemes({ themes = [], onRefresh }) {
     } finally {
       setSaving(false);
     }
+  };
+
+  const openThemeEditor = async (themeId) => {
+    setMessage(null);
+    await fetchThemes();
+    setEditingThemeId(themeId);
   };
 
   return (
@@ -935,7 +945,18 @@ export default function ConfigurationAndThemes({ themes = [], onRefresh }) {
                 <span>
                   Created {new Date(theme.createdAt).toLocaleDateString()}
                 </span>
-                <span className="text-emerald-600 font-medium">Ready</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openThemeEditor(theme.id)}
+                    title={`Edit ${theme.name} theme`}
+                    aria-label={`Edit ${theme.name} theme`}
+                    className="rounded-lg border border-slate-200 p-1.5 text-slate-500 transition-colors hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600"
+                  >
+                    <Edit3 size={13} />
+                  </button>
+                  <span className="text-emerald-600 font-medium">Ready</span>
+                </div>
               </div>
             </div>
           );
@@ -947,6 +968,17 @@ export default function ConfigurationAndThemes({ themes = [], onRefresh }) {
           </div>
         )}
       </div>
+      {editingThemeId && (
+        <ThemeModal
+          key={editingThemeId}
+          initialThemeId={editingThemeId}
+          onClose={() => {
+            setEditingThemeId(null);
+            onRefresh?.();
+          }}
+          onSaved={onRefresh}
+        />
+      )}
     </div>
   );
 }
