@@ -125,6 +125,7 @@ export function normalizeThemeConfig(config) {
   }
 
   return {
+    ...config,
     colors: {
       ...DEFAULT_THEME_TOKENS.colors,
       ...(config.colors || {}),
