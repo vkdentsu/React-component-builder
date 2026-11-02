@@ -5,8 +5,8 @@ import {
 } from "./auth";
 
 const backendUrl = (
-  import.meta.env.VITE_BACKEND_URL ||
-  import.meta.env.Vite_BACKEND_URL ||
+  process.env.VITE_BACKEND_URL ||
+  process.env.Vite_BACKEND_URL ||
   ""
 ).replace(/\/+$/, "");
 
