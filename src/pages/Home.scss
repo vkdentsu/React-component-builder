@@ -1,3 +1,5 @@
+@use '../styles/variables' as *;
+
 .compifyHome {
   background: $color-white;
   color: $color-navy;
@@ -39,6 +41,34 @@
         }
       }
     }
+  }
+
+  .auth-links {
+    display: flex;
+    align-items: center;
+    gap: $size-10;
+
+    button {
+      padding: $size-10 $size-16;
+      border: 1px solid transparent;
+      border-radius: $size-9;
+      background: transparent;
+      color: $color-navy;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+
+      &:hover {
+        color: $color-blue;
+      }
+
+      &:focus-visible {
+        outline: $size-3 solid $color-turquoise;
+        outline-offset: $size-3;
+      }
+    }
+
   }
 
   .logo {

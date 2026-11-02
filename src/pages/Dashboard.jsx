@@ -27,7 +27,9 @@ import {
     Globe,
     Upload,
 } from 'lucide-react';
-import { getApiUrl } from '../utils/api';
+import { authenticatedFetch, getApiUrl } from '../utils/api';
+import { clearAuthSession } from '../utils/auth';
+import { ensureUserTheme } from '../utils/ensureUserTheme';
 import ConfigurationAndThemes from "./ConfigurationAndThemes";
 
 export default function Dashboard({ initialTab = 'dashboard' }) {
@@ -103,8 +105,8 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
         setLoading(true);
         setError(null);
         return Promise.all([
-            fetch(getApiUrl('/api/pages')).then((r) => r.json()),
-            fetch(getApiUrl('/api/themes')).then((r) => r.json()),
+            authenticatedFetch('/api/pages').then((r) => r.json()),
+            authenticatedFetch('/api/themes').then((r) => r.json()),
             fetch(getApiUrl('/api/health')).then((r) => r.json()).catch(() => ({ status: 'error', database: 'unavailable' })),
         ]).then(([pagesRes, themesRes, healthRes]) => {
             if (pagesRes.data) setPages(pagesRes.data);
@@ -127,8 +129,8 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
     useEffect(() => {
         let isMounted = true;
         Promise.all([
-            fetch(getApiUrl('/api/pages')).then((r) => r.json()),
-            fetch(getApiUrl('/api/themes')).then((r) => r.json()),
+            authenticatedFetch('/api/pages').then((r) => r.json()),
+            authenticatedFetch('/api/themes').then((r) => r.json()),
             fetch(getApiUrl('/api/health')).then((r) => r.json()).catch(() => ({ status: 'error', database: 'unavailable' })),
         ]).then(([pagesRes, themesRes, healthRes]) => {
             if (!isMounted) return;
@@ -178,24 +180,16 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
         setCreateError('');
 
         try {
-            // Find fallback theme if required by current Prisma schema
-            let themeIdToUse = themes[0]?.id;
-            if (!themeIdToUse) {
-                try {
-                    const themesRes = await fetch(getApiUrl('/api/themes')).then((r) => r.json());
-                    themeIdToUse = themesRes.data?.[0]?.id;
-                } catch (themeErr) {
-                    console.warn('Could not fetch default theme:', themeErr);
-                }
-            }
+            const theme = themes[0]?.id ? themes[0] : await ensureUserTheme();
+            const themeIdToUse = theme.id;
 
-            const res = await fetch(getApiUrl('/api/pages'), {
+            const res = await authenticatedFetch('/api/pages', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     name: newPageName.trim(),
                     slug: newPageSlug.trim(),
-                    ...(themeIdToUse ? { themeId: themeIdToUse } : {}),
+                    themeId: themeIdToUse,
                     contentJson: { rows: [] },
                     status: 'DRAFT',
                 }),
@@ -226,7 +220,7 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
         if (!pageToDelete) return;
         setDeleting(true);
         try {
-            const res = await fetch(getApiUrl(`/api/pages/${pageToDelete.id}`), {
+            const res = await authenticatedFetch(`/api/pages/${pageToDelete.id}`, {
                 method: 'DELETE',
             });
             if (!res.ok && res.status !== 204) {
@@ -251,7 +245,7 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
             const newName = `${page.name} Copy`;
             const newSlug = `${page.slug}-copy-${uniqueSuffix}`;
 
-            const res = await fetch(getApiUrl('/api/pages'), {
+            const res = await authenticatedFetch('/api/pages', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -281,9 +275,9 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
             const newStatus = page.status === 'PUBLISHED' ? 'DRAFT' : 'PUBLISHED';
             let res;
             if (newStatus === 'PUBLISHED') {
-                res = await fetch(getApiUrl(`/api/pages/${page.id}/publish`), { method: 'POST' });
+                res = await authenticatedFetch(`/api/pages/${page.id}/publish`, { method: 'POST' });
             } else {
-                res = await fetch(getApiUrl(`/api/pages/${page.id}`), {
+                res = await authenticatedFetch(`/api/pages/${page.id}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ status: 'DRAFT' }),
@@ -442,7 +436,8 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                     <button
                                         onClick={() => {
                                             setProfileOpen(false);
-                                            showToast('Logged out (placeholder)', 'error');
+                                            clearAuthSession();
+                                            navigate('/login', { replace: true });
                                         }}
                                         className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 transition-colors"
                                     >
