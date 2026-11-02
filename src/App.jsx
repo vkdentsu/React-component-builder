@@ -67,14 +67,7 @@ function App() {
           }
         />
         <Route path="/preview" element={<Preview />} />
-        <Route
-          path="/themes"
-          element={
-            <RequireAuth>
-              <ThemesPage />
-            </RequireAuth>
-          }
-        />
+
         <Route path="/login" element={<Auth mode="login" />} />
         <Route path="/register" element={<Auth mode="register" />} />
         <Route path="/dashboard" element={<RequireAuth><Dashboard initialTab="dashboard" /></RequireAuth>} />

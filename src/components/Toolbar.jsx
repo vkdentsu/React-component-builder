@@ -2,7 +2,6 @@ import { useNavigate } from 'react-router-dom';
 import { Monitor, Tablet, Smartphone, Trash2, Code2, Undo2, Redo2, Eye, Upload, FileJson, ArrowLeft, Save } from 'lucide-react';
 import useBuilderStore from '../store/builderStore';
 import DocumentSwitcher from './DocumentSwitcher';
-import ThemeSelector from './ThemeSelector';
 
 const DEVICES = [
   { id: 'desktop', label: 'Desktop', Icon: Monitor },
@@ -29,19 +28,8 @@ export default function Toolbar({ onExport, onExportJson, onImportJson, onPrevie
           <Code2 size={13} className="text-white" />
         </div>
         <span className="font-semibold text-sm text-gray-800 hidden lg:inline">Compify</span>
-        {/* {pageMeta?.name && onEditPageSettings && (
-          <button
-            type="button"
-            onClick={onEditPageSettings}
-            className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors"
-            title="Edit Page Properties"
-          >
-            <span className="max-w-[130px] truncate">{pageMeta.name}</span>
-          </button>
-        )} */}
         <div className="ml-1 flex items-center gap-1.5">
           <DocumentSwitcher />
-          <ThemeSelector />
         </div>
         {/* <span className="hidden xl:inline text-xs text-gray-400 ml-1">
           {rows.length} row{rows.length !== 1 ? 's' : ''} · {elCount} element{elCount !== 1 ? 's' : ''}

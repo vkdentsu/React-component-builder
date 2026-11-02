@@ -27,7 +27,6 @@ import ExportModal from '../components/ExportModal';
 import ExportJsonModal from '../components/ExportJsonModal';
 import ImportJsonModal from '../components/ImportJsonModal';
 import PreviewModal from '../components/PreviewModal';
-import ThemeModal from '../components/ThemeModal';
 import ElementPreview from '../components/ElementPreview';
 import { loadGoogleFont } from "../utils/loadGoogleFont";
 import { authenticatedFetch } from '../utils/api';
@@ -76,8 +75,6 @@ export default function CustomBuilder() {
     loadPageFromDb,
     initNewDbPage,
     fetchThemes,
-    isThemeModalOpen,
-    closeThemeModal,
   } = useBuilderStore();
 
   // Load database page if pageId is in URL
@@ -525,8 +522,6 @@ export default function CustomBuilder() {
           </div>
         </div>
       )}
-
-      {isThemeModalOpen && <ThemeModal onClose={closeThemeModal} />}
     </DndContext>
   );
 }

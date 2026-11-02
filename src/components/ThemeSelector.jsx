@@ -1,14 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Plus, Sliders, Copy, Check } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ChevronDown, Check, ArrowUpRight, Palette } from 'lucide-react';
 import useBuilderStore from '../store/builderStore';
 
 export default function ThemeSelector() {
+  const navigate = useNavigate();
   const {
     activeTheme,
     availableThemes,
     selectTheme,
-    openThemeModal,
-    cloneTheme,
   } = useBuilderStore();
 
   const [open, setOpen] = useState(false);
@@ -30,7 +30,7 @@ export default function ThemeSelector() {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((o) => !o)}
-        title="Active Theme & Style Settings"
+        title="Active Theme: Click to switch theme"
         className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors duration-150 max-w-[170px]"
       >
         <div className="flex items-center -space-x-1 shrink-0">
@@ -53,19 +53,14 @@ export default function ThemeSelector() {
       {open && (
         <div className="absolute top-full left-0 mt-1.5 w-72 bg-white rounded-xl border border-gray-200 shadow-xl z-50 overflow-hidden animate-[fadeIn_0.12s_ease]">
           {/* Header */}
-          <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
-              Theme Styles
+          <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between bg-gray-50/70">
+            <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+              <Palette size={12} className="text-blue-600" />
+              Theme Selector
             </span>
-            <button
-              onClick={() => {
-                setOpen(false);
-                openThemeModal('palette');
-              }}
-              className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700"
-            >
-              <Plus size={13} /> New Theme
-            </button>
+            <span className="text-[10px] text-gray-400 font-medium">
+              {availableThemes.length} available
+            </span>
           </div>
 
           {/* Theme list */}
@@ -111,33 +106,23 @@ export default function ThemeSelector() {
 
                   <div className="flex items-center gap-1 shrink-0">
                     {isActive && <Check size={14} className="text-blue-600 mr-1" />}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        cloneTheme(theme.id);
-                      }}
-                      title="Duplicate theme"
-                      className="p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-200/60 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <Copy size={12} />
-                    </button>
                   </div>
                 </div>
               );
             })}
           </div>
 
-          {/* Footer - Open Configurator */}
+          {/* Footer - Link to Dashboard Configuration & Themes */}
           <div className="p-2 border-t border-gray-100 bg-gray-50/80">
             <button
               onClick={() => {
                 setOpen(false);
-                openThemeModal('palette');
+                navigate('/themes');
               }}
-              className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-medium text-gray-700 bg-white hover:bg-gray-100 border border-gray-200 shadow-2xs transition-colors"
+              className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-medium text-slate-600 hover:text-blue-600 bg-white hover:bg-blue-50 border border-gray-200 hover:border-blue-200 transition-colors"
             >
-              <Sliders size={13} className="text-blue-600" />
-              Edit Theme Styles
+              <span>Manage Themes in Dashboard</span>
+              <ArrowUpRight size={12} className="text-slate-400" />
             </button>
           </div>
         </div>
