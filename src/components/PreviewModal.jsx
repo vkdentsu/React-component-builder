@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { X, Monitor, Tablet, Smartphone } from 'lucide-react';
 import ElementPreview from './ElementPreview';
 import useBuilderStore from '../store/builderStore';
-import { tokensToCssVars } from '../utils/themeDefaults';
+import { tokensToCssRules, tokensToCssVars } from '../utils/themeDefaults';
 
 const DEVICES = [
   { id: 'desktop', label: 'Desktop', Icon: Monitor,    width: '100%'  },
@@ -165,6 +165,7 @@ export default function PreviewModal({ open, onClose }) {
   const themeVars = useMemo(() => {
     return tokensToCssVars(activeTheme?.configJson);
   }, [activeTheme]);
+  const themeRules = useMemo(() => tokensToCssRules(activeTheme?.configJson, '.theme-canvas'), [activeTheme]);
 
   if (!open) return null;
 
@@ -216,8 +217,9 @@ export default function PreviewModal({ open, onClose }) {
               : 'inherit',
             ...themeVars,
           }}
-          className="bg-white rounded-2xl shadow-2xl overflow-hidden min-h-[200px] flex flex-col"
+          className="theme-canvas bg-white rounded-2xl shadow-2xl overflow-hidden min-h-[200px] flex flex-col"
         >
+          {themeRules && <style>{themeRules}</style>}
           {/* Browser chrome */}
           <div className="flex items-center gap-1.5 px-4 py-2.5 bg-gray-100 border-b border-gray-200 shrink-0">
             <div className="w-2.5 h-2.5 rounded-full bg-red-400" />

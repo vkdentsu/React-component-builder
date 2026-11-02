@@ -1,75 +1,95 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  X,
-  Palette,
-  Type,
-  Maximize2,
-  Box,
-  Plus,
-  Copy,
-  Trash2,
   Check,
+  Copy,
+  Download,
+  Maximize2,
+  Palette,
+  RotateCcw,
   Save,
   Sliders,
+  Type,
+  Upload,
+  X,
+  Paintbrush,
 } from 'lucide-react';
 import useBuilderStore from '../store/builderStore';
-import GOOGLE_FONTS from '../utils/googleFonts';
 import { loadGoogleFont } from '../utils/loadGoogleFont';
-import { THEME_PRESETS, normalizeThemeConfig } from '../utils/themeDefaults';
-import FontUpload from './FontUpload';
+import { registerFont } from '../utils/fontLoader';
+import { DEFAULT_THEME_TOKENS, THEME_PRESETS, normalizeThemeConfig } from '../utils/themeDefaults';
+import ThemeEditorFields from './ThemeEditorFields';
+import ThemePreview from './ThemePreview';
 
 const TABS = [
   { id: 'palette', label: 'Color Palette', Icon: Palette },
   { id: 'typography', label: 'Fonts & Text', Icon: Type },
-  { id: 'spacing', label: 'Spacing', Icon: Maximize2 },
-  { id: 'radius', label: 'Corner Radius', Icon: Box },
+  { id: 'spacing', label: 'Spacing & Radius', Icon: Maximize2 },
   { id: 'config', label: 'Config Groups', Icon: Sliders },
+  { id: 'styles', label: 'Config Styles', Icon: Paintbrush },
 ];
 
-const COLOR_FIELDS = [
-  { key: 'primary', label: 'Primary Brand Color', desc: 'Main color for buttons, active states, and highlights' },
-  { key: 'secondary', label: 'Secondary Accent Color', desc: 'Supporting accent color for badges, chips, and secondary elements' },
-  { key: 'background', label: 'Page Background', desc: 'Main background color for the page and canvas' },
-  { key: 'surface', label: 'Card & Surface', desc: 'Background color for cards, panels, and modals' },
-  { key: 'text', label: 'Main Text', desc: 'Primary color for headings and body content' },
-  { key: 'textMuted', label: 'Muted Text', desc: 'Color for subtitles, secondary text, and hints' },
-  { key: 'border', label: 'Borders & Lines', desc: 'Color for outlines, dividing lines, and input borders' },
-];
+const slugify = (value) => value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'theme';
 
-const FONT_SIZE_LABELS = {
-  xs: 'Extra Small (XS)',
-  sm: 'Small (SM)',
-  base: 'Body / Base',
-  lg: 'Large (LG)',
-  xl: 'Extra Large (XL)',
-  '2xl': '2X Large (2XL)',
-  '3xl': '3X Large (3XL)',
-  '4xl': 'Hero (4XL)',
-};
+function uniqueSlug(name, themes, excludeId) {
+  const base = slugify(name);
+  const used = new Set(themes
+    .filter((theme) => theme.id !== excludeId && !String(theme.id).startsWith('preset-'))
+    .map((theme) => theme.slug?.toLowerCase()));
+  if (!used.has(base)) return base;
+  let suffix = 2;
+  while (used.has(`${base}-${suffix}`)) suffix += 1;
+  return `${base}-${suffix}`;
+}
 
-const SPACING_LABELS = {
-  xs: 'Extra Small (XS)',
-  sm: 'Small (SM)',
-  md: 'Medium (MD)',
-  lg: 'Large (LG)',
-  xl: 'Extra Large (XL)',
-};
+function validateTheme(name, slug, tokens, themes, selectedId) {
+  if (!name.trim()) return 'Project name is required.';
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) return 'Slug must use lowercase letters, numbers, and single hyphens only.';
+  if (themes.some((theme) => theme.id !== selectedId && !String(theme.id).startsWith('preset-') && theme.slug?.toLowerCase() === slug.toLowerCase())) return 'This slug is already in use.';
 
-const RADIUS_LABELS = {
-  none: 'Sharp (0px)',
-  sm: 'Small Rounding',
-  md: 'Medium Rounding',
-  lg: 'Large Rounding',
-  full: 'Pill / Full',
-};
+  const invalidColor = Object.entries(tokens.colors).find(([, value]) => !/^#[0-9a-f]{6}$/i.test(value));
+  if (invalidColor) return `Enter a valid HEX value for ${invalidColor[0]}.`;
+  if (!Object.values(tokens.spacing).every((value) => /^-?(?:\d+\.?\d*|\.\d+)(?:px|rem|%)$/.test(String(value)))) return 'Spacing values must use px, rem, or % units.';
+  if (!Object.values(tokens.borderRadius).every((value) => /^-?(?:\d+\.?\d*|\.\d+)(?:px|rem|em|%)$/.test(String(value)))) return 'Corner radii must use px, rem, em, or % units.';
+  if (!Number.isFinite(Number(tokens.typography.lineHeight)) || Number(tokens.typography.lineHeight) <= 0) return 'Enter a positive line height.';
+  if (!/^-?(?:\d+\.?\d*|\.\d+)(?:px|rem|em)$/.test(String(tokens.typography.letterSpacing))) return 'Letter spacing must use px, rem, or em units.';
+  for (const [styleName, style] of Object.entries(tokens.typography.textStyles)) {
+    if (!Number.isFinite(Number(style.lineHeight)) || Number(style.lineHeight) <= 0) return `Enter a positive line height for ${styleName}.`;
+    if (!/^-?(?:\d+\.?\d*|\.\d+)(?:px|rem|em)$/.test(String(style.letterSpacing))) return `Letter spacing for ${styleName} must use px, rem, or em units.`;
+    if (![100, 300, 400, 500, 600, 700, 800].includes(Number(style.fontWeight))) return `Select a valid font weight for ${styleName}.`;
+    if (!['normal', 'italic', 'oblique'].includes(style.fontStyle)) return `Select a valid font style for ${styleName}.`;
+  }
 
-const FONT_WEIGHT_OPTIONS = [
-  { label: 'Light', value: 300 },
-  { label: 'Regular', value: 400 },
-  { label: 'Medium', value: 500 },
-  { label: 'Semibold', value: 600 },
-  { label: 'Bold', value: 700 },
-];
+  const groupNames = new Set();
+  for (const group of tokens.configGroups) {
+    const normalizedName = group.name.trim().toLowerCase();
+    if (!normalizedName) return 'Group name is required.';
+    if (groupNames.has(normalizedName)) return `The group "${group.name}" already exists.`;
+    groupNames.add(normalizedName);
+    const optionNames = new Set();
+    for (const option of group.options) {
+      const optionName = option.name.trim();
+      if (!/^[A-Za-z][A-Za-z0-9_-]*$/.test(optionName)) return `Enter a valid configuration key for "${option.name || 'unnamed option'}".`;
+      if (optionNames.has(optionName.toLowerCase())) return `The option "${optionName}" already exists in "${group.name}".`;
+      optionNames.add(optionName.toLowerCase());
+      if (option.value === '' || option.value === null || option.value === undefined) return `A value is required for "${optionName}".`;
+      if (option.valueType === 'number' && !Number.isFinite(Number(option.value))) return `Enter a valid number for "${optionName}".`;
+      if (option.valueType === 'color' && !/^#[0-9a-f]{6}$/i.test(String(option.value))) return `Enter a valid HEX color for "${optionName}".`;
+    }
+  }
+  const styleSelectors = new Set();
+  for (const group of tokens.configStyles) {
+    if (!group.name.trim()) return 'Style group name is required.';
+    if (!/^[A-Za-z_][A-Za-z0-9_-]*$/.test(group.selector)) return `Enter a valid ${group.selectorType} name for "${group.name}".`;
+    const selectorKey = `${group.selectorType}:${group.selector}`;
+    if (styleSelectors.has(selectorKey)) return `The selector "${group.selector}" is already used by another style group.`;
+    styleSelectors.add(selectorKey);
+    for (const option of group.options) {
+      if (!/^(?:--[a-z][a-z0-9_-]*|-?[a-z][a-z0-9-]*)$/i.test(option.property)) return `Enter a valid CSS property in "${group.name}".`;
+      if (!String(option.value).trim() || /[;{}<>\\\r\n]/.test(String(option.value))) return `Enter a single CSS value for "${option.property}".`;
+    }
+  }
+  return '';
+}
 
 export default function ThemeModal({ onClose, initialThemeId, onSaved }) {
   const {
@@ -79,919 +99,284 @@ export default function ThemeModal({ onClose, initialThemeId, onSaved }) {
     themeModalInitialTab,
     closeThemeModal,
     selectTheme,
+    applyThemeDraft,
     createTheme,
     updateTheme,
     cloneTheme,
-    deleteTheme,
     themeLoading,
     themeError,
     addCustomFont,
+    customFonts,
   } = useBuilderStore();
+  const creatingInitially = initialThemeId === 'new';
+  const initialTheme = availableThemes.find((theme) => theme.id === initialThemeId)
+    || availableThemes.find((theme) => theme.id === activeTheme?.id)
+    || activeTheme
+    || { id: 'preset-0', name: THEME_PRESETS[0].name, slug: THEME_PRESETS[0].slug, configJson: THEME_PRESETS[0].configJson };
 
-  const initialTheme =
-    availableThemes.find((t) => t.id === initialThemeId) ||
-    availableThemes.find((t) => t.id === activeTheme?.id) ||
-    activeTheme ||
-    THEME_PRESETS[0];
   const [activeTab, setActiveTab] = useState(themeModalInitialTab || 'palette');
-  const [selectedThemeId, setSelectedThemeId] = useState(
-    initialThemeId || initialTheme?.id || 'preset-0'
-  );
-  const [themeName, setThemeName] = useState(initialTheme?.name || 'Modern Blue');
-  const [tokens, setTokens] = useState(() => normalizeThemeConfig(initialTheme?.configJson));
-  const [isNewTheme, setIsNewTheme] = useState(false);
+  const [selectedThemeId, setSelectedThemeId] = useState(creatingInitially ? 'new' : initialThemeId || initialTheme.id || 'preset-0');
+  const [projectName, setProjectName] = useState(creatingInitially ? 'My Custom Theme' : initialTheme.name || 'Modern Blue');
+  const [slugName, setSlugName] = useState(creatingInitially ? uniqueSlug('My Custom Theme', availableThemes) : initialTheme.slug || slugify(initialTheme.name || 'Modern Blue'));
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
+  const [description, setDescription] = useState(initialTheme.configJson?.description || '');
+  const [tokens, setTokens] = useState(() => normalizeThemeConfig(creatingInitially ? DEFAULT_THEME_TOKENS : initialTheme.configJson));
+  const [isNewTheme, setIsNewTheme] = useState(creatingInitially);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [localError, setLocalError] = useState(null);
+  const [localError, setLocalError] = useState('');
 
-  const handleSelectTheme = (theme) => {
-    setIsNewTheme(false);
-    setSelectedThemeId(theme.id);
-    setThemeName(theme.name);
-    setTokens(normalizeThemeConfig(theme.configJson));
-    setLocalError(null);
-  };
-
-  // Load font dynamically if it's a google font
   useEffect(() => {
-    if (tokens?.typography?.fontFamily) {
-      loadGoogleFont(tokens.typography.fontFamily);
-    }
-  }, [tokens?.typography?.fontFamily]);
+    const fonts = new Set([
+      tokens.typography.fontFamily,
+      ...Object.values(tokens.typography.fonts || {}),
+    ]);
+    const customNames = new Set((customFonts || []).map((font) => font.name));
+    fonts.forEach((font) => {
+      if (font && !customNames.has(font)) loadGoogleFont(font);
+    });
+  }, [tokens.typography, customFonts]);
+
+  useEffect(() => {
+    (customFonts || []).forEach((font) => {
+      if (font.name && (font.url || font.sources?.length)) registerFont(font.name, font);
+    });
+  }, [customFonts]);
 
   if (!isThemeModalOpen && !onClose) return null;
 
   const handleClose = () => {
-    setLocalError(null);
+    setLocalError('');
     setSaveSuccess(false);
     if (onClose) onClose();
     else closeThemeModal();
   };
 
-  const updateColor = (key, val) => {
-    setTokens((prev) => ({
-      ...prev,
-      colors: { ...prev.colors, [key]: val },
-    }));
+  const handleProjectNameChange = (value) => {
+    setProjectName(value);
+    if (isNewTheme && !slugManuallyEdited) setSlugName(uniqueSlug(value, availableThemes));
   };
 
-  const updateTypography = (field, val) => {
-    setTokens((prev) => ({
-      ...prev,
-      typography: { ...prev.typography, [field]: val },
-    }));
-  };
-
-  const updateFontSize = (scaleKey, val) => {
-    setTokens((prev) => ({
-      ...prev,
-      typography: {
-        ...prev.typography,
-        sizes: { ...prev.typography.sizes, [scaleKey]: val },
-      },
-    }));
-  };
-
-  const toggleWeight = (weight) => {
-    setTokens((prev) => {
-      const currentWeights = prev.typography.weights || [];
-      const has = currentWeights.includes(weight);
-      const next = has
-        ? currentWeights.filter((w) => w !== weight)
-        : [...currentWeights, weight].sort((a, b) => a - b);
-      return {
-        ...prev,
-        typography: { ...prev.typography, weights: next },
-      };
-    });
-  };
-
-  const updateSpacing = (key, val) => {
-    setTokens((prev) => ({
-      ...prev,
-      spacing: { ...prev.spacing, [key]: val },
-    }));
-  };
-
-  const updateRadius = (key, val) => {
-    setTokens((prev) => ({
-      ...prev,
-      borderRadius: { ...prev.borderRadius, [key]: val },
-    }));
-  };
-
-  const updateConfigValue = (path, value) => {
-    setTokens((current) => {
-      const updated = { ...current };
-      let target = updated;
-      for (const key of path.slice(0, -1)) {
-        target[key] = { ...target[key] };
-        target = target[key];
-      }
-      target[path[path.length - 1]] = value;
-      return updated;
-    });
-  };
-
-  const renderConfigValue = (key, value, path = []) => {
-    const currentPath = [...path, key];
-    const label = key
-      .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-      .replace(/^./, (character) => character.toUpperCase());
-    const fieldClass =
-      'w-full rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-800 focus:border-blue-500 focus:outline-hidden';
-
-    if (value && typeof value === 'object' && !Array.isArray(value)) {
-      return (
-        <details
-          key={JSON.stringify(currentPath)}
-          className="rounded-xl border border-gray-200 bg-white"
-        >
-          <summary className="cursor-pointer px-3 py-2.5 text-xs font-semibold text-gray-700">
-            {label}
-          </summary>
-          <div className="space-y-3 border-t border-gray-100 p-3">
-            {Object.entries(value).map(([childKey, childValue]) =>
-              renderConfigValue(childKey, childValue, currentPath)
-            )}
-          </div>
-        </details>
-      );
-    }
-
-    if (typeof value === 'boolean') {
-      return (
-        <label
-          key={JSON.stringify(currentPath)}
-          className="flex items-center justify-between gap-3 rounded-lg border border-gray-100 px-3 py-2 text-xs font-medium text-gray-700"
-        >
-          {label}
-          <input
-            type="checkbox"
-            checked={value}
-            onChange={(event) =>
-              updateConfigValue(currentPath, event.target.checked)
-            }
-            className="h-4 w-4 accent-blue-600"
-          />
-        </label>
-      );
-    }
-
-    if (Array.isArray(value)) {
-      return (
-        <label
-          key={JSON.stringify(currentPath)}
-          className="block space-y-1 text-xs font-medium text-gray-700"
-        >
-          <span>{label}</span>
-          <input
-            type="text"
-            value={value.join(', ')}
-            onChange={(event) => {
-              const items = event.target.value
-                .split(',')
-                .map((item) => item.trim())
-                .filter(Boolean);
-              updateConfigValue(
-                currentPath,
-                value.every((item) => typeof item === 'number')
-                  ? items.map(Number)
-                  : items
-              );
-            }}
-            className={fieldClass}
-          />
-        </label>
-      );
-    }
-
-    const isColor =
-      typeof value === 'string' &&
-      currentPath.some((segment) => /color/i.test(segment)) &&
-      /^#[0-9a-f]{6}$/i.test(value);
-
-    return (
-      <label
-        key={JSON.stringify(currentPath)}
-        className="block space-y-1 text-xs font-medium text-gray-700"
-      >
-        <span>{label}</span>
-        <div className="flex items-center gap-2">
-          {isColor && (
-            <input
-              type="color"
-              value={value}
-              onChange={(event) =>
-                updateConfigValue(currentPath, event.target.value)
-              }
-              aria-label={`${label} color`}
-              className="h-9 w-10 cursor-pointer rounded border border-gray-200 p-1"
-            />
-          )}
-          <input
-            type={typeof value === 'number' ? 'number' : 'text'}
-            value={value ?? ''}
-            onChange={(event) =>
-              updateConfigValue(
-                currentPath,
-                typeof value === 'number'
-                  ? event.target.value === ''
-                    ? ''
-                    : Number(event.target.value)
-                  : event.target.value
-              )
-            }
-            className={fieldClass}
-          />
-        </div>
-      </label>
-    );
-  };
-
-  const applyPreset = (preset) => {
-    setTokens(normalizeThemeConfig(preset.configJson));
-    if (isNewTheme) {
-      setThemeName(`${preset.name} Copy`);
-    }
-  };
-
-  const handleSave = async (e) => {
-    e?.preventDefault();
-    setLocalError(null);
+  const handleStartNew = (config = DEFAULT_THEME_TOKENS, name = 'My Custom Theme') => {
+    const nextName = name;
+    setIsNewTheme(true);
+    setSelectedThemeId('new');
+    setProjectName(nextName);
+    setSlugManuallyEdited(false);
+    setSlugName(uniqueSlug(nextName, availableThemes));
+    setDescription('');
+    setTokens(normalizeThemeConfig(config));
+    setLocalError('');
     setSaveSuccess(false);
+  };
 
-    if (!themeName.trim()) {
-      setLocalError('Please enter a theme name');
+  const handleSelectPreset = (presetName) => {
+    const preset = THEME_PRESETS.find((item) => item.name === presetName);
+    if (preset) handleStartNew(preset.configJson, `${preset.name} Copy`);
+  };
+
+  const configForSave = () => normalizeThemeConfig({
+    ...tokens,
+    description: description.trim(),
+  });
+
+  const handleApply = () => {
+    applyThemeDraft({
+      id: isNewTheme ? 'draft-theme' : selectedThemeId,
+      name: projectName.trim() || 'Theme Draft',
+      slug: slugName,
+      configJson: configForSave(),
+    });
+    setSaveSuccess(false);
+  };
+
+  const handleSave = async () => {
+    setLocalError('');
+    setSaveSuccess(false);
+    const configJson = configForSave();
+    const validationError = validateTheme(projectName, slugName, configJson, availableThemes, selectedThemeId);
+    if (validationError) {
+      setLocalError(validationError);
       return;
     }
 
     try {
+      let savedTheme;
       if (isNewTheme || String(selectedThemeId).startsWith('preset-')) {
-        const created = await createTheme({
-          name: themeName.trim(),
-          configJson: tokens,
-        });
-        setSelectedThemeId(created.id);
-        setThemeName(created.name);
-        setTokens(normalizeThemeConfig(created.configJson));
+        savedTheme = await createTheme({ name: projectName.trim(), slug: slugName, configJson });
+        setSelectedThemeId(savedTheme.id);
         setIsNewTheme(false);
       } else {
-        await updateTheme(selectedThemeId, {
-          name: themeName.trim(),
-          configJson: tokens,
-        });
+        savedTheme = await updateTheme(selectedThemeId, { name: projectName.trim(), slug: slugName, configJson });
       }
+      if (savedTheme?.id) selectTheme(savedTheme.id);
+      setProjectName(savedTheme?.name || projectName.trim());
+      setSlugName(savedTheme?.slug || slugName);
+      setSlugManuallyEdited(false);
+      setTokens(normalizeThemeConfig(savedTheme?.configJson || configJson));
+      setDescription(savedTheme?.configJson?.description || description.trim());
       await onSaved?.();
       setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 2500);
-    } catch (err) {
-      setLocalError(err.message || 'Failed to save theme');
+      window.setTimeout(() => setSaveSuccess(false), 2500);
+    } catch (error) {
+      setLocalError(error.message || 'Failed to save theme.');
     }
   };
 
-  const handleStartNew = () => {
-    setIsNewTheme(true);
-    setSelectedThemeId('new');
-    setThemeName('My Custom Theme');
-    setTokens(normalizeThemeConfig(activeTheme?.configJson || THEME_PRESETS[0].configJson));
-    setLocalError(null);
+  const handleReset = () => {
+    if (isNewTheme) {
+      handleStartNew(DEFAULT_THEME_TOKENS);
+      return;
+    }
+    const source = availableThemes.find((theme) => theme.id === selectedThemeId) || initialTheme;
+    setProjectName(source.name || 'Modern Blue');
+    setSlugName(source.slug || slugify(source.name || 'Modern Blue'));
+    setSlugManuallyEdited(false);
+    setDescription(source.configJson?.description || '');
+    setTokens(normalizeThemeConfig(source.configJson));
+    setLocalError('');
+    setSaveSuccess(false);
   };
 
-  const handleCustomFontUpload = (file) => {
-    const fontName = file.name.replace(/\.[^/.]+$/, '');
-    const fontUrl = URL.createObjectURL(file);
-    const fontFace = new FontFace(fontName, `url(${fontUrl})`);
-
-    fontFace.load().then((loadedFace) => {
-      document.fonts.add(loadedFace);
-      addCustomFont({ name: fontName, url: fontUrl });
-      updateTypography('fontFamily', fontName);
-      updateTypography('fontSource', 'custom');
-    });
-  };
-
-  const handleCloneTheme = async (themeId) => {
+  const handleDuplicate = async () => {
+    const name = `${projectName.trim() || 'Theme'} Copy`;
+    if (isNewTheme || String(selectedThemeId).startsWith('preset-')) {
+      handleStartNew(configForSave(), name);
+      return;
+    }
     try {
-      const cloned = await cloneTheme(themeId);
-      if (cloned) {
-        handleSelectTheme(cloned);
+      const duplicate = await cloneTheme(selectedThemeId, name);
+      if (duplicate) {
+        setIsNewTheme(false);
+        setSelectedThemeId(duplicate.id);
+        setProjectName(duplicate.name);
+        setSlugName(duplicate.slug);
+        setSlugManuallyEdited(false);
+        setDescription(duplicate.configJson?.description || '');
+        setTokens(normalizeThemeConfig(duplicate.configJson));
       }
-    } catch (err) {
-      setLocalError(err.message || 'Failed to clone theme');
+    } catch (error) {
+      setLocalError(error.message || 'Failed to duplicate theme.');
     }
   };
 
-  const handleDeleteTheme = async (theme) => {
-    if (confirm(`Delete theme "${theme.name}"?`)) {
-      try {
-        await deleteTheme(theme.id);
-        const remaining = availableThemes.filter((t) => t.id !== theme.id);
-        if (remaining.length > 0) {
-          handleSelectTheme(remaining[0]);
-        }
-      } catch (err) {
-        setLocalError(err.message || 'Failed to delete theme');
-      }
+  const handleExport = () => {
+    const data = {
+      name: projectName,
+      slug: slugName,
+      configJson: configForSave(),
+      customFonts: (customFonts || []).filter((font) =>
+        [tokens.typography.fontFamily, ...Object.values(tokens.typography.fonts || {})].includes(font.name)),
+    };
+    const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `${slugify(projectName)}.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImport = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setLocalError('');
+    try {
+      const imported = JSON.parse(await file.text());
+      const importedConfig = imported.configJson || imported;
+      if (!importedConfig || typeof importedConfig !== 'object' || Array.isArray(importedConfig)) throw new Error('The selected file does not contain a valid theme configuration.');
+      setTokens(normalizeThemeConfig(importedConfig));
+      setProjectName(typeof imported.name === 'string' ? imported.name : projectName);
+      setSlugName(typeof imported.slug === 'string' ? imported.slug.toLowerCase() : uniqueSlug(imported.name || projectName, availableThemes));
+      setSlugManuallyEdited(typeof imported.slug === 'string');
+      setDescription(typeof importedConfig.description === 'string' ? importedConfig.description : '');
+      if (Array.isArray(imported.customFonts)) imported.customFonts.forEach((font) => {
+        if (font && typeof font.name === 'string' && typeof font.url === 'string' && font.url.startsWith('data:')) addCustomFont(font);
+      });
+      setIsNewTheme(true);
+      setSelectedThemeId('new');
+    } catch (error) {
+      setLocalError(error.message || 'Could not import this theme JSON.');
+    } finally {
+      event.target.value = '';
     }
   };
 
-  const isPreset = String(selectedThemeId).startsWith('preset-');
-  const displayedError = localError || themeError;
+  const handleFontUpload = async (fontName, format, files) => {
+    const safeFontName = fontName.replace(/[^a-zA-Z0-9 _-]/g, '').trim();
+    const extensions = { woff2: '.woff2', woff: '.woff', truetype: '.ttf', opentype: '.otf' };
+    const expectedExtension = extensions[format];
+    if (!safeFontName) throw new Error('Font family names may contain letters, numbers, spaces, underscores, and hyphens.');
+    if (!expectedExtension || !files.length) throw new Error('Select at least one supported font file.');
+    const invalidFile = files.find((file) => !file.name.toLowerCase().endsWith(expectedExtension));
+    if (invalidFile) throw new Error(`All selected files must use the ${expectedExtension} extension.`);
+    try {
+      const sources = await Promise.all(files.map((file) => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve({ url: reader.result, format });
+        reader.onerror = () => reject(new Error(`Could not read "${file.name}".`));
+        reader.readAsDataURL(file);
+      })));
+      const face = await new FontFace(safeFontName, `url(${sources[0].url})`).load();
+      document.fonts.add(face);
+      const customFont = { name: safeFontName, url: sources[0].url, sources };
+      addCustomFont(customFont);
+      registerFont(safeFontName, customFont);
+      setTokens((current) => ({
+        ...current,
+        typography: {
+          ...current.typography,
+          fontFamily: safeFontName,
+          fontSource: 'custom',
+          fonts: { ...current.typography.fonts, primary: safeFontName },
+        },
+      }));
+    } catch (error) {
+      setLocalError(error.message || 'Could not load the custom font.');
+      throw error;
+    }
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-[fadeIn_0.15s_ease]">
-      <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-5xl h-[88vh] flex flex-col overflow-hidden">
-        {/* Top Header */}
-        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between shrink-0 bg-gray-50/60">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 backdrop-blur-xs animate-[fadeIn_0.15s_ease] sm:p-4">
+      <div className="flex h-[96vh] w-full max-w-[1500px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+        <header className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-slate-50/60 px-5 py-3 sm:px-6">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-xs">
-              <Palette size={18} />
-            </div>
-            <div>
-              <h2 className="text-base font-semibold text-gray-900 leading-tight">
-                Theme Studio
-              </h2>
-              <p className="text-xs text-gray-500">
-                Manage themes and customize design styles.
-              </p>
-            </div>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 text-white"><Palette size={17} /></div>
+            <div><h2 className="text-sm font-semibold text-slate-900">Theme Studio</h2><p className="text-xs text-slate-500">Manage theme configuration and preview changes.</p></div>
           </div>
+          <button type="button" onClick={handleClose} aria-label="Close Theme Studio" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><X size={18} /></button>
+        </header>
 
-          <button
-            onClick={handleClose}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
-          >
-            <X size={18} />
-          </button>
-        </div>
+        {localError || themeError ? <div role="alert" className="flex items-center justify-between border-b border-rose-200 bg-rose-50 px-5 py-2 text-xs text-rose-700"><span>{localError || themeError}</span><button type="button" onClick={() => setLocalError('')}>×</button></div> : null}
+        {saveSuccess && <div role="status" className="flex items-center gap-1.5 border-b border-emerald-200 bg-emerald-50 px-5 py-2 text-xs text-emerald-700"><Check size={14} /> Changes saved and applied to canvas.</div>}
 
-        {/* Error / Success Toast Banner */}
-        {displayedError && (
-          <div className="px-6 py-2 bg-red-50 border-b border-red-200 text-xs text-red-700 flex items-center justify-between">
-            <span>{displayedError}</span>
-            <button onClick={() => setLocalError(null)} className="font-bold">×</button>
-          </div>
-        )}
-        {saveSuccess && (
-          <div className="px-6 py-2 bg-emerald-50 border-b border-emerald-200 text-xs text-emerald-700 flex items-center gap-1.5">
-            <Check size={14} /> Theme saved and applied to canvas successfully!
-          </div>
-        )}
-
-        {/* Main Body */}
-        <div className="flex-1 min-h-0 flex overflow-hidden">
-          {/* Left Sidebar - Theme List */}
-          <aside className="w-64 border-r border-gray-200 bg-gray-50/40 flex flex-col shrink-0">
-            <div className="p-3 border-b border-gray-200 flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
-                Themes ({availableThemes.length})
-              </span>
-              <button
-                onClick={handleStartNew}
-                className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors"
-              >
-                <Plus size={13} /> New Theme
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-2 space-y-1">
-              {availableThemes.map((theme) => {
-                const isSelected = !isNewTheme && theme.id === selectedThemeId;
-                const isCurrentlyActive = theme.id === activeTheme?.id;
-                const c = theme.configJson?.colors || {};
-
-                return (
-                  <div
-                    key={theme.id}
-                    onClick={() => handleSelectTheme(theme)}
-                    className={`group relative flex items-center justify-between p-2.5 rounded-xl text-xs cursor-pointer transition-all border
-                      ${isSelected
-                        ? 'bg-white border-blue-200 shadow-xs ring-1 ring-blue-500/20'
-                        : 'border-transparent hover:bg-white/80 hover:border-gray-200'}`}
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      {/* Swatch dots */}
-                      <div className="flex items-center -space-x-1 shrink-0">
-                        <span
-                          className="w-3.5 h-3.5 rounded-full border border-white shadow-2xs"
-                          style={{ backgroundColor: c.primary || '#2563eb' }}
-                        />
-                        <span
-                          className="w-3.5 h-3.5 rounded-full border border-white shadow-2xs"
-                          style={{ backgroundColor: c.secondary || '#7c3aed' }}
-                        />
-                      </div>
-
-                      <div className="truncate">
-                        <div className="flex items-center gap-1">
-                          <span className={`truncate font-medium ${isSelected ? 'text-blue-900' : 'text-gray-800'}`}>
-                            {theme.name}
-                          </span>
-                        </div>
-                        <span className="text-[10px] text-gray-400">
-                          {theme._count?.pages ? `${theme._count.pages} page(s)` : '0 pages'}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center gap-1 shrink-0">
-                      {isCurrentlyActive && (
-                        <span className="px-1.5 py-0.5 text-[9px] font-semibold bg-blue-100 text-blue-700 rounded-full">
-                          Active
-                        </span>
-                      )}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCloneTheme(theme.id);
-                        }}
-                        title="Duplicate theme"
-                        className="p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <Copy size={12} />
-                      </button>
-                      {!String(theme.id).startsWith('preset-') && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteTheme(theme);
-                          }}
-                          title="Delete theme"
-                          className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-
-              {isNewTheme && (
-                <div className="p-2.5 rounded-xl text-xs bg-blue-50 border border-blue-300 shadow-xs flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-blue-600 animate-pulse" />
-                    <span className="font-semibold text-blue-900 truncate">
-                      {themeName || 'New Theme'}
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-blue-600 font-medium uppercase">Creating</span>
-                </div>
-              )}
-            </div>
-
-            {/* Presets Quick Picker */}
-            <div className="p-3 border-t border-gray-200 bg-white">
-              <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                Starter Presets
-              </span>
-              <div className="grid grid-cols-2 gap-1.5">
-                {THEME_PRESETS.map((preset) => (
-                  <button
-                    key={preset.name}
-                    type="button"
-                    onClick={() => applyPreset(preset)}
-                    className="flex items-center gap-1.5 p-1.5 rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-[11px] text-gray-700 text-left transition-colors"
-                  >
-                    <span
-                      className="w-2.5 h-2.5 rounded-full shrink-0"
-                      style={{ backgroundColor: preset.configJson.colors.primary }}
-                    />
-                    <span className="truncate">{preset.name}</span>
-                  </button>
-                ))}
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
+          <main className="flex min-h-0 min-w-0 flex-col overflow-hidden lg:w-[60%]">
+            <div className="flex shrink-0 flex-col gap-3 border-b border-slate-200 bg-white p-4 sm:p-5">
+              <div className="grid w-full min-w-0 gap-3 md:grid-cols-3">
+                <label className="block space-y-1 text-[11px] font-medium text-slate-600"><span>Project Name</span><input value={projectName} onChange={(event) => handleProjectNameChange(event.target.value)} placeholder="Project name" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-900 focus:border-blue-500 focus:outline-none" /></label>
+                <label className="block space-y-1 text-[11px] font-medium text-slate-600"><span>Slug Name</span><input value={slugName} onChange={(event) => { setSlugManuallyEdited(true); setSlugName(event.target.value.toLowerCase()); }} placeholder="project-name" className="w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-sm text-slate-800 focus:border-blue-500 focus:outline-none" /></label>
+                <label className="block space-y-1 text-[11px] font-medium text-slate-600"><span>Description</span><input value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Optional project description" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-700 focus:border-blue-500 focus:outline-none" /></label>
+                {isNewTheme && <label className="block space-y-1 text-[11px] font-medium text-slate-600 md:col-span-3"><span>Start from a preset</span><select defaultValue="" onChange={(event) => handleSelectPreset(event.target.value)} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"><option value="">Keep current configuration</option>{THEME_PRESETS.map((preset) => <option key={preset.slug} value={preset.name}>{preset.name}</option>)}</select></label>}
               </div>
-            </div>
-          </aside>
-
-          {/* Right Area - Configurator */}
-          <main className="flex-1 flex flex-col min-w-0 bg-white">
-            {/* Top Toolbar / Theme Meta Bar */}
-            <div className="px-6 py-3 border-b border-gray-200 flex flex-wrap items-center justify-between gap-3 bg-white shrink-0">
-              <div className="flex items-center gap-3 flex-1 min-w-[200px]">
-                <input
-                  type="text"
-                  value={themeName}
-                  onChange={(e) => setThemeName(e.target.value)}
-                  placeholder="Theme Name"
-                  className="font-semibold text-gray-900 text-sm px-2.5 py-1.5 border border-gray-200 rounded-lg hover:border-gray-300 focus:border-blue-500 focus:outline-hidden w-full max-w-xs transition-colors"
-                />
-                {isPreset && (
-                  <span className="text-[11px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 shrink-0">
-                    Starter Preset (edits save as a new theme)
-                  </span>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => selectTheme(selectedThemeId)}
-                  disabled={isNewTheme}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors disabled:opacity-40"
-                >
-                  <Check size={13} className="text-blue-600" />
-                  Apply to Canvas
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={themeLoading}
-                  className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-xs disabled:opacity-50"
-                >
-                  <Save size={13} />
-                  {isNewTheme || isPreset ? 'Save as New' : 'Save Changes'}
-                </button>
+              <div className="flex w-full flex-wrap items-center justify-end gap-1.5 border-t border-slate-100 pt-3">
+                <button type="button" onClick={handleReset} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-2 text-[10px] font-medium text-slate-600 hover:bg-slate-50 sm:text-xs"><RotateCcw size={12} /> Reset</button>
+                <button type="button" onClick={handleDuplicate} disabled={themeLoading} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-2 text-[10px] font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 sm:text-xs"><Copy size={12} /> Duplicate</button>
+                <button type="button" onClick={handleExport} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-2 text-[10px] font-medium text-slate-600 hover:bg-slate-50 sm:text-xs"><Download size={12} /> Export</button>
+                <label className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-2 text-[10px] font-medium text-slate-600 hover:bg-slate-50 sm:text-xs"><Upload size={12} /> Import<input type="file" accept=".json,application/json" onChange={handleImport} className="sr-only" /></label>
+                <button type="button" onClick={handleApply} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-2 text-[10px] font-medium text-slate-700 hover:bg-slate-50 sm:text-xs"><Check size={12} className="text-blue-600" /> Apply to Canvas</button>
+                <button type="button" onClick={handleSave} disabled={themeLoading} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-2 text-[10px] font-semibold text-white hover:bg-blue-700 disabled:opacity-50 sm:text-xs"><Save size={12} />{themeLoading ? 'Saving…' : 'Save Changes'}</button>
               </div>
             </div>
 
-            {/* Navigation Tabs */}
-            <div className="px-6 border-b border-gray-200 flex items-center gap-1 bg-gray-50/50 shrink-0">
-              {TABS.map(({ id, label, Icon }) => {
-                const isActive = activeTab === id;
-                return (
-                  <button
-                    key={id}
-                    onClick={() => setActiveTab(id)}
-                    className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-medium border-b-2 transition-all
-                      ${isActive
-                        ? 'border-blue-600 text-blue-600 bg-white shadow-2xs'
-                        : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-200'}`}
-                  >
-                    <Icon size={14} />
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
+            <nav aria-label="Theme configuration" className="flex shrink-0 overflow-x-auto border-b border-slate-200 bg-slate-50/60 px-3 sm:px-5">
+              {TABS.map(({ id, label, Icon }) => <button key={id} type="button" aria-current={activeTab === id ? 'page' : undefined} onClick={() => setActiveTab(id)} className={`flex shrink-0 items-center gap-1.5 border-b-2 px-2.5 py-2.5 text-[10px] font-medium transition-colors sm:gap-2 sm:px-3.5 sm:text-xs ${activeTab === id ? 'border-blue-600 bg-white text-blue-600' : 'border-transparent text-slate-600 hover:text-slate-900'}`}><Icon size={14} />{label}</button>)}
+            </nav>
 
-            {/* Configurator Content & Live Preview Split */}
-            <div className="flex-1 min-h-0 flex overflow-hidden">
-              {/* Form Controls Column */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                {/* TAB 1: COLOR PALETTE */}
-                {activeTab === 'palette' && (
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-900">Color Palette</h3>
-                      <p className="text-xs text-gray-500">
-                        Customize brand colors, surfaces, backgrounds, and text.
-                      </p>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {COLOR_FIELDS.map(({ key, label, desc }) => (
-                        <div
-                          key={key}
-                          className="p-3 rounded-xl border border-gray-200 bg-gray-50/40 hover:bg-white hover:border-gray-300 transition-colors min-w-0 overflow-hidden"
-                        >
-                          <div className="flex items-center justify-between mb-1.5 min-w-0">
-                            <label className="text-xs font-semibold text-gray-800 truncate mr-2">{label}</label>
-                            <span className="text-[10px] font-mono text-gray-400 uppercase shrink-0">
-                              {tokens.colors[key]}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div className="relative w-8 h-8 shrink-0 rounded-lg overflow-hidden border border-gray-300 shadow-2xs">
-                              <input
-                                type="color"
-                                value={tokens.colors[key] || '#000000'}
-                                onChange={(e) => updateColor(key, e.target.value)}
-                                className="absolute -inset-2 w-12 h-12 cursor-pointer border-0 p-0"
-                              />
-                            </div>
-                            <input
-                              type="text"
-                              value={tokens.colors[key] || ''}
-                              maxLength={7}
-                              onChange={(e) => updateColor(key, e.target.value)}
-                              placeholder="#000000"
-                              className="w-full min-w-0 flex-1 px-2.5 py-1 text-xs font-mono border border-gray-200 rounded-lg focus:border-blue-500 focus:outline-hidden"
-                            />
-                          </div>
-
-                          <p className="mt-1 text-[10px] text-gray-500 truncate">{desc}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* TAB 2: TYPOGRAPHY */}
-                {activeTab === 'typography' && (
-                  <div className="space-y-6">
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-900">Fonts & Text Sizes</h3>
-                      <p className="text-xs text-gray-500">
-                        Choose your font family, customize font sizes, and select font weights.
-                      </p>
-                    </div>
-
-                    {/* Font Family Picker */}
-                    <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/50 space-y-3">
-                      <label className="text-xs font-semibold text-gray-800 block">
-                        Font Family
-                      </label>
-
-                      <div className="flex gap-2">
-                        <select
-                          value={tokens.typography.fontFamily}
-                          onChange={(e) => updateTypography('fontFamily', e.target.value)}
-                          className="flex-1 px-3 py-2 text-xs border border-gray-200 rounded-lg bg-white focus:border-blue-500 focus:outline-hidden"
-                        >
-                          {GOOGLE_FONTS.map((font) => (
-                            <option key={font.value} value={font.value}>
-                              {font.label} (Google Font)
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="pt-2">
-                        <span className="text-[11px] font-medium text-gray-600 block mb-1">
-                          Or upload custom font:
-                        </span>
-                        <FontUpload onFontUpload={handleCustomFontUpload} />
-                      </div>
-                    </div>
-
-                    {/* Font Weights */}
-                    <div className="space-y-2">
-                      <label className="text-xs font-semibold text-gray-800 block">
-                        Font Weights
-                      </label>
-                      <div className="flex flex-wrap gap-2">
-                        {FONT_WEIGHT_OPTIONS.map(({ label, value }) => {
-                          const isChecked = (tokens.typography.weights || []).includes(value);
-                          return (
-                            <button
-                              key={value}
-                              type="button"
-                              onClick={() => toggleWeight(value)}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors
-                                ${isChecked
-                                  ? 'bg-blue-50 border-blue-300 text-blue-700 shadow-2xs'
-                                  : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
-                            >
-                              {label} ({value})
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Size Scales */}
-                    <div className="space-y-3">
-                      <label className="text-xs font-semibold text-gray-800 block">
-                        Font Sizes
-                      </label>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                        {Object.entries(tokens.typography.sizes || {}).map(([scaleKey, val]) => (
-                          <div key={scaleKey} className="p-2.5 rounded-lg border border-gray-200 bg-white min-w-0">
-                            <span className="text-[10px] font-semibold text-gray-600 block mb-1 truncate" title={FONT_SIZE_LABELS[scaleKey] || scaleKey.toUpperCase()}>
-                              {FONT_SIZE_LABELS[scaleKey] || scaleKey.toUpperCase()}
-                            </span>
-                            <input
-                              type="text"
-                              value={val}
-                              onChange={(e) => updateFontSize(scaleKey, e.target.value)}
-                              className="w-full min-w-0 px-2 py-1 text-xs border border-gray-200 rounded-md focus:border-blue-500 focus:outline-hidden font-mono"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* TAB 3: SPACING SCALE */}
-                {activeTab === 'spacing' && (
-                  <div className="space-y-5">
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-900">Spacing & Layout</h3>
-                      <p className="text-xs text-gray-500">
-                        Adjust spacing values for margins, container padding, and gaps between elements.
-                      </p>
-                    </div>
-
-                    <div className="space-y-3">
-                      {Object.entries(tokens.spacing || {}).map(([key, val]) => (
-                        <div
-                          key={key}
-                          className="flex items-center gap-4 p-3 rounded-xl border border-gray-200 bg-white hover:border-gray-300 transition-colors min-w-0"
-                        >
-                          <div className="w-28 font-medium text-xs text-gray-700 shrink-0">
-                            {SPACING_LABELS[key] || key.toUpperCase()}
-                          </div>
-
-                          <div className="w-28 min-w-0 shrink-0">
-                            <input
-                              type="text"
-                              value={val}
-                              onChange={(e) => updateSpacing(key, e.target.value)}
-                              className="w-full min-w-0 px-2.5 py-1 text-xs font-mono border border-gray-200 rounded-lg focus:border-blue-500 focus:outline-hidden"
-                            />
-                          </div>
-
-                          {/* Visual Indicator Bar */}
-                          <div className="flex-1 bg-gray-100 rounded-md h-5 p-1 flex items-center overflow-hidden min-w-0">
-                            <div
-                              className="h-full bg-blue-500 rounded-xs transition-all duration-150"
-                              style={{ width: val }}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* TAB 4: BORDER RADIUS */}
-                {activeTab === 'radius' && (
-                  <div className="space-y-5">
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-900">Corner Radius</h3>
-                      <p className="text-xs text-gray-500">
-                        Adjust corner roundness for buttons, cards, badges, and input fields.
-                      </p>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                      {Object.entries(tokens.borderRadius || {}).map(([key, val]) => (
-                        <div
-                          key={key}
-                          className="p-4 rounded-xl border border-gray-200 bg-white flex flex-col items-center text-center gap-3 min-w-0"
-                        >
-                          <span className="text-xs font-semibold text-gray-700">
-                            {RADIUS_LABELS[key] || key.toUpperCase()}
-                          </span>
-
-                          {/* Shape visualizer */}
-                          <div
-                            className="w-16 h-16 bg-blue-100 border-2 border-blue-500 transition-all duration-150 flex items-center justify-center text-[10px] text-blue-700 font-mono"
-                            style={{ borderRadius: val }}
-                          >
-                            {val}
-                          </div>
-
-                          <input
-                            type="text"
-                            value={val}
-                            onChange={(e) => updateRadius(key, e.target.value)}
-                            className="w-full min-w-0 px-2 py-1 text-xs text-center font-mono border border-gray-200 rounded-lg focus:border-blue-500 focus:outline-hidden"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {activeTab === 'config' && (
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-900">
-                        Configuration Groups
-                      </h3>
-                      <p className="text-xs text-gray-500">
-                        Expand a group to edit its values. Supported theme tokens update the live preview as you edit.
-                      </p>
-                    </div>
-                    <div className="space-y-3">
-                      {Object.entries(tokens).map(([key, value]) =>
-                        renderConfigValue(key, value)
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Live Interactive Preview Card Sidebar */}
-              <div className="w-80 border-l border-gray-200 bg-gray-50/50 p-5 flex flex-col overflow-y-auto shrink-0">
-                <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3">
-                  Live Style Preview
-                </span>
-
-                <div
-                  className="p-4 rounded-xl shadow-xs border transition-all space-y-4"
-                  style={{
-                    backgroundColor: tokens.colors.background,
-                    borderColor: tokens.colors.border,
-                    fontFamily: `'${tokens.typography.fontFamily}', sans-serif`,
-                    color: tokens.colors.text,
-                  }}
-                >
-                  {/* Card Header */}
-                  <div>
-                    <h4
-                      className="font-bold leading-tight"
-                      style={{
-                        fontSize: tokens.typography.sizes['xl'],
-                        color: tokens.colors.text,
-                      }}
-                    >
-                      Theme Preview
-                    </h4>
-                    <p
-                      className="mt-0.5"
-                      style={{
-                        fontSize: tokens.typography.sizes['xs'],
-                        color: tokens.colors.textMuted,
-                      }}
-                    >
-                      Real-time style preview
-                    </p>
-                  </div>
-
-                  {/* Surface Box */}
-                  <div
-                    className="p-3 border transition-all"
-                    style={{
-                      backgroundColor: tokens.colors.surface,
-                      borderColor: tokens.colors.border,
-                      borderRadius: tokens.borderRadius.md,
-                    }}
-                  >
-                    <span
-                      className="block font-medium"
-                      style={{
-                        fontSize: tokens.typography.sizes['sm'],
-                        color: tokens.colors.text,
-                      }}
-                    >
-                      Content Card
-                    </span>
-                    <span
-                      className="block mt-1"
-                      style={{
-                        fontSize: tokens.typography.sizes['xs'],
-                        color: tokens.colors.textMuted,
-                      }}
-                    >
-                      Nested box styled with your chosen colors and border roundness.
-                    </span>
-                  </div>
-
-                  {/* Buttons */}
-                  <div className="space-y-2">
-                    <button
-                      type="button"
-                      className="w-full py-2 px-3 font-medium transition-all shadow-2xs"
-                      style={{
-                        backgroundColor: tokens.colors.primary,
-                        color: '#ffffff',
-                        borderRadius: tokens.borderRadius.md,
-                        fontSize: tokens.typography.sizes['sm'],
-                      }}
-                    >
-                      Primary Button
-                    </button>
-
-                    <button
-                      type="button"
-                      className="w-full py-2 px-3 font-medium transition-all"
-                      style={{
-                        backgroundColor: tokens.colors.secondary,
-                        color: '#ffffff',
-                        borderRadius: tokens.borderRadius.md,
-                        fontSize: tokens.typography.sizes['sm'],
-                      }}
-                    >
-                      Secondary Button
-                    </button>
-                  </div>
-
-                  {/* Sample Input */}
-                  <div>
-                    <label
-                      className="block mb-1 text-[11px] font-medium"
-                      style={{ color: tokens.colors.textMuted }}
-                    >
-                      Sample Input Field
-                    </label>
-                    <input
-                      type="text"
-                      disabled
-                      value="Sample input text"
-                      className="w-full px-2.5 py-1.5 border text-xs"
-                      style={{
-                        backgroundColor: tokens.colors.background,
-                        borderColor: tokens.colors.border,
-                        borderRadius: tokens.borderRadius.sm,
-                        color: tokens.colors.text,
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div className="mt-4 p-3 rounded-lg bg-blue-50/70 border border-blue-100 text-[11px] text-blue-800 leading-relaxed">
-                  💡 <strong>Tip:</strong> Saving this theme updates it across your project and automatically applies all styles to the canvas.
-                </div>
-              </div>
-            </div>
+            <section className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
+              <ThemeEditorFields activeTab={activeTab} tokens={tokens} onChange={setTokens} customFonts={customFonts} onFontUpload={handleFontUpload} />
+            </section>
           </main>
+          <ThemePreview tokens={tokens} />
         </div>
       </div>
     </div>

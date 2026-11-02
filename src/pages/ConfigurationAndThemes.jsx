@@ -1,13 +1,12 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Edit3, Trash2 } from "lucide-react";
+import { Edit3, Plus, Trash2 } from "lucide-react";
 import { getApiUrl } from "../utils/api";
 import useBuilderStore from "../store/builderStore";
 import ThemeModal from "../components/ThemeModal";
 
 export default function ConfigurationAndThemes({ themes = [], onRefresh }) {
-  const navigate = useNavigate();
   const fetchThemes = useBuilderStore((state) => state.fetchThemes);
+  const deleteTheme = useBuilderStore((state) => state.deleteTheme);
   const [editingThemeId, setEditingThemeId] = useState(null);
   const [selectedThemeId, setSelectedThemeId] = useState("");
   const [editingField, setEditingField] = useState(null);
@@ -409,6 +408,30 @@ export default function ConfigurationAndThemes({ themes = [], onRefresh }) {
     setEditingThemeId(themeId);
   };
 
+  const openNewThemeEditor = () => {
+    setMessage(null);
+    setEditingThemeId("new");
+  };
+
+  const handleDeleteTheme = async (theme) => {
+    if (!window.confirm(`Delete theme "${theme.name}"?`)) return;
+    setSaving(true);
+    setMessage(null);
+    try {
+      await deleteTheme(theme.id);
+      if (selectedThemeId === theme.id) setSelectedThemeId("");
+      await onRefresh?.();
+      setMessage({ type: "success", text: `Theme "${theme.name}" deleted.` });
+    } catch (error) {
+      setMessage({
+        type: "error",
+        text: error.message || "Failed to delete theme.",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       <div className="flex items-center justify-between">
@@ -421,12 +444,6 @@ export default function ConfigurationAndThemes({ themes = [], onRefresh }) {
           </p>
         </div>
 
-        <button
-          onClick={() => navigate("/")}
-          className="px-3.5 py-2 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-semibold transition-colors"
-        >
-          Configure New Theme
-        </button>
       </div>
 
       {/* Project Details */}
@@ -886,6 +903,21 @@ export default function ConfigurationAndThemes({ themes = [], onRefresh }) {
         )}
       </div>
 
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold text-slate-800">Themes</h2>
+          <p className="mt-0.5 text-xs text-slate-500">Manage your saved theme configurations.</p>
+        </div>
+        <button
+          type="button"
+          onClick={openNewThemeEditor}
+          className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white transition-colors hover:bg-blue-700"
+        >
+          <Plus size={14} />
+          New Theme
+        </button>
+      </div>
+
       {/* Theme Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {themes.map((theme) => {
@@ -955,6 +987,18 @@ export default function ConfigurationAndThemes({ themes = [], onRefresh }) {
                   >
                     <Edit3 size={13} />
                   </button>
+                  {!String(theme.id).startsWith("preset-") && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteTheme(theme)}
+                      disabled={saving}
+                      title={`Delete ${theme.name} theme`}
+                      aria-label={`Delete ${theme.name} theme`}
+                      className="rounded-lg border border-slate-200 p-1.5 text-slate-500 transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  )}
                   <span className="text-emerald-600 font-medium">Ready</span>
                 </div>
               </div>

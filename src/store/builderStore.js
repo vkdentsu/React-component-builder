@@ -587,7 +587,16 @@ const useBuilderStore = create(
           };
         }),
 
-      createTheme: async ({ name, configJson }) => {
+      applyThemeDraft: (theme) =>
+        set((state) => ({
+          activeTheme: {
+            ...(state.activeTheme || {}),
+            ...theme,
+            configJson: normalizeThemeConfig(theme.configJson),
+          },
+        })),
+
+      createTheme: async ({ name, slug: requestedSlug, configJson }) => {
         set({ themeLoading: true, themeError: null });
         try {
           const trimmedName = typeof name === 'string' ? name.trim() : '';
@@ -596,7 +605,16 @@ const useBuilderStore = create(
           const normalizedTokens = normalizeThemeConfig(configJson);
           let json;
           let response;
-          let slug = getUniqueThemeSlug(trimmedName, get().availableThemes);
+          const themes = get().availableThemes;
+          let slug = requestedSlug || getUniqueThemeSlug(trimmedName, themes);
+          if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
+            throw new Error('Theme slug must use lowercase letters, numbers, and hyphens only.');
+          }
+          if (themes.some((theme) =>
+            !String(theme.id).startsWith('preset-') &&
+            theme.slug?.toLowerCase() === slug.toLowerCase())) {
+            throw new Error('This theme slug is already in use.');
+          }
 
           for (let attempt = 0; attempt < 5; attempt += 1) {
             response = await authenticatedFetch('/api/themes', {
@@ -616,7 +634,7 @@ const useBuilderStore = create(
               }
               break;
             }
-            if (response.status !== 409 || attempt === 4) {
+            if (response.status !== 409 || requestedSlug || attempt === 4) {
               throw new Error(json.error?.message || 'Failed to create theme');
             }
 
@@ -644,26 +662,35 @@ const useBuilderStore = create(
         }
       },
 
-      updateTheme: async (id, { name, configJson }) => {
+      updateTheme: async (id, { name, slug, configJson }) => {
         set({ themeLoading: true, themeError: null });
         try {
           // If editing a preset, automatically fork it as a new custom theme
           if (String(id).startsWith('preset-')) {
             return await get().createTheme({
               name: `${name || get().activeTheme?.name} (Custom)`,
+              slug,
               configJson: configJson || get().activeTheme?.configJson,
             });
           }
 
           const data = {};
-          if (name) {
-            data.name = name.trim();
-            data.slug =
-              name
-                .trim()
-                .toLowerCase()
-                .replace(/[^a-z0-9]+/g, '-')
-                .replace(/^-|-$/g, '') || `theme-${Date.now()}`;
+          if (typeof name === 'string') {
+            const trimmedName = name.trim();
+            if (!trimmedName) throw new Error('Please enter a theme name.');
+            data.name = trimmedName;
+          }
+          if (typeof slug === 'string') {
+            if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
+              throw new Error('Theme slug must use lowercase letters, numbers, and hyphens only.');
+            }
+            if (get().availableThemes.some((theme) =>
+              theme.id !== id &&
+              !String(theme.id).startsWith('preset-') &&
+              theme.slug?.toLowerCase() === slug.toLowerCase())) {
+              throw new Error('This theme slug is already in use.');
+            }
+            data.slug = slug;
           }
           if (configJson) {
             data.configJson = normalizeThemeConfig(configJson);
