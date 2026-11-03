@@ -295,6 +295,52 @@ function NavbarPreview({ el, device }) {
   );
 }
 
+/* ── Footer ──────────────────────────────────────────────────────────── */
+function FooterPreview({ el, device }) {
+  const links = (el.links || '')
+    .split(',')
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  return (
+    <footer
+      className={`w-full px-4 py-4 rounded-lg ${
+        el.shadow ? 'shadow-md' : ''
+      }`}
+      style={{
+        background: el.bg,
+        color: el.color,
+        textAlign: el.textAlign || 'center',
+      }}
+    >
+      {el.brand && (
+        <div className="font-bold mb-2">
+          {el.brand}
+        </div>
+      )}
+
+      {links.length > 0 && (
+        <div className="flex flex-wrap justify-center gap-4 mb-2">
+          {links.map((link, index) => (
+            <span
+              key={index}
+              className={getResponsiveTypographyClasses(el, device)}
+            >
+              {link}
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div
+        className={getResponsiveTypographyClasses(el, device)}
+      >
+        {el.copyright}
+      </div>
+    </footer>
+  );
+}
+
 /* ── Hero ────────────────────────────────────────────────────────────── */
 function HeroPreview({ el, device }) {
   const alignCls = el.align === 'right' ? 'items-end text-right' : el.align === 'center' ? 'items-center text-center' : 'items-start text-left';
@@ -704,6 +750,9 @@ export default function ElementPreview({ el, device }) {
 
     case 'navbar':
       return <NavbarPreview el={el} device={device} />;
+
+    case 'footer':
+      return <FooterPreview el={el} device={device} />;
 
     case 'hero':
       return <HeroPreview el={el} device={device} />;

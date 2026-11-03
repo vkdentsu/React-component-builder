@@ -1,7 +1,8 @@
 import {
   Square, Type, Heading, TextCursorInput, Image, LayoutPanelLeft,
   Tag, Minus, Rows2, Columns2, Columns3, Columns4, StretchHorizontal,
-  PanelTop, Sparkles, ListChecks, MessageSquare, Circle, CheckSquare, AlertTriangle, LoaderCircle, MessageCircleMore, ToggleLeft
+  PanelTop, Sparkles, ListChecks, MessageSquare, Circle, CheckSquare, AlertTriangle, LoaderCircle, MessageCircleMore, ToggleLeft,
+  PanelBottom
 } from 'lucide-react';
 
 export const LAYOUT_PALETTE = [
@@ -35,6 +36,7 @@ export const BLOCK_PALETTE = [
   { type: 'navbar',    label: 'Navbar',     icon: PanelTop },
   { type: 'hero',      label: 'Hero',       icon: Sparkles },
   { type: 'formgroup', label: 'Form group', icon: ListChecks },
+  { type: 'footer',    label: 'Footer',     icon: PanelBottom}
 ];
 
 export const DRAG_TYPES = {
