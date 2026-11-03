@@ -1,7 +1,7 @@
 import { useMemo, useEffect } from 'react';
 import RowsCanvas from './RowsCanvas';
 import useBuilderStore from '../store/builderStore';
-import { tokensToCssVars } from '../utils/themeDefaults';
+import { tokensToCssRules, tokensToCssVars } from '../utils/themeDefaults';
 import { loadGoogleFont } from '../utils/loadGoogleFont';
 
 const DEVICE_WIDTHS = {
@@ -16,6 +16,7 @@ export default function Canvas() {
   const themeVars = useMemo(() => {
     return tokensToCssVars(activeTheme?.configJson);
   }, [activeTheme]);
+  const themeRules = useMemo(() => tokensToCssRules(activeTheme?.configJson, '.theme-canvas'), [activeTheme]);
 
   useEffect(() => {
     const font = activeTheme?.configJson?.typography?.fontFamily;
@@ -36,8 +37,9 @@ export default function Canvas() {
           ...themeVars,
         }}
         /* Remove overflow-hidden here — let the inner content grow naturally */
-        className="bg-white rounded-2xl shadow-sm border border-gray-200 min-h-[520px] flex flex-col self-start"
+        className="theme-canvas bg-white rounded-2xl shadow-sm border border-gray-200 min-h-[520px] flex flex-col self-start"
       >
+        {themeRules && <style>{themeRules}</style>}
         {/* Browser chrome dots */}
         <div className="flex items-center justify-center py-2 border-b border-gray-100 gap-1.5 shrink-0">
           <div className="w-2 h-2 rounded-full bg-gray-200" />

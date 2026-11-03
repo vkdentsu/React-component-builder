@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { X, Copy, Check, Download, Code, Palette } from 'lucide-react';
 import { generateJSX } from '../utils/codeGen';
 import useBuilderStore from '../store/builderStore';
-import { tokensToCssString } from '../utils/themeDefaults';
+import { tokensToCssRules, tokensToCssString } from '../utils/themeDefaults';
 
 const toPascalCase = (str) =>
   (str || 'MyComponent')
@@ -22,7 +22,8 @@ export default function ExportModal({ open, onClose }) {
   const componentName = toPascalCase(activeDoc?.name);
   const code = generateJSX(rows, componentName, globalFont);
 
-  const themeCss = `:root {\n${tokensToCssString(activeTheme?.configJson)}\n}`;
+  const customStyleRules = tokensToCssRules(activeTheme?.configJson);
+  const themeCss = `:root {\n${tokensToCssString(activeTheme?.configJson)}\n}${customStyleRules ? `\n\n${customStyleRules}` : ''}`;
   const displayContent = activeTab === 'jsx' ? code : themeCss;
 
   const handleCopy = async () => {

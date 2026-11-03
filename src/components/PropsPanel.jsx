@@ -4,6 +4,7 @@ import useBuilderStore from '../store/builderStore';
 import { FONT_OPTIONS } from "../utils/fonts";
 import FontUpload from "./FontUpload";
 import { createFontData, loadCustomFont } from "../utils/fontManager";
+import { registerFont } from "../utils/fontLoader";
 import {
   ResponsiveFontSizeControl,
   ResponsiveFontWeightControl,
@@ -1368,6 +1369,7 @@ export default function PropsPanel() {
 
   useEffect(() => {
     customFonts.forEach((font) => {
+      registerFont(font.name, font);
       if (font.dataUrl || font.file) {
         loadCustomFont(font);
       }
@@ -1392,6 +1394,7 @@ export default function PropsPanel() {
             />
           </Field>
           <FontUpload
+            variant="simple"
             onFontUpload={async (file) => {
               const fontData = await createFontData(file);
               addCustomFont(fontData);

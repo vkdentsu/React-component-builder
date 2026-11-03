@@ -1,16 +1,24 @@
 export const DEFAULT_THEME_TOKENS = {
   colors: {
-    primary: '#2563eb',       // Blue 600
-    secondary: '#7c3aed',     // Violet 600
+    primary: '#2563eb',
+    secondary: '#7c3aed',
     background: '#ffffff',
-    surface: '#f8fafc',       // Slate 50
-    text: '#0f172a',          // Slate 900
-    textMuted: '#64748b',     // Slate 500
-    border: '#e2e8f0',        // Slate 200
+    surface: '#f8fafc',
+    text: '#0f172a',
+    textMuted: '#64748b',
+    border: '#e2e8f0',
   },
   typography: {
     fontFamily: 'Inter',
     fontSource: 'google',
+    fonts: {
+      primary: 'Inter',
+      secondary: 'Inter',
+      heading: 'Inter',
+      body: 'Inter',
+      button: 'Inter',
+      link: 'Inter',
+    },
     sizes: {
       xs: '12px',
       sm: '14px',
@@ -19,8 +27,43 @@ export const DEFAULT_THEME_TOKENS = {
       xl: '20px',
       '2xl': '24px',
       '3xl': '30px',
+      h1: '36px',
+      h2: '30px',
+      h3: '24px',
+      h4: '20px',
+      bodyLarge: '18px',
+      bodyMedium: '16px',
+      bodySmall: '14px',
+      caption: '12px',
+      label: '14px',
+      button: '14px',
+      h5: '18px',
+      h6: '16px',
+      paragraph: '16px',
+      primaryButton: '14px',
+      secondaryButton: '14px',
+      link: '14px',
     },
     weights: [400, 500, 600, 700],
+    fontWeights: { heading: 700, body: 400, button: 600 },
+    textStyles: {
+      h1: { lineHeight: 1.2, letterSpacing: '0px', fontStyle: 'normal', fontWeight: 700 },
+      h2: { lineHeight: 1.25, letterSpacing: '0px', fontStyle: 'normal', fontWeight: 700 },
+      h3: { lineHeight: 1.3, letterSpacing: '0px', fontStyle: 'normal', fontWeight: 600 },
+      h4: { lineHeight: 1.35, letterSpacing: '0px', fontStyle: 'normal', fontWeight: 600 },
+      h5: { lineHeight: 1.4, letterSpacing: '0px', fontStyle: 'normal', fontWeight: 600 },
+      h6: { lineHeight: 1.4, letterSpacing: '0px', fontStyle: 'normal', fontWeight: 600 },
+      paragraph: { lineHeight: 1.5, letterSpacing: '0px', fontStyle: 'normal', fontWeight: 400 },
+      primaryButton: { lineHeight: 1.2, letterSpacing: '0px', fontStyle: 'normal', fontWeight: 600 },
+      secondaryButton: { lineHeight: 1.2, letterSpacing: '0px', fontStyle: 'normal', fontWeight: 500 },
+      link: { lineHeight: 1.4, letterSpacing: '0px', fontStyle: 'normal', fontWeight: 400 },
+    },
+    lineHeight: 1.5,
+    letterSpacing: '0px',
+    textTransform: 'none',
+    textDecoration: 'none',
+    fontStyle: 'normal',
+    customTokens: {},
   },
   spacing: {
     none: '0px',
@@ -30,14 +73,24 @@ export const DEFAULT_THEME_TOKENS = {
     lg: '24px',
     xl: '32px',
     '2xl': '48px',
+    base: '8px',
+    containerPadding: '24px',
+    section: '48px',
+    componentGap: '16px',
+    gridGap: '16px',
   },
   borderRadius: {
     none: '0px',
+    xs: '2px',
     sm: '4px',
     md: '8px',
     lg: '16px',
+    xl: '24px',
     full: '9999px',
   },
+  configGroups: [],
+  configGroup: {},
+  configStyles: [],
 };
 
 export const THEME_PRESETS = [
@@ -74,6 +127,7 @@ export const THEME_PRESETS = [
       typography: {
         ...DEFAULT_THEME_TOKENS.typography,
         fontFamily: 'Poppins',
+        fonts: { ...DEFAULT_THEME_TOKENS.typography.fonts, primary: 'Poppins' },
       },
     },
   },
@@ -94,6 +148,7 @@ export const THEME_PRESETS = [
       typography: {
         ...DEFAULT_THEME_TOKENS.typography,
         fontFamily: 'Montserrat',
+        fonts: { ...DEFAULT_THEME_TOKENS.typography.fonts, primary: 'Montserrat' },
       },
     },
   },
@@ -114,47 +169,192 @@ export const THEME_PRESETS = [
       typography: {
         ...DEFAULT_THEME_TOKENS.typography,
         fontFamily: 'Nunito',
+        fonts: { ...DEFAULT_THEME_TOKENS.typography.fonts, primary: 'Nunito' },
       },
     },
   },
 ];
 
+const asRecord = (value) =>
+  value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+
+const colorKeyFromName = (name) => {
+  const words = String(name || '').match(/[a-zA-Z0-9]+/g) || [];
+  return words
+    .map((word, index) => index === 0
+      ? word.charAt(0).toLowerCase() + word.slice(1)
+      : word.charAt(0).toUpperCase() + word.slice(1))
+    .join('');
+};
+
+function normalizeColors(config) {
+  const colors = { ...DEFAULT_THEME_TOKENS.colors, ...asRecord(config.colors) };
+  const legacyCustomColors = Array.isArray(config.customColors) ? config.customColors : [];
+  legacyCustomColors.forEach((color) => {
+    if (!color || typeof color !== 'object' || typeof color.value !== 'string') return;
+    const key = colorKeyFromName(color.name);
+    if (key && !Object.prototype.hasOwnProperty.call(colors, key)) {
+      colors[key] = color.value;
+    }
+  });
+  return colors;
+}
+
+const inferValueType = (option) => {
+  if (['text', 'number', 'color'].includes(option.valueType)) return option.valueType;
+  if (option.inputType === 'number' || option.inputType === 'range' || option.inputType === 'fontWeight') return 'number';
+  if (option.inputType === 'color') return 'color';
+  if (typeof option.value === 'number' || typeof option.defaultValue === 'number') return 'number';
+  if (/^#[0-9a-f]{6}$/i.test(String(option.value ?? option.defaultValue ?? ''))) return 'color';
+  return 'text';
+};
+
+function configGroupsFromValues(configGroup) {
+  return Object.entries(asRecord(configGroup)).map(([name, values], groupIndex) => ({
+    id: `config-group-${groupIndex}`,
+    name,
+    options: Object.entries(asRecord(values)).map(([optionName, value], optionIndex) => ({
+      id: `config-option-${groupIndex}-${optionIndex}`,
+      name: optionName,
+      valueType: typeof value === 'number' ? 'number' : /^#[0-9a-f]{6}$/i.test(String(value)) ? 'color' : 'text',
+      value,
+    })),
+  }));
+}
+
+function normalizeConfigGroups(groups, configGroup) {
+  const source = Array.isArray(groups) ? groups : configGroupsFromValues(configGroup);
+  return source
+    .filter((group) => group && typeof group === 'object' && !Array.isArray(group))
+    .map((group, groupIndex) => {
+      const name = typeof group.name === 'string' ? group.name : `Configuration Group ${groupIndex + 1}`;
+      const storedValues = asRecord(asRecord(configGroup)[name]);
+      const options = Array.isArray(group.options) ? group.options : [];
+      return {
+        id: typeof group.id === 'string' ? group.id : `config-group-${groupIndex}`,
+        name,
+        options: options
+          .filter((option) => option && typeof option === 'object' && !Array.isArray(option))
+          .map((option, optionIndex) => {
+            const optionName = typeof option.name === 'string' ? option.name : `option${optionIndex + 1}`;
+            const valueType = inferValueType(option);
+            const hasStoredValue = Object.prototype.hasOwnProperty.call(storedValues, optionName);
+            const value = hasStoredValue
+              ? storedValues[optionName]
+              : Object.prototype.hasOwnProperty.call(option, 'value')
+                ? option.value
+                : option.defaultValue ?? '';
+            return {
+              id: typeof option.id === 'string' ? option.id : `config-option-${groupIndex}-${optionIndex}`,
+              name: optionName,
+              valueType,
+              value: valueType === 'number' && value !== '' && Number.isFinite(Number(value))
+                ? Number(value)
+                : valueType === 'number' && value !== ''
+                  ? ''
+                  : String(value ?? ''),
+            };
+          }),
+      };
+    });
+}
+
+function normalizeConfigStyles(configStyles) {
+  if (!Array.isArray(configStyles)) return [];
+  return configStyles
+    .filter((group) => group && typeof group === 'object' && !Array.isArray(group))
+    .map((group, groupIndex) => ({
+      id: typeof group.id === 'string' ? group.id : `config-style-${groupIndex}`,
+      name: typeof group.name === 'string' ? group.name : `Style Group ${groupIndex + 1}`,
+      selectorType: group.selectorType === 'id' ? 'id' : 'class',
+      selector: typeof group.selector === 'string' ? group.selector.replace(/^[.#]/, '') : '',
+      options: (Array.isArray(group.options) ? group.options : [])
+        .filter((option) => option && typeof option === 'object' && !Array.isArray(option))
+        .map((option, optionIndex) => ({
+          id: typeof option.id === 'string' ? option.id : `config-style-option-${groupIndex}-${optionIndex}`,
+          property: typeof option.property === 'string' ? option.property : '',
+          value: typeof option.value === 'string' || typeof option.value === 'number' ? String(option.value) : '',
+        })),
+    }));
+}
+
+function configGroupFromGroups(groups) {
+  return Object.fromEntries(groups.map((group) => [
+    group.name,
+    Object.fromEntries(group.options.map((option) => [
+      option.name,
+      option.valueType === 'number' && option.value !== '' ? Number(option.value) : option.value,
+    ])),
+  ]));
+}
+
 export function normalizeThemeConfig(config) {
-  if (!config || typeof config !== 'object') {
+  if (!config || typeof config !== 'object' || Array.isArray(config)) {
     return JSON.parse(JSON.stringify(DEFAULT_THEME_TOKENS));
   }
 
+  const typography = asRecord(config.typography);
+  const groups = normalizeConfigGroups(config.configGroups, config.configGroup);
+  const configWithoutLegacyColors = { ...config };
+  delete configWithoutLegacyColors.customColors;
   return {
-    ...config,
-    colors: {
-      ...DEFAULT_THEME_TOKENS.colors,
-      ...(config.colors || {}),
-    },
+    ...configWithoutLegacyColors,
+    colors: normalizeColors(config),
     typography: {
       ...DEFAULT_THEME_TOKENS.typography,
-      ...(config.typography || {}),
+      ...typography,
+      fonts: {
+        ...DEFAULT_THEME_TOKENS.typography.fonts,
+        ...asRecord(typography.fonts),
+        primary: asRecord(typography.fonts).primary || typography.fontFamily || 'Inter',
+      },
       sizes: {
         ...DEFAULT_THEME_TOKENS.typography.sizes,
-        ...(config.typography?.sizes || {}),
+        ...asRecord(typography.sizes),
       },
-      weights: Array.isArray(config.typography?.weights)
-        ? config.typography.weights
-        : DEFAULT_THEME_TOKENS.typography.weights,
+      weights: Array.isArray(typography.weights) ? typography.weights : DEFAULT_THEME_TOKENS.typography.weights,
+      fontWeights: {
+        ...DEFAULT_THEME_TOKENS.typography.fontWeights,
+        ...asRecord(typography.fontWeights),
+      },
+      textStyles: Object.fromEntries(Object.entries(DEFAULT_THEME_TOKENS.typography.textStyles).map(([key, defaults]) => [
+        key,
+        { ...defaults, ...asRecord(asRecord(typography.textStyles)[key]) },
+      ])),
+      customTokens: { ...asRecord(typography.customTokens) },
     },
-    spacing: {
-      ...DEFAULT_THEME_TOKENS.spacing,
-      ...(config.spacing || {}),
-    },
-    borderRadius: {
-      ...DEFAULT_THEME_TOKENS.borderRadius,
-      ...(config.borderRadius || {}),
-    },
+    spacing: { ...DEFAULT_THEME_TOKENS.spacing, ...asRecord(config.spacing) },
+    borderRadius: { ...DEFAULT_THEME_TOKENS.borderRadius, ...asRecord(config.borderRadius) },
+    configGroups: groups,
+    configGroup: configGroupFromGroups(groups),
+    configStyles: normalizeConfigStyles(config.configStyles),
   };
+}
+
+const isSafeCssDeclaration = (property, value) =>
+  /^(?:--[a-z][a-z0-9_-]*|-?[a-z][a-z0-9-]*)$/i.test(String(property || ''))
+  && String(value ?? '').trim() !== ''
+  && !/[;{}<>\\\r\n]/.test(String(value));
+
+export function tokensToCssRules(tokens, scope = '') {
+  const styles = normalizeThemeConfig(tokens).configStyles;
+  return styles
+    .filter((group) => /^[A-Za-z_][A-Za-z0-9_-]*$/.test(group.selector))
+    .map((group) => {
+      const selector = `${group.selectorType === 'id' ? '#' : '.'}${group.selector}`;
+      const scopedSelector = scope ? `${scope} ${selector}` : selector;
+      const declarations = group.options
+        .filter((option) => isSafeCssDeclaration(option.property, option.value))
+        .map((option) => `  ${option.property}: ${option.value};`);
+      return declarations.length ? `${scopedSelector} {\n${declarations.join('\n')}\n}` : '';
+    })
+    .filter(Boolean)
+    .join('\n\n');
 }
 
 export function tokensToCssVars(tokens) {
   const normalized = normalizeThemeConfig(tokens);
-  return {
+  const vars = {
     '--theme-primary': normalized.colors.primary,
     '--theme-secondary': normalized.colors.secondary,
     '--theme-bg': normalized.colors.background,
@@ -162,7 +362,9 @@ export function tokensToCssVars(tokens) {
     '--theme-text': normalized.colors.text,
     '--theme-text-muted': normalized.colors.textMuted,
     '--theme-border': normalized.colors.border,
-    '--theme-font': normalized.typography.fontFamily ? `'${normalized.typography.fontFamily}', sans-serif` : 'inherit',
+    '--theme-font': normalized.typography.fonts.primary
+      ? `'${normalized.typography.fonts.primary}', sans-serif`
+      : 'inherit',
     '--theme-radius-sm': normalized.borderRadius.sm,
     '--theme-radius-md': normalized.borderRadius.md,
     '--theme-radius-lg': normalized.borderRadius.lg,
@@ -174,11 +376,45 @@ export function tokensToCssVars(tokens) {
     '--theme-space-xl': normalized.spacing.xl,
     '--theme-space-2xl': normalized.spacing['2xl'],
   };
+  const normalizeKey = (key) => String(key)
+    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+    .replace(/[^a-zA-Z0-9-]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .toLowerCase();
+
+  Object.entries(normalized.colors).forEach(([key, value]) => {
+    vars[`--theme-color-${normalizeKey(key)}`] = value;
+  });
+  Object.entries(normalized.spacing).forEach(([key, value]) => {
+    vars[`--theme-space-${normalizeKey(key)}`] = value;
+  });
+  Object.entries(normalized.borderRadius).forEach(([key, value]) => {
+    vars[`--theme-radius-${normalizeKey(key)}`] = value;
+  });
+  Object.entries(normalized.typography.sizes).forEach(([key, value]) => {
+    vars[`--theme-font-size-${normalizeKey(key)}`] = value;
+  });
+  Object.entries(normalized.typography.fonts).forEach(([key, value]) => {
+    vars[`--theme-font-${normalizeKey(key)}`] = `'${value}', sans-serif`;
+  });
+  Object.entries(normalized.typography.textStyles).forEach(([key, style]) => {
+    const token = `--theme-text-${normalizeKey(key)}`;
+    vars[`${token}-line-height`] = String(style.lineHeight);
+    vars[`${token}-letter-spacing`] = style.letterSpacing;
+    vars[`${token}-font-style`] = style.fontStyle;
+    vars[`${token}-font-weight`] = String(style.fontWeight);
+  });
+  Object.entries(normalized.configGroup).forEach(([groupName, values]) => {
+    Object.entries(values).forEach(([key, value]) => {
+      const variable = `--theme-config-${normalizeKey(groupName)}-${normalizeKey(key)}`;
+      vars[variable] = typeof value === 'number' ? String(value) : value;
+    });
+  });
+  return vars;
 }
 
 export function tokensToCssString(tokens) {
-  const vars = tokensToCssVars(tokens);
-  return Object.entries(vars)
-    .map(([key, val]) => `  ${key}: ${val};`)
+  return Object.entries(tokensToCssVars(tokens))
+    .map(([key, value]) => `  ${key}: ${value};`)
     .join('\n');
 }
