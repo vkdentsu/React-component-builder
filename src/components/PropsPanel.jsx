@@ -31,14 +31,84 @@ const Inp = ({ value, onChange, type = 'text', min, max, placeholder }) => (
     className="w-full border border-gray-200 rounded-md px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white" />
 );
 
-const ColorPicker = ({ value, onChange }) => (
-  <div className="flex items-center gap-2">
-    <input type="color" value={value || '#000000'} onChange={(e) => onChange(e.target.value)}
-      className="w-7 h-7 rounded cursor-pointer border border-gray-200 p-0.5 shrink-0" />
-    <input type="text" value={value || ''} onChange={(e) => onChange(e.target.value)}
-      className="flex-1 border border-gray-200 rounded-md px-2 py-1 text-[11px] font-mono focus:outline-none focus:ring-2 focus:ring-blue-300" />
-  </div>
-);
+const THEME_COLOR_TOKENS = [
+  { key: 'primary', label: 'Primary', varName: 'var(--theme-primary)' },
+  { key: 'secondary', label: 'Secondary', varName: 'var(--theme-secondary)' },
+  { key: 'surface', label: 'Surface', varName: 'var(--theme-surface)' },
+  { key: 'background', label: 'Background', varName: 'var(--theme-bg)' },
+  { key: 'text', label: 'Text', varName: 'var(--theme-text)' },
+  { key: 'textMuted', label: 'Muted', varName: 'var(--theme-text-muted)' },
+];
+
+const ColorPicker = ({ value, onChange }) => {
+  const activeTheme = useBuilderStore((s) => s.activeTheme);
+  const colors = activeTheme?.configJson?.colors || {};
+
+  const matchedToken = THEME_COLOR_TOKENS.find(
+    (t) => value === t.varName || value === t.key
+  );
+
+  const getComputedColor = (token) => colors[token.key] || '#000000';
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      {/* Theme tokens quick selection */}
+      <div className="flex items-center gap-1 flex-wrap">
+        {THEME_COLOR_TOKENS.map((token) => {
+          const isSelected = matchedToken?.varName === token.varName;
+          const bg = getComputedColor(token);
+          return (
+            <button
+              type="button"
+              key={token.key}
+              onClick={() => onChange(token.varName)}
+              title={`${token.label} Token (${bg})`}
+              className={`h-5 px-1.5 rounded flex items-center gap-1 text-[10px] border transition-all ${
+                isSelected
+                  ? 'border-blue-500 bg-blue-50 text-blue-700 font-semibold shadow-xs'
+                  : 'border-gray-200 hover:border-gray-300 bg-white text-gray-600'
+              }`}
+            >
+              <span
+                className="w-2.5 h-2.5 rounded-full border border-black/10 shrink-0"
+                style={{ backgroundColor: bg }}
+              />
+              <span>{token.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Custom color input or current value */}
+      <div className="flex items-center gap-2">
+        <input
+          type="color"
+          value={
+            matchedToken
+              ? getComputedColor(matchedToken)
+              : /^#[0-9a-f]{6}$/i.test(value)
+              ? value
+              : '#000000'
+          }
+          onChange={(e) => onChange(e.target.value)}
+          className="w-7 h-7 rounded cursor-pointer border border-gray-200 p-0.5 shrink-0"
+        />
+        <input
+          type="text"
+          value={value || ''}
+          placeholder="e.g. var(--theme-primary) or #000"
+          onChange={(e) => onChange(e.target.value)}
+          className="flex-1 border border-gray-200 rounded-md px-2 py-1 text-[11px] font-mono focus:outline-none focus:ring-2 focus:ring-blue-300"
+        />
+      </div>
+      {matchedToken && (
+        <span className="text-[10px] text-blue-600 font-medium">
+          Linked to Theme {matchedToken.label} token
+        </span>
+      )}
+    </div>
+  );
+};
 
 const Sel = ({ value, onChange, options }) => (
   <select value={value ?? ''} onChange={(e) => onChange(e.target.value)}
@@ -228,11 +298,20 @@ function RadioProps({ el, update }) {
                     />
                 </Field>
 
-                <Field label="Color">
+                <Field label="Accent color">
                     <ColorPicker
                         value={el.color}
                         onChange={(v) =>
                             update({ color: v })
+                        }
+                    />
+                </Field>
+
+                <Field label="Text color">
+                    <ColorPicker
+                        value={el.textColor || 'var(--theme-text)'}
+                        onChange={(v) =>
+                            update({ textColor: v })
                         }
                     />
                 </Field>
@@ -1083,10 +1162,17 @@ function CheckboxProps({ el, update }) {
 
       <Section title="Style">
 
-        <Field label="Text Color">
+        <Field label="Accent color">
           <ColorPicker
             value={el.color}
             onChange={(v) => update({ color: v })}
+          />
+        </Field>
+
+        <Field label="Text color">
+          <ColorPicker
+            value={el.textColor || 'var(--theme-text)'}
+            onChange={(v) => update({ textColor: v })}
           />
         </Field>
 

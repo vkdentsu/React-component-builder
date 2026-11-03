@@ -14,19 +14,28 @@ export default function RowContainer({ row, hops, device }) {
       onClick={(e) => { e.stopPropagation(); select(row.id, 'row'); }}
       className={`group relative rounded-xl border transition-all duration-150 cursor-pointer
         ${isRowSelected
-          ? 'border-blue-400 shadow-[0_0_0_2px_rgba(59,130,246,0.1)]'
-          : 'border-gray-200 hover:border-gray-300'
+          ? 'border-blue-400 shadow-[0_0_0_2px_rgba(59,130,246,0.15)]'
+          : 'hover:border-blue-300'
         }`}
+      style={{
+        borderColor: isRowSelected ? undefined : 'var(--theme-border, rgba(0,0,0,0.12))',
+      }}
     >
       {/* Row header */}
-      <div className={`flex items-center justify-between px-3 py-1.5 rounded-t-xl text-xs font-medium transition-colors duration-150
-        ${isRowSelected ? 'bg-blue-50 text-blue-600' : 'bg-gray-50 text-gray-400'}`}
+      <div
+        className={`flex items-center justify-between px-3 py-1.5 rounded-t-xl text-xs font-medium transition-colors duration-150
+          ${isRowSelected ? 'bg-blue-500/10 text-blue-500' : 'opacity-70'}`}
+        style={{
+          backgroundColor: isRowSelected ? undefined : 'rgba(0,0,0,0.03)',
+          borderBottom: '1px solid var(--theme-border, rgba(0,0,0,0.08))',
+          color: isRowSelected ? undefined : 'var(--theme-text-muted, #94a3b8)',
+        }}
       >
         <div className="flex items-center gap-1.5">
-          <GripVertical size={12} className="text-gray-300" />
+          <GripVertical size={12} className="opacity-40" />
           <span>Row — {row.cols.length} col{row.cols.length !== 1 ? 's' : ''}</span>
           {row.stackOnMobile && (
-            <span className="ml-2 px-1.5 py-0.5 bg-amber-100 text-amber-600 rounded text-[10px]">
+            <span className="ml-2 px-1.5 py-0.5 bg-amber-500/10 text-amber-600 rounded text-[10px]">
               stacks mobile
             </span>
           )}

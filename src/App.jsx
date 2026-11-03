@@ -79,7 +79,6 @@ function App() {
         <Route path="/register" element={<Auth mode="register" />} />
         <Route path="/dashboard" element={<RequireAuth><Dashboard initialTab="dashboard" /></RequireAuth>} />
         <Route path="/pages" element={<RequireAuth><Dashboard initialTab="pages" /></RequireAuth>} />
-        <Route path="/themes" element={<RequireAuth><Dashboard initialTab="themes" /></RequireAuth>} />
         <Route path="/media" element={<RequireAuth><Dashboard initialTab="media" /></RequireAuth>} />
         <Route path="/settings" element={<RequireAuth><Dashboard initialTab="settings" /></RequireAuth>} />
       </Routes>

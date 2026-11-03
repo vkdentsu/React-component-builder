@@ -25,8 +25,8 @@ export default function ColumnZone({ row, col, colIndex, hops, isRowSelected, de
   return (
     <div style={{ flex: col.flex || 1 }} className="flex flex-col min-w-0">
       <div className="flex items-center justify-between mb-1 px-1">
-        <span className="text-[10px] text-gray-400 font-medium">Col {colIndex + 1}</span>
-        <span className="text-[10px] text-gray-300">flex-{col.flex || 1}</span>
+        <span className="text-[10px] font-medium opacity-60" style={{ color: 'var(--theme-text-muted, #94a3b8)' }}>Col {colIndex + 1}</span>
+        <span className="text-[10px] opacity-40" style={{ color: 'var(--theme-text-muted, #94a3b8)' }}>flex-{col.flex || 1}</span>
       </div>
 
       <SortableContext items={elementIds} strategy={verticalListSortingStrategy}>
@@ -34,15 +34,22 @@ export default function ColumnZone({ row, col, colIndex, hops, isRowSelected, de
           ref={setNodeRef}
           className={`relative flex-1 flex flex-col gap-2 rounded-lg border-2 border-dashed p-2 min-h-[80px] transition-all duration-150
             ${isOver
-              ? 'border-blue-400 bg-blue-50/60 scale-[1.01]'
+              ? 'border-blue-400 bg-blue-500/10 scale-[1.01]'
               : isRowSelected
-              ? 'border-blue-200 bg-blue-50/20'
-              : 'border-gray-200 hover:border-gray-300 bg-gray-50/50'
+              ? 'border-blue-300/50 bg-blue-500/5'
+              : ''
             }`}
+          style={{
+            borderColor: (isOver || isRowSelected) ? undefined : 'var(--theme-border, rgba(0,0,0,0.15))',
+            backgroundColor: (isOver || isRowSelected) ? undefined : 'transparent',
+          }}
         >
           {isEmpty && (
-            <div className={`flex-1 flex items-center justify-center text-xs transition-colors duration-150
-              ${isOver ? 'text-blue-400 font-medium' : 'text-gray-300'}`}>
+            <div
+              className={`flex-1 flex items-center justify-center text-xs transition-colors duration-150
+                ${isOver ? 'text-blue-500 font-medium' : 'opacity-40'}`}
+              style={{ color: isOver ? undefined : 'var(--theme-text-muted, #94a3b8)' }}
+            >
               {isOver ? 'Drop here' : 'Empty'}
             </div>
           )}

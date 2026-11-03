@@ -26,7 +26,7 @@ const userScopedStorage = {
 const defaultElementProps = {
   button: {
     label: 'Click me',
-    bg: '#3b82f6',
+    bg: 'var(--theme-primary)',
     color: '#ffffff',
     fontSize: { desktop: 14, tablet: 13, mobile: 12 },
     fontWeight: { desktop: 'medium', tablet: 'medium', mobile: 'medium' },
@@ -36,7 +36,7 @@ const defaultElementProps = {
   },
   text: {
     label: 'Paragraph text here.',
-    color: '#374151',
+    color: 'var(--theme-text)',
     fontSize: { desktop: 14, tablet: 13, mobile: 12 },
     fontWeight: { desktop: 'normal', tablet: 'normal', mobile: 'normal' },
     lineHeight: { desktop: 1.2, tablet: 1.3, mobile: 1.5 },
@@ -47,7 +47,8 @@ const defaultElementProps = {
     group: "group1",
     value: "option1",
     checked: false,
-    color: "#2563eb",
+    color: "var(--theme-primary)",
+    textColor: "var(--theme-text)",
     fontSize: { desktop: 14, tablet: 13, mobile: 12 },
     fontWeight: { desktop: 'normal', tablet: 'normal', mobile: 'normal' },
     lineHeight: { desktop: 1.2, tablet: 1.3, mobile: 1.5 },
@@ -57,7 +58,8 @@ const defaultElementProps = {
     label: "Checkbox",
     checked: false,
     value: "option1",
-    color: "#2563eb",
+    color: "var(--theme-primary)",
+    textColor: "var(--theme-text)",
     fontSize: { desktop: 14, tablet: 13, mobile: 12 },
     fontWeight: { desktop: 'normal', tablet: 'normal', mobile: 'normal' },
     lineHeight: { desktop: 1.2, tablet: 1.3, mobile: 1.5 },
@@ -65,7 +67,7 @@ const defaultElementProps = {
   },
   heading: {
     label: 'Section Heading',
-    color: '#111827',
+    color: 'var(--theme-text)',
     fontSize: { desktop: 24, tablet: 20, mobile: 18 },
     fontWeight: { desktop: 'bold', tablet: 'medium', mobile: 'normal' },
     lineHeight: { desktop: 1.2, tablet: 1.3, mobile: 1.5 },
@@ -84,7 +86,7 @@ const defaultElementProps = {
     imageAlt: '',
 
     title: 'Card title',
-    titleColor: '#111827',
+    titleColor: 'var(--theme-text)',
     titleFontSize: {
       desktop: 24,
       tablet: 20,
@@ -102,7 +104,7 @@ const defaultElementProps = {
     },
 
     subtitle: 'Supporting description text.',
-    subtitleColor: '#6b7280',
+    subtitleColor: 'var(--theme-text-muted)',
     subtitleFontSize: {
       desktop: 16,
       tablet: 15,
@@ -121,7 +123,7 @@ const defaultElementProps = {
 
     ctaLabel: 'Learn More',
 
-    ctaBg: '#3b82f6',
+    ctaBg: 'var(--theme-primary)',
     ctaColor: '#ffffff',
 
     ctaFontSize: {
@@ -140,13 +142,13 @@ const defaultElementProps = {
       mobile: 1.4,
     },
 
-    bg: '#ffffff',
+    bg: 'var(--theme-surface)',
     rounded: 'lg',
 
     link: '',
   },
   badge: {
-    label: 'Badge', bg: '#ede9fe', color: '#6d28d9',
+    label: 'Badge', bg: 'var(--theme-primary)', color: '#ffffff',
     fontSize: { desktop: 12, tablet: 11, mobile: 10 },
     fontWeight: { desktop: 'medium', tablet: 'medium', mobile: 'normal' },
     lineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 },
@@ -454,12 +456,41 @@ const useBuilderStore = create(
           rows: sanitizedRows,
         };
 
+        const assignedThemeId = pageRecord.themeId;
+        const available = get().availableThemes || [];
+        let assignedTheme = pageRecord.theme
+          ? {
+            ...pageRecord.theme,
+            configJson: normalizeThemeConfig(pageRecord.theme.configJson),
+          }
+          : available.find((t) => t.id === assignedThemeId);
+
+        if (!assignedTheme && assignedThemeId) {
+          authenticatedFetch(`/api/themes/${assignedThemeId}`)
+            .then((r) => r.json())
+            .then((res) => {
+              if (res?.data?.id) {
+                const loadedTheme = {
+                  ...res.data,
+                  configJson: normalizeThemeConfig(res.data.configJson),
+                };
+                set((state) => ({
+                  activeTheme: loadedTheme,
+                  availableThemes: state.availableThemes.some((t) => t.id === loadedTheme.id)
+                    ? state.availableThemes.map((t) => (t.id === loadedTheme.id ? loadedTheme : t))
+                    : [...state.availableThemes, loadedTheme],
+                }));
+              }
+            })
+            .catch(() => { });
+        }
+
         set({
           activeDbPageId: pageRecord.id,
           pageMeta: {
             name: pageRecord.name || 'Untitled Page',
             slug: pageRecord.slug || '',
-            themeId: pageRecord.themeId || '',
+            themeId: assignedThemeId || '',
             status: pageRecord.status || 'DRAFT',
           },
           documents: [pageDoc],
@@ -468,19 +499,32 @@ const useBuilderStore = create(
           selectedId: null,
           selectedType: null,
           _history: { past: [], future: [] },
+          ...(assignedTheme ? { activeTheme: assignedTheme } : {}),
           ...(rawContent.globalFont ? { globalFont: rawContent.globalFont } : {}),
         });
       },
 
       initNewDbPage: ({ name = 'New Page', slug = 'new-page', themeId = '' } = {}) => {
         const doc = makeDocument(name);
+        const defaultId = get().defaultThemeId;
+        const defaultTheme = get().availableThemes.find((t) => t.id === defaultId)
+          || get().availableThemes[0]
+          || {
+          id: 'preset-0',
+          name: THEME_PRESETS[0].name,
+          slug: THEME_PRESETS[0].slug,
+          configJson: normalizeThemeConfig(THEME_PRESETS[0].configJson),
+          _count: { pages: 0 },
+        };
+        const resolvedThemeId = themeId || defaultTheme.id;
+        const appliedTheme = get().availableThemes.find((t) => t.id === resolvedThemeId) || defaultTheme;
 
         set({
           activeDbPageId: null,
           pageMeta: {
             name,
             slug,
-            themeId,
+            themeId: resolvedThemeId,
             status: 'DRAFT',
           },
           documents: [doc],
@@ -489,6 +533,7 @@ const useBuilderStore = create(
           selectedId: null,
           selectedType: null,
           _history: { past: [], future: [] },
+          activeTheme: appliedTheme,
         });
       },
 
@@ -520,6 +565,7 @@ const useBuilderStore = create(
         }),
 
       // ── Themes ─────────────────────────────────────────────────
+      defaultThemeId: 'preset-0',
       activeTheme: {
         id: 'preset-0',
         name: THEME_PRESETS[0].name,
@@ -538,6 +584,15 @@ const useBuilderStore = create(
       themeModalInitialTab: 'palette',
       themeLoading: false,
       themeError: null,
+
+      setDefaultTheme: (themeId) =>
+        set((state) => {
+          const target = state.availableThemes.find((t) => t.id === themeId);
+          return {
+            defaultThemeId: themeId,
+            ...(target ? { activeTheme: { ...target, configJson: normalizeThemeConfig(target.configJson) } } : {}),
+          };
+        }),
 
       openThemeModal: (tab = 'palette') =>
         set({ isThemeModalOpen: true, themeModalInitialTab: tab }),

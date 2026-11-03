@@ -30,6 +30,7 @@ import {
 import { authenticatedFetch, getApiUrl } from '../utils/api';
 import { clearAuthSession } from '../utils/auth';
 import { ensureUserTheme } from '../utils/ensureUserTheme';
+import useBuilderStore from '../store/builderStore';
 import ConfigurationAndThemes from "./ConfigurationAndThemes";
 
 export default function Dashboard({ initialTab = 'dashboard' }) {
@@ -73,6 +74,7 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
     const [createModalOpen, setCreateModalOpen] = useState(false);
     const [newPageName, setNewPageName] = useState('');
     const [newPageSlug, setNewPageSlug] = useState('');
+    const [newPageThemeId, setNewPageThemeId] = useState('');
     const [creatingPage, setCreatingPage] = useState(false);
     const [createError, setCreateError] = useState('');
 
@@ -180,8 +182,10 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
         setCreateError('');
 
         try {
-            const theme = themes[0]?.id ? themes[0] : await ensureUserTheme();
-            const themeIdToUse = theme.id;
+            const storeDefaultId = useBuilderStore.getState().defaultThemeId;
+            const defaultTheme = themes.find((t) => t.id === storeDefaultId)
+                || (themes[0]?.id ? themes[0] : await ensureUserTheme());
+            const themeIdToUse = newPageThemeId || defaultTheme.id;
 
             const res = await authenticatedFetch('/api/pages', {
                 method: 'POST',
@@ -203,7 +207,12 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
             setCreateModalOpen(false);
             setNewPageName('');
             setNewPageSlug('');
-            showToast(`Page "${json.data.name}" created! Opening builder...`);
+            setNewPageThemeId('');
+            showToast(`Page "${json.data.name}" created with theme! Opening builder...`);
+
+            // Apply theme to builder store
+            const appliedTheme = themes.find((t) => t.id === themeIdToUse) || defaultTheme;
+            useBuilderStore.getState().selectTheme(appliedTheme.id);
 
             // Refresh list and navigate to builder with newly created page id
             await loadData();
@@ -1004,7 +1013,7 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                         <Database size={16} className="text-blue-600" />
                                         <span>Database & Backend Connection</span>
                                     </h3>
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                         <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/70">
                                             <p className="text-[11px] text-slate-400">API Health</p>
                                             <p className="text-sm font-bold text-slate-800 mt-1 flex items-center gap-1.5">
@@ -1030,9 +1039,22 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                         <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/70">
                                             <p className="text-[11px] text-slate-400">Server Endpoint</p>
                                             <p className="text-sm font-mono text-slate-800 mt-1 truncate">
-                                                http://localhost:3001
+                                                {getApiUrl('')}
                                             </p>
                                         </div>
+
+                                        <a
+                                            href={getApiUrl('/api/docs/')}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="p-4 rounded-xl bg-blue-50/70 border border-blue-200/80 hover:bg-blue-100/60 transition-colors block group"
+                                        >
+                                            <p className="text-[11px] text-blue-600 font-medium">API Documentation</p>
+                                            <p className="text-sm font-bold text-slate-800 mt-1 flex items-center justify-between">
+                                                <span>Swagger UI</span>
+                                                <Globe size={14} className="text-blue-500 group-hover:scale-110 transition-transform" />
+                                            </p>
+                                        </a>
                                     </div>
                                 </div>
 
@@ -1291,6 +1313,26 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                         className="flex-1 px-3 py-2 text-xs bg-white font-mono focus:outline-none"
                                     />
                                 </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-medium text-slate-700 mb-1">
+                                    Assign Theme (Default Theme applied)
+                                </label>
+                                <select
+                                    value={newPageThemeId}
+                                    onChange={(e) => setNewPageThemeId(e.target.value)}
+                                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                >
+                                    <option value="">
+                                        Default Theme ({themes.find((t) => t.id === useBuilderStore.getState().defaultThemeId)?.name || themes[0]?.name || 'Modern Blue'})
+                                    </option>
+                                    {themes.map((t) => (
+                                        <option key={t.id} value={t.id}>
+                                            {t.name} {t.id === useBuilderStore.getState().defaultThemeId ? '(Default)' : ''}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
 
 
