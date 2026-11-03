@@ -12,6 +12,7 @@ import {
   Upload,
   X,
   Paintbrush,
+  Plus,
 } from 'lucide-react';
 import useBuilderStore from '../store/builderStore';
 import { loadGoogleFont } from '../utils/loadGoogleFont';
@@ -99,6 +100,7 @@ export default function ThemeModal({ onClose, initialThemeId, onSaved }) {
     themeModalInitialTab,
     closeThemeModal,
     selectTheme,
+    setDefaultTheme,
     applyThemeDraft,
     createTheme,
     updateTheme,
@@ -180,13 +182,26 @@ export default function ThemeModal({ onClose, initialThemeId, onSaved }) {
   });
 
   const handleApply = () => {
-    applyThemeDraft({
-      id: isNewTheme ? 'draft-theme' : selectedThemeId,
-      name: projectName.trim() || 'Theme Draft',
-      slug: slugName,
-      configJson: configForSave(),
-    });
-    setSaveSuccess(false);
+    const config = configForSave();
+    if (isNewTheme) {
+      applyThemeDraft({
+        id: 'draft-theme',
+        name: projectName.trim() || 'Theme Draft',
+        slug: slugName,
+        configJson: config,
+      });
+    } else {
+      selectTheme(selectedThemeId);
+      setDefaultTheme(selectedThemeId);
+      applyThemeDraft({
+        id: selectedThemeId,
+        name: projectName.trim(),
+        slug: slugName,
+        configJson: config,
+      });
+    }
+    setSaveSuccess(true);
+    window.setTimeout(() => setSaveSuccess(false), 2000);
   };
 
   const handleSave = async () => {
@@ -208,7 +223,10 @@ export default function ThemeModal({ onClose, initialThemeId, onSaved }) {
       } else {
         savedTheme = await updateTheme(selectedThemeId, { name: projectName.trim(), slug: slugName, configJson });
       }
-      if (savedTheme?.id) selectTheme(savedTheme.id);
+      if (savedTheme?.id) {
+        selectTheme(savedTheme.id);
+        setDefaultTheme(savedTheme.id);
+      }
       setProjectName(savedTheme?.name || projectName.trim());
       setSlugName(savedTheme?.slug || slugName);
       setSlugManuallyEdited(false);
@@ -341,9 +359,61 @@ export default function ThemeModal({ onClose, initialThemeId, onSaved }) {
         <header className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-slate-50/60 px-5 py-3 sm:px-6">
           <div className="flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 text-white"><Palette size={17} /></div>
-            <div><h2 className="text-sm font-semibold text-slate-900">Theme Studio</h2><p className="text-xs text-slate-500">Manage theme configuration and preview changes.</p></div>
+            <div>
+              <h2 className="text-sm font-semibold text-slate-900">Theme Studio</h2>
+              <p className="text-xs text-slate-500">Manage design tokens, color palette, typography & spacing.</p>
+            </div>
           </div>
-          <button type="button" onClick={handleClose} aria-label="Close Theme Studio" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><X size={18} /></button>
+
+          <div className="flex items-center gap-2">
+            <select
+              aria-label="Select Theme to Edit"
+              value={isNewTheme ? 'new' : selectedThemeId}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === 'new') {
+                  handleStartNew();
+                } else {
+                  const found = availableThemes.find((t) => t.id === val);
+                  if (found) {
+                    setIsNewTheme(false);
+                    setSelectedThemeId(found.id);
+                    setProjectName(found.name || 'Modern Blue');
+                    setSlugName(found.slug || slugify(found.name || 'Modern Blue'));
+                    setSlugManuallyEdited(false);
+                    setDescription(found.configJson?.description || '');
+                    setTokens(normalizeThemeConfig(found.configJson));
+                    setLocalError('');
+                    setSaveSuccess(false);
+                  }
+                }
+              }}
+              className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 max-w-[180px] truncate"
+            >
+              <option value="new">+ Create New Theme</option>
+              <optgroup label="Available Themes">
+                {availableThemes.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name} {t.id === activeTheme?.id ? '(Active)' : ''}
+                  </option>
+                ))}
+              </optgroup>
+            </select>
+
+            {!isNewTheme && (
+              <button
+                type="button"
+                onClick={() => handleStartNew()}
+                className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+                title="Create a new theme"
+              >
+                <Plus size={13} />
+                <span className="hidden sm:inline">New</span>
+              </button>
+            )}
+
+            <button type="button" onClick={handleClose} aria-label="Close Theme Studio" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 ml-1"><X size={18} /></button>
+          </div>
         </header>
 
         {localError || themeError ? <div role="alert" className="flex items-center justify-between border-b border-rose-200 bg-rose-50 px-5 py-2 text-xs text-rose-700"><span>{localError || themeError}</span><button type="button" onClick={() => setLocalError('')}>×</button></div> : null}

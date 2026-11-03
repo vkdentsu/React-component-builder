@@ -354,27 +354,39 @@ export function tokensToCssRules(tokens, scope = '') {
 
 export function tokensToCssVars(tokens) {
   const normalized = normalizeThemeConfig(tokens);
+  const primaryFont = normalized.typography.fonts.primary || normalized.typography.fontFamily || 'Inter';
+  const headingFont = normalized.typography.fonts.heading || primaryFont;
+  const bodyFont = normalized.typography.fonts.body || primaryFont;
+  const buttonFont = normalized.typography.fonts.button || primaryFont;
+
   const vars = {
     '--theme-primary': normalized.colors.primary,
     '--theme-secondary': normalized.colors.secondary,
     '--theme-bg': normalized.colors.background,
+    '--theme-background': normalized.colors.background,
     '--theme-surface': normalized.colors.surface,
     '--theme-text': normalized.colors.text,
     '--theme-text-muted': normalized.colors.textMuted,
     '--theme-border': normalized.colors.border,
-    '--theme-font': normalized.typography.fonts.primary
-      ? `'${normalized.typography.fonts.primary}', sans-serif`
-      : 'inherit',
-    '--theme-radius-sm': normalized.borderRadius.sm,
-    '--theme-radius-md': normalized.borderRadius.md,
-    '--theme-radius-lg': normalized.borderRadius.lg,
-    '--theme-radius-full': normalized.borderRadius.full,
-    '--theme-space-xs': normalized.spacing.xs,
-    '--theme-space-sm': normalized.spacing.sm,
-    '--theme-space-md': normalized.spacing.md,
-    '--theme-space-lg': normalized.spacing.lg,
-    '--theme-space-xl': normalized.spacing.xl,
-    '--theme-space-2xl': normalized.spacing['2xl'],
+    '--theme-font': `'${primaryFont}', sans-serif`,
+    '--theme-font-heading': `'${headingFont}', sans-serif`,
+    '--theme-font-body': `'${bodyFont}', sans-serif`,
+    '--theme-font-button': `'${buttonFont}', sans-serif`,
+    '--theme-radius-none': normalized.borderRadius.none || '0px',
+    '--theme-radius-xs': normalized.borderRadius.xs || '2px',
+    '--theme-radius-sm': normalized.borderRadius.sm || '4px',
+    '--theme-radius-md': normalized.borderRadius.md || '8px',
+    '--theme-radius-lg': normalized.borderRadius.lg || '16px',
+    '--theme-radius-xl': normalized.borderRadius.xl || '24px',
+    '--theme-radius-full': normalized.borderRadius.full || '9999px',
+    '--theme-space-none': normalized.spacing.none || '0px',
+    '--theme-space-base': normalized.spacing.base || '8px',
+    '--theme-space-xs': normalized.spacing.xs || '4px',
+    '--theme-space-sm': normalized.spacing.sm || '8px',
+    '--theme-space-md': normalized.spacing.md || '16px',
+    '--theme-space-lg': normalized.spacing.lg || '24px',
+    '--theme-space-xl': normalized.spacing.xl || '32px',
+    '--theme-space-2xl': normalized.spacing['2xl'] || '48px',
   };
   const normalizeKey = (key) => String(key)
     .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
@@ -417,4 +429,47 @@ export function tokensToCssString(tokens) {
   return Object.entries(tokensToCssVars(tokens))
     .map(([key, value]) => `  ${key}: ${value};`)
     .join('\n');
+}
+
+export function resolveColor(value, defaultToken = '') {
+  if (!value) return defaultToken;
+  if (typeof value === 'string' && value.startsWith('var(--theme-')) return value;
+  const tokenMap = {
+    primary: 'var(--theme-primary)',
+    secondary: 'var(--theme-secondary)',
+    background: 'var(--theme-bg)',
+    bg: 'var(--theme-bg)',
+    surface: 'var(--theme-surface)',
+    text: 'var(--theme-text)',
+    textMuted: 'var(--theme-text-muted)',
+    border: 'var(--theme-border)',
+    '#3b82f6': 'var(--theme-primary)',
+    '#2563eb': 'var(--theme-primary)',
+    '#111827': 'var(--theme-text)',
+    '#374151': 'var(--theme-text)',
+    '#0f172a': 'var(--theme-text)',
+    '#6b7280': 'var(--theme-text-muted)',
+    '#64748b': 'var(--theme-text-muted)',
+    '#f8fafc': 'var(--theme-surface)',
+    '#e2e8f0': 'var(--theme-border)',
+  };
+  if (tokenMap[value]) return tokenMap[value];
+  return value;
+}
+
+export function resolveRadius(rounded, defaultToken = '') {
+  if (!rounded) return defaultToken;
+  if (typeof rounded === 'string' && (rounded.startsWith('var(--theme-') || rounded.endsWith('px') || rounded.endsWith('rem') || rounded.endsWith('%'))) {
+    return rounded;
+  }
+  const radiusMap = {
+    none: 'var(--theme-radius-none, 0px)',
+    xs: 'var(--theme-radius-xs, 2px)',
+    sm: 'var(--theme-radius-sm, 4px)',
+    md: 'var(--theme-radius-md, 8px)',
+    lg: 'var(--theme-radius-lg, 16px)',
+    xl: 'var(--theme-radius-xl, 24px)',
+    full: 'var(--theme-radius-full, 9999px)',
+  };
+  return radiusMap[rounded] || defaultToken;
 }

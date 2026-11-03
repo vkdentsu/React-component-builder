@@ -2,6 +2,7 @@ import { useState } from 'react';
 import RowsCanvas from './RowsCanvas';
 import useBuilderStore from '../store/builderStore';
 import { getResponsiveTypographyClassName, getResponsiveTypographyClasses, getResponsiveTypographyStyles } from '../utils/responsiveTypography';
+import { resolveColor, resolveRadius } from '../utils/themeDefaults';
 import { ChevronDown, Menu, X, Lock, Mail, User, Eye, EyeOff, Type, Phone } from 'lucide-react';
 
 const roundedCls = { none: '', sm: 'rounded-sm', md: 'rounded-md', lg: 'rounded-lg', full: 'rounded-full' };
@@ -49,7 +50,7 @@ const PasswordFieldPreview = ({ field, index, labelClass }) => {
 
   return (
     <div key={`${label}-${index}`} className="flex flex-col gap-1">
-      <label className={`text-xs font-medium text-gray-600 ${labelClass || ''}`}>{label}{field.required ? ' *' : ''}</label>
+      <label className={`text-xs font-medium ${labelClass || ''}`} style={{ color: 'var(--theme-text-muted, #64748b)' }}>{label}{field.required ? ' *' : ''}</label>
       <div className="relative">
         {hasIcon && (
           <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
@@ -62,7 +63,13 @@ const PasswordFieldPreview = ({ field, index, labelClass }) => {
           placeholder={field.placeholder || `Enter ${label.toLowerCase()}`}
           pattern={field.validationRegex || undefined}
           title={field.validationRegex ? `Must match: ${field.validationRegex}` : undefined}
-          className={`border border-gray-300 rounded-md px-3 py-2 text-sm bg-white w-full ${hasIcon ? 'pl-10' : ''} pr-10`}
+          style={{
+            backgroundColor: 'var(--theme-bg, #ffffff)',
+            borderColor: 'var(--theme-border, #cbd5e1)',
+            color: 'var(--theme-text, #0f172a)',
+            borderRadius: 'var(--theme-radius-sm, 4px)',
+          }}
+          className={`border px-3 py-2 text-sm w-full ${hasIcon ? 'pl-10' : ''} pr-10`}
         />
         <button
           disabled={true}
@@ -93,16 +100,28 @@ const renderFormFieldPreview = (field, index, typography = {}) => {
     case 'textarea':
       return (
         <div key={`${label}-${index}`} className="flex flex-col gap-1">
-          <label className={`text-xs font-medium text-gray-600 ${labelClass}`}>{label}{field.required ? ' *' : ''}</label>
+          <label className={`text-xs font-medium ${labelClass}`} style={{ color: 'var(--theme-text-muted, #64748b)' }}>{label}{field.required ? ' *' : ''}</label>
           <textarea disabled placeholder={field.placeholder || `Enter ${label.toLowerCase()}`}
-            className="border border-gray-300 rounded-md px-3 py-2 text-sm bg-white w-full min-h-[72px]" />
+            style={{
+              backgroundColor: 'var(--theme-bg, #ffffff)',
+              borderColor: 'var(--theme-border, #cbd5e1)',
+              color: 'var(--theme-text, #0f172a)',
+              borderRadius: 'var(--theme-radius-sm, 4px)',
+            }}
+            className="border px-3 py-2 text-sm w-full min-h-[72px]" />
         </div>
       );
     case 'dropdown':
       return (
         <div key={`${label}-${index}`} className="flex flex-col gap-1">
-          <label className={`text-xs font-medium text-gray-600 ${labelClass}`}>{label}{field.required ? ' *' : ''}</label>
-          <select disabled className="border border-gray-300 rounded-md px-3 py-2 text-sm bg-white w-full">
+          <label className={`text-xs font-medium ${labelClass}`} style={{ color: 'var(--theme-text-muted, #64748b)' }}>{label}{field.required ? ' *' : ''}</label>
+          <select disabled className="border px-3 py-2 text-sm w-full"
+            style={{
+              backgroundColor: 'var(--theme-bg, #ffffff)',
+              borderColor: 'var(--theme-border, #cbd5e1)',
+              color: 'var(--theme-text, #0f172a)',
+              borderRadius: 'var(--theme-radius-sm, 4px)',
+            }}>
             {((field.options || '').split(',').map((opt) => opt.trim()).filter(Boolean)).length > 0 ? (
               (field.options || '').split(',').map((opt) => opt.trim()).filter(Boolean).map((opt) => <option key={opt}>{opt}</option>)
             ) : (
@@ -113,8 +132,8 @@ const renderFormFieldPreview = (field, index, typography = {}) => {
       );
     case 'checkbox':
       return (
-        <label key={`${label}-${index}`} className={`flex items-center gap-2 text-gray-700 ${checkboxClass}`}>
-          <input type="checkbox" disabled className="h-4 w-4 rounded border-gray-300 text-blue-600" />
+        <label key={`${label}-${index}`} className={`flex items-center gap-2 ${checkboxClass}`} style={{ color: 'var(--theme-text, #0f172a)' }}>
+          <input type="checkbox" disabled className="h-4 w-4 rounded border-gray-300" style={{ accentColor: 'var(--theme-primary)' }} />
           <span>{label}{field.required ? ' *' : ''}</span>
         </label>
       );
@@ -127,7 +146,7 @@ const renderFormFieldPreview = (field, index, typography = {}) => {
       const hasIcon = field.icon && field.icon !== 'none';
       return (
         <div key={`${label}-${index}`} className="flex flex-col gap-1">
-          <label className={`text-xs font-medium text-gray-600 ${labelClass}`}>{label}{field.required ? ' *' : ''}</label>
+          <label className={`text-xs font-medium ${labelClass}`} style={{ color: 'var(--theme-text-muted, #64748b)' }}>{label}{field.required ? ' *' : ''}</label>
           <div className="relative">
             {hasIcon && (
               <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
@@ -140,7 +159,13 @@ const renderFormFieldPreview = (field, index, typography = {}) => {
               placeholder={field.placeholder || `Enter ${label.toLowerCase()}`}
               pattern={field.validationRegex || undefined}
               title={field.validationRegex ? `Must match: ${field.validationRegex}` : undefined}
-              className={`border border-gray-300 rounded-md px-3 py-2 text-sm bg-white w-full ${hasIcon ? 'pl-10' : ''}`}
+              style={{
+                backgroundColor: 'var(--theme-bg, #ffffff)',
+                borderColor: 'var(--theme-border, #cbd5e1)',
+                color: 'var(--theme-text, #0f172a)',
+                borderRadius: 'var(--theme-radius-sm, 4px)',
+              }}
+              className={`border px-3 py-2 text-sm w-full ${hasIcon ? 'pl-10' : ''}`}
             />
           </div>
         </div>
@@ -455,10 +480,27 @@ export default function ElementPreview({ el, device }) {
   switch (el.type) {
     case 'button': {
       const typography = getResponsiveTypographyStyles(el, device);
+      const isSecondary = el.variant === 'secondary';
+      const defaultBg = isSecondary ? 'var(--theme-bg)' : 'var(--theme-primary)';
+      const defaultColor = isSecondary ? 'var(--theme-text)' : '#ffffff';
+      const bg = resolveColor(el.bg, defaultBg);
+      const color = resolveColor(el.color, defaultColor);
+      const borderRadius = resolveRadius(el.rounded, 'var(--theme-radius-md)');
       return (
         <button
-          className={`text-sm ${roundedCls[el.rounded] || 'rounded-md'} ${el.padding === 'sm' ? 'px-3 py-1.5' : el.padding === 'lg' ? 'px-6 py-3' : 'px-4 py-2'}`}
-          style={{ background: el.bg, color: el.color, fontSize: typography.fontSize, fontWeight: typography.fontWeight, lineHeight: typography.lineHeight, pointerEvents: 'none', border: 'none', cursor: 'default' }}
+          className={`text-sm ${roundedCls[el.rounded] || ''} ${el.padding === 'sm' ? 'px-3 py-1.5' : el.padding === 'lg' ? 'px-6 py-3' : 'px-4 py-2'}`}
+          style={{
+            background: bg,
+            color: color,
+            border: isSecondary ? '1px solid var(--theme-border, #cbd5e1)' : 'none',
+            borderRadius: borderRadius,
+            fontFamily: 'var(--theme-font-button, inherit)',
+            fontSize: typography.fontSize,
+            fontWeight: typography.fontWeight,
+            lineHeight: typography.lineHeight,
+            pointerEvents: 'none',
+            cursor: 'default',
+          }}
         >
           {el.label}
         </button>
@@ -467,10 +509,18 @@ export default function ElementPreview({ el, device }) {
 
     case 'text': {
       const typography = getResponsiveTypographyStyles(el, device);
+      const color = resolveColor(el.color, 'var(--theme-text)');
       return (
         <p
           className={`leading-relaxed ${getResponsiveTypographyClassName(el, device)} ${el.align === 'center' ? 'text-center' : el.align === 'right' ? 'text-right' : 'text-left'}`}
-          style={{ color: el.color, fontSize: typography.fontSize, fontWeight: typography.fontWeight, lineHeight: typography.lineHeight, margin: 0 }}
+          style={{
+            color: color,
+            fontFamily: 'var(--theme-font-body, inherit)',
+            fontSize: typography.fontSize,
+            fontWeight: typography.fontWeight,
+            lineHeight: typography.lineHeight,
+            margin: 0,
+          }}
         >
           {el.label}
         </p>
@@ -478,8 +528,10 @@ export default function ElementPreview({ el, device }) {
     }
 
     case "radio": {
+        const color = resolveColor(el.color, 'var(--theme-primary)');
+        const textColor = resolveColor(el.textColor, 'var(--theme-text)');
         return (
-          <label className="flex items-center gap-2">
+          <label className="flex items-center gap-2" style={{ color: textColor }}>
             <input
               type="radio"
               name={el.group}
@@ -491,17 +543,19 @@ export default function ElementPreview({ el, device }) {
                   .updateRadioSelection(el.id, true)
               }
               style={{
-                accentColor: el.color,
+                accentColor: color,
                 textAlign: el.align,
               }}
             />
 
-            <span className={`${getResponsiveTypographyClasses({ fontSize: el.fontSize, fontWeight: el.fontWeight, lineHeight: el.lineHeight }, device)} ${el.align === 'center' ? 'text-center' : el.align === 'right' ? 'text-right' : 'text-left'}`} style={{ color: el.color }}>{el.label}</span>
+            <span className={`${getResponsiveTypographyClasses({ fontSize: el.fontSize, fontWeight: el.fontWeight, lineHeight: el.lineHeight }, device)} ${el.align === 'center' ? 'text-center' : el.align === 'right' ? 'text-right' : 'text-left'}`} style={{ color: textColor }}>{el.label}</span>
           </label>
         );
     }
 
     case "checkbox": {
+        const color = resolveColor(el.color, 'var(--theme-primary)');
+        const textColor = resolveColor(el.textColor, 'var(--theme-text)');
         return (
           <div
             style={{
@@ -514,7 +568,7 @@ export default function ElementPreview({ el, device }) {
                   : "flex-start",
             }}
           >
-            <label className="flex items-center gap-2">
+            <label className="flex items-center gap-2" style={{ color: textColor }}>
               <input
                 type="checkbox"
                 checked={el.checked}
@@ -523,12 +577,12 @@ export default function ElementPreview({ el, device }) {
                     checked: e.target.checked,
                   })
                 }
-                style={{ accentColor: el.color }}
+                style={{ accentColor: color }}
               />
 
               <span
                 className={`${getResponsiveTypographyClasses({ fontSize: el.fontSize, fontWeight: el.fontWeight, lineHeight: el.lineHeight }, device)} ${el.align === 'center' ? 'text-center' : el.align === 'right' ? 'text-right' : 'text-left'}`}
-                style={{ color: el.color }}
+                style={{ color: textColor }}
               >
                 {el.label}
               </span>
@@ -540,10 +594,18 @@ export default function ElementPreview({ el, device }) {
     case 'heading': {
       const Tag = ['h1','h2','h3','h4','h5','h6'].includes(el.tag) ? el.tag : 'h2';
       const typography = getResponsiveTypographyStyles(el, device);
+      const color = resolveColor(el.color, 'var(--theme-text)');
       return (
         <Tag
           className={`leading-tight ${getResponsiveTypographyClassName(el, device)} ${el.align === 'center' ? 'text-center' : el.align === 'right' ? 'text-right' : 'text-left'}`}
-          style={{ color: el.color, fontSize: typography.fontSize, fontWeight: typography.fontWeight, lineHeight: typography.lineHeight, margin: 0 }}
+          style={{
+            color: color,
+            fontFamily: 'var(--theme-font-heading, inherit)',
+            fontSize: typography.fontSize,
+            fontWeight: typography.fontWeight,
+            lineHeight: typography.lineHeight,
+            margin: 0,
+          }}
         >
           {el.label}
         </Tag>
@@ -553,11 +615,21 @@ export default function ElementPreview({ el, device }) {
     case 'input':
       {
       const typography = getResponsiveTypographyStyles(el, device);
+      const bg = resolveColor(el.bg, 'var(--theme-bg)');
+      const color = resolveColor(el.color, 'var(--theme-text)');
+      const borderColor = resolveColor(el.borderColor, 'var(--theme-border)');
+      const labelColor = resolveColor(el.labelColor, 'var(--theme-text-muted)');
       return (
         <div className="flex flex-col gap-1 w-full">
-          <label className={`text-xs font-medium text-gray-600 ${getResponsiveTypographyClasses(el, device)}`} style={{ fontSize: typography.fontSize, fontWeight: typography.fontWeight, lineHeight: typography.lineHeight }}>{el.label}</label>
+          <label className={`text-xs font-medium ${getResponsiveTypographyClasses(el, device)}`} style={{ color: labelColor, fontSize: typography.fontSize, fontWeight: typography.fontWeight, lineHeight: typography.lineHeight }}>{el.label}</label>
           <input type="text" placeholder={el.placeholder} disabled
-            className="border border-gray-300 rounded-md px-3 py-2 text-sm bg-white w-full" />
+            style={{
+              backgroundColor: bg,
+              borderColor: borderColor,
+              color: color,
+              borderRadius: resolveRadius(el.rounded, 'var(--theme-radius-sm)'),
+            }}
+            className="border px-3 py-2 text-sm w-full" />
         </div>
       );
       }
@@ -565,8 +637,8 @@ export default function ElementPreview({ el, device }) {
     case 'image':
       return (
         <img src={el.src} alt={el.alt}
-          className={`w-full object-cover ${roundedCls[el.rounded] || 'rounded-md'}`}
-          style={{ pointerEvents: 'none' }}
+          className="w-full object-cover"
+          style={{ pointerEvents: 'none', borderRadius: resolveRadius(el.rounded, 'var(--theme-radius-md)') }}
           onError={(e) => { e.target.src = 'https://placehold.co/400x200/f3f4f6/9ca3af?text=Image'; }}
         />
       );
@@ -601,8 +673,12 @@ export default function ElementPreview({ el, device }) {
 
   return (
     <div
-      className="border border-gray-200 rounded-xl overflow-hidden shadow-md w-full flex flex-col"
-      style={{ background: el.bg }}
+      className="border overflow-hidden shadow-md w-full flex flex-col"
+      style={{
+        background: resolveColor(el.bg, 'var(--theme-surface)'),
+        borderColor: 'var(--theme-border, #e2e8f0)',
+        borderRadius: resolveRadius(el.rounded, 'var(--theme-radius-lg)'),
+      }}
     >
       {el.image && (
         <img
@@ -622,7 +698,8 @@ export default function ElementPreview({ el, device }) {
         <p
           style={{
             margin: 0,
-            color: "#111827",
+            color: resolveColor(el.titleColor, 'var(--theme-text)'),
+            fontFamily: 'var(--theme-font-heading, inherit)',
             fontSize: titleTypography.fontSize,
             fontWeight: titleTypography.fontWeight,
             lineHeight: titleTypography.lineHeight,
@@ -635,7 +712,8 @@ export default function ElementPreview({ el, device }) {
         <p
           style={{
             margin: 0,
-            color: "#6b7280",
+            color: resolveColor(el.subtitleColor, 'var(--theme-text-muted)'),
+            fontFamily: 'var(--theme-font-body, inherit)',
             fontSize: subtitleTypography.fontSize,
             fontWeight: subtitleTypography.fontWeight,
             lineHeight: subtitleTypography.lineHeight,
@@ -647,10 +725,12 @@ export default function ElementPreview({ el, device }) {
         {/* CTA Button */}
         {el.ctaLabel && (
           <button
-            className="mt-3 self-start px-3 py-1.5 rounded-md"
+            className="mt-3 self-start px-3 py-1.5"
             style={{
-              background: el.ctaBg,
-              color: el.ctaColor,
+              background: resolveColor(el.ctaBg, 'var(--theme-primary)'),
+              color: resolveColor(el.ctaColor, '#ffffff'),
+              borderRadius: resolveRadius(el.ctaRounded || el.rounded, 'var(--theme-radius-md)'),
+              fontFamily: 'var(--theme-font-button, inherit)',
               border: "none",
               pointerEvents: "none",
               cursor: "default",
@@ -667,7 +747,7 @@ export default function ElementPreview({ el, device }) {
         {el.link && !el.ctaLabel && (
           <span
             style={{
-              color: el.ctaBg || "#3b82f6",
+              color: resolveColor(el.ctaBg, 'var(--theme-primary)'),
               fontSize: ctaTypography.fontSize,
               fontWeight: ctaTypography.fontWeight,
               lineHeight: ctaTypography.lineHeight,
@@ -685,8 +765,15 @@ export default function ElementPreview({ el, device }) {
       {
         const typography = getResponsiveTypographyStyles(el, device);
       return (
-        <span className={`inline-flex items-center px-3 py-1 rounded-full ${getResponsiveTypographyClasses(el, device)}`}
-          style={{ background: el.bg, color: el.color, fontSize: typography.fontSize, fontWeight: typography.fontWeight, lineHeight: typography.lineHeight }}>
+        <span className={`inline-flex items-center px-3 py-1 ${getResponsiveTypographyClasses(el, device)}`}
+          style={{
+            background: resolveColor(el.bg, 'var(--theme-primary)'),
+            color: resolveColor(el.color, '#ffffff'),
+            borderRadius: resolveRadius(el.rounded, 'var(--theme-radius-full)'),
+            fontSize: typography.fontSize,
+            fontWeight: typography.fontWeight,
+            lineHeight: typography.lineHeight,
+          }}>
           {el.label}
         </span>
       );
@@ -737,16 +824,16 @@ export default function ElementPreview({ el, device }) {
     case "toggle": {
       return (
         <div className="w-full flex justify-center">
-          <div className="px-6 py-3 rounded-md border-2 border-dashed border-gray-300 bg-gray-50 text-gray-600 flex items-center gap-2">
-            <span className="text-base">⏻</span>
+          <label className="inline-flex items-center gap-2 cursor-pointer" style={{ color: resolveColor(el.textColor, 'var(--theme-text)') }}>
+            <input type="checkbox" role="switch" defaultChecked disabled style={{ accentColor: resolveColor(el.color, 'var(--theme-primary)') }} />
             <span className={`${getResponsiveTypographyClasses({ fontSize: el.fontSize, fontWeight: el.fontWeight, lineHeight: el.lineHeight }, device)} ${el.align === 'center' ? 'text-center' : el.align === 'right' ? 'text-right' : 'text-left'}`}>{el.label}</span>
-          </div>
+          </label>
         </div>
       );
     }
 
     case 'divider':
-      return <hr className="w-full" style={{ borderColor: el.color, borderTopWidth: el.thickness, borderTopStyle: 'solid', margin: 0 }} />;
+      return <hr className="w-full" style={{ borderColor: resolveColor(el.color, 'var(--theme-border)'), borderTopWidth: el.thickness || 1, borderTopStyle: 'solid', margin: 0 }} />;
 
     case 'navbar':
       return <NavbarPreview el={el} device={device} />;
@@ -764,10 +851,26 @@ export default function ElementPreview({ el, device }) {
       const checkboxTypography = { fontSize: el.checkboxFontSize || { desktop: 14, tablet: 13, mobile: 12 }, fontWeight: el.checkboxFontWeight || { desktop: 'normal', tablet: 'normal', mobile: 'normal' }, lineHeight: el.checkboxLineHeight || { desktop: 1.4, tablet: 1.3, mobile: 1.2 } };
       const buttonTypography = { fontSize: el.buttonFontSize || { desktop: 14, tablet: 13, mobile: 12 }, fontWeight: el.buttonFontWeight || { desktop: 'medium', tablet: 'medium', mobile: 'medium' }, lineHeight: el.buttonLineHeight || { desktop: 1.4, tablet: 1.3, mobile: 1.2 } };
       return (
-        <div className="w-full rounded-xl border border-gray-200 p-4 flex flex-col gap-3 bg-white">
-          <p className={`${getResponsiveTypographyClasses(titleTypography, device)} text-gray-900`}>{el.title}</p>
+        <div
+          className="w-full rounded-xl border p-4 flex flex-col gap-3"
+          style={{
+            backgroundColor: resolveColor(el.bg, 'var(--theme-surface)'),
+            borderColor: resolveColor(el.borderColor, 'var(--theme-border)'),
+            borderRadius: resolveRadius(el.rounded, 'var(--theme-radius-lg)'),
+          }}
+        >
+          <p className={`${getResponsiveTypographyClasses(titleTypography, device)}`} style={{ color: 'var(--theme-text, #0f172a)' }}>{el.title}</p>
           {normalizeFormFields(el.fields).map((field, index) => renderFormFieldPreview(field, index, { labelClass: getResponsiveTypographyClasses(labelTypography, device), checkboxClass: getResponsiveTypographyClasses(checkboxTypography, device) }))}
-          <button className={`mt-1 px-4 py-2 rounded-md ${getResponsiveTypographyClasses(buttonTypography, device)} bg-blue-600 text-white self-start`} style={{ pointerEvents: 'none' }}>
+          <button
+            className={`mt-1 px-4 py-2 ${getResponsiveTypographyClasses(buttonTypography, device)} self-start`}
+            style={{
+              backgroundColor: 'var(--theme-primary, #2563eb)',
+              color: '#ffffff',
+              borderRadius: resolveRadius(el.buttonRounded, 'var(--theme-radius-md)'),
+              border: 'none',
+              pointerEvents: 'none',
+            }}
+          >
             {el.buttonLabel}
           </button>
         </div>

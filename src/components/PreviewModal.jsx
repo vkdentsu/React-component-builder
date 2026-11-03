@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { X, Monitor, Tablet, Smartphone } from 'lucide-react';
 import ElementPreview from './ElementPreview';
 import useBuilderStore from '../store/builderStore';
-import { tokensToCssRules, tokensToCssVars } from '../utils/themeDefaults';
+import ThemeProvider from './ThemeProvider';
 
 const DEVICES = [
   { id: 'desktop', label: 'Desktop', Icon: Monitor,    width: '100%'  },
@@ -156,16 +156,11 @@ function PreviewRows({ rows, device }) {
 }
 
 export default function PreviewModal({ open, onClose }) {
-  const { rows, documents, activeDocId, globalFont, activeTheme } = useBuilderStore();
+  const { rows, documents, activeDocId, globalFont } = useBuilderStore();
   const [device, setDevice] = useState('desktop');
 
   const activeDoc = documents.find((d) => d.id === activeDocId);
   const deviceWidth = DEVICES.find((d) => d.id === device)?.width || '100%';
-
-  const themeVars = useMemo(() => {
-    return tokensToCssVars(activeTheme?.configJson);
-  }, [activeTheme]);
-  const themeRules = useMemo(() => tokensToCssRules(activeTheme?.configJson, '.theme-canvas'), [activeTheme]);
 
   if (!open) return null;
 
@@ -208,20 +203,22 @@ export default function PreviewModal({ open, onClose }) {
       {/* Preview area */}
       <div className="flex-1 overflow-auto flex justify-center py-8 px-4 bg-[#1a1a2e]">
         {/* Device frame */}
-        <div
+        <ThemeProvider
+          scope=".theme-canvas"
           style={{
             width: deviceWidth,
             transition: 'width 0.3s ease',
-            fontFamily: activeTheme?.configJson?.typography?.fontFamily
-              ? `'${activeTheme.configJson.typography.fontFamily}', sans-serif`
-              : 'inherit',
-            ...themeVars,
+            backgroundColor: 'var(--theme-bg, #ffffff)',
+            color: 'var(--theme-text, #0f172a)',
+            borderColor: 'var(--theme-border, #e2e8f0)',
           }}
-          className="theme-canvas bg-white rounded-2xl shadow-2xl overflow-hidden min-h-[200px] flex flex-col"
+          className="theme-canvas rounded-2xl shadow-2xl overflow-hidden min-h-[200px] flex flex-col"
         >
-          {themeRules && <style>{themeRules}</style>}
           {/* Browser chrome */}
-          <div className="flex items-center gap-1.5 px-4 py-2.5 bg-gray-100 border-b border-gray-200 shrink-0">
+          <div
+            className="flex items-center gap-1.5 px-4 py-2.5 bg-gray-100 border-b shrink-0"
+            style={{ borderColor: 'var(--theme-border, rgba(0,0,0,0.08))' }}
+          >
             <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
             <div className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
             <div className="w-2.5 h-2.5 rounded-full bg-green-400" />
@@ -231,9 +228,9 @@ export default function PreviewModal({ open, onClose }) {
           </div>
 
           {/* Rendered content */}
-          <div className="flex-1 p-4 overflow-auto">
+          <div className="flex-1 p-4 overflow-auto" style={{ backgroundColor: 'var(--theme-bg, #ffffff)', color: 'var(--theme-text, #0f172a)' }}>
             {rows.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-40 gap-2 text-gray-400">
+              <div className="flex flex-col items-center justify-center h-40 gap-2 opacity-50" style={{ color: 'var(--theme-text-muted, #94a3b8)' }}>
                 <span className="text-3xl">🎨</span>
                 <p className="text-sm">Nothing to preview yet — add some elements first</p>
               </div>
@@ -241,7 +238,7 @@ export default function PreviewModal({ open, onClose }) {
               <PreviewRows rows={rows} device={device} />
             )}
           </div>
-        </div>
+        </ThemeProvider>
       </div>
     </div>
   );
