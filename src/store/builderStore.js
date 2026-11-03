@@ -253,6 +253,17 @@ const defaultElementProps = {
     ],
     buttonLabel: 'Submit',
   },
+  footer: {
+    brand: 'Brand', logoUrl: '', logoAlign: 'left',
+    links: 'Privacy Policy, Terms, Contact, Support', submenus: '',
+    copyright: '© 2026 Company',
+    bg: '#111827', color: '#ffffff', textAlign: 'center', shadow: false,
+    fontSize: { desktop: 14, tablet: 13, mobile: 12 },
+    fontWeight: { desktop: 'medium', tablet: 'medium', mobile: 'medium' },
+    lineHeight: { desktop: 1.4, tablet: 1.3, mobile: 1.2 },
+    paddingTop: { desktop: 16, tablet: 14, mobile: 12 },
+    paddingBottom: { desktop: 16, tablet: 14, mobile: 12 },
+  },
 };
 
 // Element types that can hold nested rows
@@ -295,10 +306,23 @@ const makeRow = (cols = 2) => ({
   cols: Array.from({ length: cols }, () => makeColumn()),
 });
 
+const createDefaultRows = () => {
+  const navbarRow = makeRow(1);
+  navbarRow.cols[0].elements.push(makeElement("navbar"));
+
+  const heroRow = makeRow(1);
+  heroRow.cols[0].elements.push(makeElement("hero"));
+
+  const footerRow = makeRow(1);
+  footerRow.cols[0].elements.push(makeElement("footer"));
+
+  return [navbarRow, heroRow, footerRow];
+};
+
 const makeDocument = (name = 'My Component') => ({
   id: nanoid(),
   name,
-  rows: [],
+  rows: createDefaultRows(),
 });
 
 function getUniqueThemeSlug(name, themes, attempt = 0) {
@@ -450,6 +474,7 @@ const useBuilderStore = create(
 
       initNewDbPage: ({ name = 'New Page', slug = 'new-page', themeId = '' } = {}) => {
         const doc = makeDocument(name);
+
         set({
           activeDbPageId: null,
           pageMeta: {
@@ -460,14 +485,15 @@ const useBuilderStore = create(
           },
           documents: [doc],
           activeDocId: doc.id,
-          rows: [],
+          rows: doc.rows,
           selectedId: null,
           selectedType: null,
           _history: { past: [], future: [] },
         });
       },
 
-      rows: [],
+
+      rows: createDefaultRows(),
       selectedId: null,
       selectedType: null,
       device: 'desktop',
@@ -1124,7 +1150,7 @@ const useBuilderStore = create(
         set({
           documents: [...syncedDocs, doc],
           activeDocId: doc.id,
-          rows: [],
+          rows: createDefaultRows(),
           selectedId: null,
           selectedType: null,
           _history: { past: [], future: [] },
@@ -1387,6 +1413,8 @@ const useBuilderStore = create(
     }
   )
 );
+
+
 
 // Recursively regenerates every id in a row subtree so duplicated rows
 // never share IDs with their originals — dnd-kit requires all IDs to be
