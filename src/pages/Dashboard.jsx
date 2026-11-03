@@ -28,7 +28,7 @@ import {
     Upload,
 } from 'lucide-react';
 import { authenticatedFetch, getApiUrl } from '../utils/api';
-import { clearAuthSession } from '../utils/auth';
+import { clearAuthSession, getAuthUser, saveAuthUser } from '../utils/auth';
 import { ensureUserTheme } from '../utils/ensureUserTheme';
 import useBuilderStore from '../store/builderStore';
 import ConfigurationAndThemes from "./ConfigurationAndThemes";
@@ -58,6 +58,13 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
 
     const [profileOpen, setProfileOpen] = useState(false);
     const profileRef = useRef(null);
+    const [currentUser, setCurrentUser] = useState(getAuthUser);
+    const [profileModalOpen, setProfileModalOpen] = useState(false);
+    const [profileName, setProfileName] = useState('');
+    const [profileImage, setProfileImage] = useState(null);
+    const [profileError, setProfileError] = useState('');
+    const [savingProfile, setSavingProfile] = useState(false);
+    const profileDisplayName = currentUser?.name?.trim() || currentUser?.email || 'Your profile';
 
     // Database Data States
     const [pages, setPages] = useState([]);
@@ -109,11 +116,16 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
         return Promise.all([
             authenticatedFetch('/api/pages').then((r) => r.json()),
             authenticatedFetch('/api/themes').then((r) => r.json()),
+            authenticatedFetch('/api/auth/me').then((r) => r.json()),
             fetch(getApiUrl('/api/health')).then((r) => r.json()).catch(() => ({ status: 'error', database: 'unavailable' })),
-        ]).then(([pagesRes, themesRes, healthRes]) => {
+        ]).then(([pagesRes, themesRes, userRes, healthRes]) => {
             if (pagesRes.data) setPages(pagesRes.data);
             if (themesRes.data) {
                 setThemes(themesRes.data);
+            }
+            if (userRes.data?.user) {
+                setCurrentUser(userRes.data.user);
+                saveAuthUser(userRes.data.user);
             }
             if (healthRes) setHealth(healthRes);
         }).catch((err) => {
@@ -133,12 +145,17 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
         Promise.all([
             authenticatedFetch('/api/pages').then((r) => r.json()),
             authenticatedFetch('/api/themes').then((r) => r.json()),
+            authenticatedFetch('/api/auth/me').then((r) => r.json()),
             fetch(getApiUrl('/api/health')).then((r) => r.json()).catch(() => ({ status: 'error', database: 'unavailable' })),
-        ]).then(([pagesRes, themesRes, healthRes]) => {
+        ]).then(([pagesRes, themesRes, userRes, healthRes]) => {
             if (!isMounted) return;
             if (pagesRes.data) setPages(pagesRes.data);
             if (themesRes.data) {
                 setThemes(themesRes.data);
+            }
+            if (userRes.data?.user) {
+                setCurrentUser(userRes.data.user);
+                saveAuthUser(userRes.data.user);
             }
             if (healthRes) setHealth(healthRes);
             setLoading(false);
@@ -155,6 +172,81 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
         };
     }, []);
 
+    const openProfileModal = () => {
+        setProfileName(currentUser?.name || '');
+        setProfileImage(currentUser?.profileImage || null);
+        setProfileError('');
+        setProfileOpen(false);
+        setProfileModalOpen(true);
+    };
+
+    const handleProfileImageChange = async (event) => {
+        const file = event.target.files?.[0];
+        event.target.value = '';
+        if (!file) return;
+        if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+            setProfileError('Choose a PNG, JPEG, or WebP image.');
+            return;
+        }
+        if (file.size > 2 * 1024 * 1024) {
+            setProfileError('Profile images must be no larger than 2 MB.');
+            return;
+        }
+
+        try {
+            const imageDataUrl = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    if (typeof reader.result === 'string') {
+                        resolve(reader.result);
+                    } else {
+                        reject(new Error('Could not read the selected image.'));
+                    }
+                };
+                reader.onerror = () => reject(new Error('Could not read the selected image.'));
+                reader.readAsDataURL(file);
+            });
+            setProfileImage(imageDataUrl);
+            setProfileError('');
+        } catch (err) {
+            setProfileError(err.message || 'Could not read the selected image.');
+        }
+    };
+
+    const handleProfileSave = async (event) => {
+        event.preventDefault();
+        const name = profileName.trim();
+        if (!name) {
+            setProfileError('Please enter your name.');
+            return;
+        }
+        if (name.length > 80) {
+            setProfileError('Name must be 80 characters or fewer.');
+            return;
+        }
+
+        setSavingProfile(true);
+        setProfileError('');
+        try {
+            const response = await authenticatedFetch('/api/auth/me', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, profileImage }),
+            });
+            const result = await response.json();
+            if (!response.ok) {
+                throw new Error(result.error?.message || 'Could not update your profile.');
+            }
+            setCurrentUser(result.data.user);
+            saveAuthUser(result.data.user);
+            setProfileModalOpen(false);
+            showToast('Profile updated successfully.');
+        } catch (err) {
+            setProfileError(err.message || 'Could not update your profile.');
+        } finally {
+            setSavingProfile(false);
+        }
+    };
     // Handle auto-slug creation
     const handleNameChange = (val) => {
         setNewPageName(val);
@@ -372,11 +464,15 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                             className="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-full hover:bg-slate-100 border border-slate-200/80 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                             aria-label="User account menu"
                         >
-                            <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center text-xs font-semibold shadow-xs">
-                                AU
+                            <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-xs overflow-hidden">
+                                {currentUser?.profileImage ? (
+                                    <img src={currentUser.profileImage} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                    <User size={15} />
+                                )}
                             </div>
                             <span className="text-xs font-medium text-slate-700 hidden sm:inline">
-                                Admin User
+                                {profileDisplayName}
                             </span>
                             <ChevronDown
                                 size={14}
@@ -390,16 +486,15 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                             <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-100 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
                                 <div className="px-4 py-2 border-b border-slate-100">
                                     <p className="text-xs font-semibold text-slate-800">
-                                        Admin User
+                                        {profileDisplayName}
                                     </p>
-                                    <p className="text-[11px] text-slate-400">admin@compify.dev</p>
+                                    <p className="text-[11px] text-slate-400">{currentUser?.email}</p>
                                 </div>
 
                                 <div className="py-1">
                                     <button
                                         onClick={() => {
-                                            setProfileOpen(false);
-                                            showToast('User Profile modal (placeholder)');
+                                            openProfileModal();
                                         }}
                                         className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors"
                                     >
@@ -1389,6 +1484,105 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                 {deleting ? 'Deleting...' : 'Delete Permanently'}
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {profileModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200">
+                        <div className="px-6 py-5 border-b border-slate-100 flex items-start justify-between">
+                            <div>
+                                <h2 className="font-bold text-base text-slate-800">My Profile</h2>
+                                <p className="text-xs text-slate-500 mt-1">Update your name and profile image.</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setProfileModalOpen(false)}
+                                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100"
+                                aria-label="Close profile editor"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleProfileSave} className="p-6 space-y-5">
+                            <div>
+                                <label htmlFor="profile-name" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                                    Name
+                                </label>
+                                <input
+                                    id="profile-name"
+                                    type="text"
+                                    value={profileName}
+                                    onChange={(event) => setProfileName(event.target.value)}
+                                    maxLength={80}
+                                    required
+                                    autoFocus
+                                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                    placeholder="Your name"
+                                />
+                            </div>
+
+                            <div>
+                                <span className="block text-xs font-semibold text-slate-700 mb-2">
+                                    Profile image
+                                </span>
+                                <div className="flex items-center gap-3">
+                                    <div className="w-14 h-14 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden text-slate-400">
+                                        {profileImage ? (
+                                            <img src={profileImage} alt="Profile preview" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <User size={22} />
+                                        )}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <label className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-700 border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors">
+                                            <Upload size={14} />
+                                            Choose image
+                                            <input
+                                                type="file"
+                                                accept="image/png,image/jpeg,image/webp"
+                                                onChange={handleProfileImageChange}
+                                                className="sr-only"
+                                                aria-label="Choose profile image"
+                                            />
+                                        </label>
+                                        {profileImage && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setProfileImage(null)}
+                                                className="px-3 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
+                                            >
+                                                Remove
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                                <p className="text-[11px] text-slate-400 mt-2">PNG, JPEG, or WebP; up to 2 MB.</p>
+                            </div>
+
+                            {profileError && (
+                                <p className="text-xs text-rose-600" role="alert">{profileError}</p>
+                            )}
+
+                            <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+                                <button
+                                    type="button"
+                                    onClick={() => setProfileModalOpen(false)}
+                                    className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={savingProfile}
+                                    className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-xl shadow-xs transition-colors"
+                                >
+                                    {savingProfile ? 'Saving...' : 'Save Profile'}
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

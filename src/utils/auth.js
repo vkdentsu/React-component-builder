@@ -14,6 +14,23 @@ export function getAuthUserId() {
   }
 }
 
+export function getAuthUser() {
+  try {
+    return JSON.parse(localStorage.getItem(AUTH_USER_KEY) || "null");
+  } catch {
+    return null;
+  }
+}
+
+export function saveAuthUser(user) {
+  if (!user || typeof user.id !== "string" || !user.id) {
+    throw new Error("The authentication response did not include a user ID.");
+  }
+  const userWithoutImage = { ...user };
+  delete userWithoutImage.profileImage;
+  localStorage.setItem(AUTH_USER_KEY, JSON.stringify(userWithoutImage));
+}
+
 export function saveAuthSession(session) {
   if (!session || typeof session.accessToken !== "string" || !session.accessToken) {
     throw new Error("The authentication response did not include an access token.");
@@ -23,7 +40,7 @@ export function saveAuthSession(session) {
   }
 
   localStorage.setItem(AUTH_TOKEN_KEY, session.accessToken);
-  localStorage.setItem(AUTH_USER_KEY, JSON.stringify(session.user));
+  saveAuthUser(session.user);
 }
 
 export function clearAuthSession() {
