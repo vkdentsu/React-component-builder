@@ -395,6 +395,19 @@ function migrateRows(rows = []) {
   }));
 }
 
+function collectRowTreeIds(rows, ids) {
+  for (const row of rows) {
+    if (row.id) ids.add(row.id);
+    for (const col of row.cols || []) {
+      if (col.id) ids.add(col.id);
+      for (const element of col.elements || []) {
+        if (element.id) ids.add(element.id);
+        if (Array.isArray(element.rows)) collectRowTreeIds(element.rows, ids);
+      }
+    }
+  }
+}
+
 const HISTORY_LIMIT = 50;
 const customFontsStorageKey = () =>
   `component-builder-custom-fonts:${getAuthUserId() || 'anonymous'}`;
@@ -429,6 +442,7 @@ const useBuilderStore = create(
       activeDocId: null, // set on first access below
 
       // Database Page Integration
+      builderMode: 'component',
       activeDbPageId: null,
       pageMeta: { name: 'My Page', slug: 'my-page', themeId: '', status: 'DRAFT' },
 
@@ -486,6 +500,7 @@ const useBuilderStore = create(
         }
 
         set({
+          builderMode: 'page',
           activeDbPageId: pageRecord.id,
           pageMeta: {
             name: pageRecord.name || 'Untitled Page',
@@ -520,6 +535,7 @@ const useBuilderStore = create(
         const appliedTheme = get().availableThemes.find((t) => t.id === resolvedThemeId) || defaultTheme;
 
         set({
+          builderMode: 'page',
           activeDbPageId: null,
           pageMeta: {
             name,
@@ -534,6 +550,57 @@ const useBuilderStore = create(
           selectedType: null,
           _history: { past: [], future: [] },
           activeTheme: appliedTheme,
+        });
+      },
+
+      loadComponentFromDb: (componentRecord) => {
+        if (!componentRecord) return;
+
+        const content = componentRecord.contentJson || {};
+        const rows = migrateRows(sanitizeRows(Array.isArray(content.rows) ? content.rows : []));
+        const current = get();
+        const syncedDocs = current.documents.map((document) =>
+          document.id === current.activeDocId ? { ...document, rows: current.rows } : document
+        );
+        const existing = syncedDocs.find((document) => document.dbComponentId === componentRecord.id);
+        const componentDoc = existing
+          ? { ...existing, name: componentRecord.name, rows, dbComponentId: componentRecord.id }
+          : {
+            id: nanoid(),
+            dbComponentId: componentRecord.id,
+            name: componentRecord.name,
+            rows,
+          };
+        const documents = existing
+          ? syncedDocs.map((document) => document.id === existing.id ? componentDoc : document)
+          : [...syncedDocs, componentDoc];
+
+        set({
+          builderMode: 'component',
+          documents,
+          activeDocId: componentDoc.id,
+          rows,
+          selectedId: null,
+          selectedType: null,
+          _history: { past: [], future: [] },
+          ...(content.globalFont ? { globalFont: content.globalFont } : {}),
+          ...(Array.isArray(content.customFonts) ? { customFonts: content.customFonts } : {}),
+          ...(content.device ? { device: content.device } : {}),
+        });
+      },
+
+      markComponentSaved: (componentRecord) => {
+        if (!componentRecord) return;
+        const { activeDocId, documents, rows } = get();
+        set({
+          documents: documents.map((document) => document.id === activeDocId
+            ? {
+              ...document,
+              name: componentRecord.name,
+              rows,
+              dbComponentId: componentRecord.id,
+            }
+            : document),
         });
       },
 
@@ -901,6 +968,35 @@ const useBuilderStore = create(
         return row.id;
       },
 
+      insertRows: (sourceRows, hops = [], afterRowId = null) => {
+        if (!Array.isArray(sourceRows) || sourceRows.length === 0) return 0;
+
+        const state = get();
+        const existingIds = new Set();
+        collectRowTreeIds(state.rows, existingIds);
+        const rowsToInsert = sanitizeRows(sourceRows, existingIds);
+        if (rowsToInsert.length === 0) return 0;
+
+        state._pushHistory();
+        set((current) => ({
+          rows: updateRowsAtLocation(current.rows, hops, (localRows) => {
+            const targetIndex = afterRowId
+              ? localRows.findIndex((row) => row.id === afterRowId)
+              : -1;
+            const insertionIndex = targetIndex >= 0 ? targetIndex + 1 : localRows.length;
+            const boundedIndex = Math.max(0, insertionIndex);
+            return [
+              ...localRows.slice(0, boundedIndex),
+              ...rowsToInsert,
+              ...localRows.slice(boundedIndex),
+            ];
+          }),
+          selectedId: null,
+          selectedType: null,
+        }));
+        return rowsToInsert.length;
+      },
+
       removeRow: (rowId) => {
         const loc = findRowLocation(get().rows, rowId);
         if (!loc) return;
@@ -1212,6 +1308,23 @@ const useBuilderStore = create(
         });
       },
 
+      newComponent: () => {
+        const { documents, rows, activeDocId } = get();
+        const syncedDocs = documents.map((d) => (d.id === activeDocId ? { ...d, rows } : d));
+        const doc = { ...makeDocument(`Component ${documents.length + 1}`), rows: [] };
+        set({
+          builderMode: 'component',
+          documents: [...syncedDocs, doc],
+          activeDocId: doc.id,
+          rows: [],
+          activeDbPageId: null,
+          pageMeta: { name: 'My Page', slug: 'my-page', themeId: '', status: 'DRAFT' },
+          selectedId: null,
+          selectedType: null,
+          _history: { past: [], future: [] },
+        });
+      },
+
       switchDocument: (docId) => {
         const { documents, rows, activeDocId } = get();
         if (docId === activeDocId) return;
@@ -1378,9 +1491,11 @@ const useBuilderStore = create(
           };
         }
 
-        const syncedDocs = documents.map((d) =>
-          d.id === activeDocId ? { ...d, rows } : d
-        );
+        const syncedDocs = documents.map((document) => ({
+          id: document.id,
+          name: document.name,
+          rows: document.id === activeDocId ? rows : document.rows,
+        }));
 
         return {
           state: {
@@ -1414,6 +1529,7 @@ const useBuilderStore = create(
           globalFont: state.globalFont,
           customFonts: state.customFonts,
           activeDbPageId: state.activeDbPageId,
+          builderMode: state.builderMode,
           pageMeta: state.pageMeta,
           activeTheme: state.activeTheme,
           availableThemes: state.availableThemes,

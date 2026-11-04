@@ -44,6 +44,9 @@ export default function CustomBuilder() {
   const [activeDrag, setActiveDrag] = useState(null);
   // Saving & Toast states
   const [isSaving, setIsSaving] = useState(false);
+  const [saveComponentOpen, setSaveComponentOpen] = useState(false);
+  const [componentName, setComponentName] = useState('');
+  const [isSavingComponent, setIsSavingComponent] = useState(false);
   const [toast, setToast] = useState(null);
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -55,6 +58,7 @@ export default function CustomBuilder() {
   const {
     rows,
     addRow,
+    insertRows,
     addElement,
     updateElement,
     reorderElements,
@@ -69,16 +73,21 @@ export default function CustomBuilder() {
     canUndo,
     canRedo,
     globalFont,
+    builderMode,
     activeDbPageId,
+    documents,
+    activeDocId,
     pageMeta,
     setPageMeta,
     setActiveDbPageId,
     loadPageFromDb,
     initNewDbPage,
+    markComponentSaved,
     fetchThemes,
     isThemeModalOpen,
     closeThemeModal,
   } = useBuilderStore();
+  const isComponentMode = !pageIdFromUrl && builderMode === 'component';
 
   // Load database page if pageId is in URL
   useEffect(() => {
@@ -208,6 +217,51 @@ export default function CustomBuilder() {
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
 
+  const handleSaveComponent = async (event) => {
+    event.preventDefault();
+    const name = componentName.trim();
+    if (!name) return;
+
+    const activeDocument = documents.find((document) => document.id === activeDocId);
+    if (!activeDocument) {
+      showToast('Create a component before saving.', 'error');
+      return;
+    }
+
+    try {
+      setIsSavingComponent(true);
+      const contentJson = {
+        rows,
+        globalFont,
+        customFonts: useBuilderStore.getState().customFonts,
+        device: useBuilderStore.getState().device,
+      };
+      const isExistingComponent = Boolean(activeDocument.dbComponentId);
+      const response = await authenticatedFetch(
+        isExistingComponent ? `/api/components/${activeDocument.dbComponentId}` : '/api/components',
+        {
+          method: isExistingComponent ? 'PATCH' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, contentJson }),
+        },
+      );
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error?.message || 'Failed to save component.');
+      }
+
+      markComponentSaved(result.data);
+      setSaveComponentOpen(false);
+      window.dispatchEvent(new Event('components:saved'));
+      showToast(`Component "${result.data.name}" saved to your library.`);
+    } catch (error) {
+      console.error('Save component error:', error);
+      showToast(error.message, 'error');
+    } finally {
+      setIsSavingComponent(false);
+    }
+  };
+
   // Collision detection: prefer column / root drop zones 
   const collisionDetection = (args) => {
     const pointerCollisions = pointerWithin(args);
@@ -257,6 +311,23 @@ export default function CustomBuilder() {
           addRow(activeData.cols, [...colParsed.hops, wrapperId]);
         }
         return;
+      }
+      return;
+    }
+
+    if (activeData?.dragType === DRAG_TYPES.SAVED_COMPONENT) {
+      const colParsed = parseColDroppableId(overId);
+      const rootParsed = parseRootDroppableId(overId);
+      const insertedCount = colParsed
+        ? insertRows(activeData.rows, colParsed.hops, colParsed.rowId)
+        : rootParsed
+          ? insertRows(activeData.rows, rootParsed.hops)
+          : 0;
+
+      if (insertedCount > 0) {
+        showToast(`Added "${activeData.componentName}" to the page.`);
+      } else {
+        showToast('This saved component has no rows to add.', 'error');
       }
       return;
     }
@@ -370,6 +441,15 @@ export default function CustomBuilder() {
       );
     }
 
+    if (data?.dragType === DRAG_TYPES.SAVED_COMPONENT) {
+      return (
+        <div className="flex items-center gap-2 rounded-lg border border-emerald-300 bg-white px-4 py-3 shadow-xl opacity-90">
+          <span className="text-sm font-medium text-emerald-700">{data.componentName}</span>
+          <span className="text-xs text-gray-400">Component</span>
+        </div>
+      );
+    }
+
     if (data?.elementId) {
       const findDeep = (rowsArr) => {
         for (const r of rowsArr) for (const c of r.cols) {
@@ -409,14 +489,21 @@ export default function CustomBuilder() {
           onPreview={() => setPreviewOpen(true)}
           canUndo={canUndo()}
           canRedo={canRedo()}
-          onSavePage={() => handleSavePage()}
-          isSaving={isSaving}
+          onSavePage={!isComponentMode ? () => handleSavePage() : undefined}
+          isSaving={!isComponentMode && isSaving}
           pageMeta={pageMeta}
           onEditPageSettings={() => setPageSettingsOpen(true)}
 
         />
         <div className="flex flex-1 min-h-0">
-          <Sidebar />
+          <Sidebar
+            onSaveComponent={isComponentMode ? () => {
+              const activeDocument = documents.find((document) => document.id === activeDocId);
+              setComponentName(activeDocument?.name || 'My Component');
+              setSaveComponentOpen(true);
+            } : undefined}
+            isSavingComponent={isComponentMode && isSavingComponent}
+          />
           <Canvas />
           <PropsPanel />
         </div>
@@ -523,6 +610,57 @@ export default function CustomBuilder() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {saveComponentOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+          <form
+            onSubmit={handleSaveComponent}
+            className="w-full max-w-sm overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+          >
+            <div className="border-b border-slate-100 bg-slate-50 px-5 py-4">
+              <h3 className="text-sm font-semibold text-slate-800">
+                {documents.find((document) => document.id === activeDocId)?.dbComponentId
+                  ? 'Save Component Changes'
+                  : 'Save Component'}
+              </h3>
+              <p className="mt-1 text-xs text-slate-500">
+                Save this component to your reusable component library.
+              </p>
+            </div>
+            <div className="p-5">
+              <label htmlFor="saved-component-name" className="mb-1 block text-xs font-medium text-slate-700">
+                Component name
+              </label>
+              <input
+                id="saved-component-name"
+                autoFocus
+                required
+                maxLength={120}
+                value={componentName}
+                onChange={(event) => setComponentName(event.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+              />
+            </div>
+            <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-5 py-3">
+              <button
+                type="button"
+                onClick={() => setSaveComponentOpen(false)}
+                disabled={isSavingComponent}
+                className="rounded-lg px-3.5 py-2 text-xs text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSavingComponent || !componentName.trim()}
+                className="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+              >
+                {isSavingComponent ? 'Saving...' : 'Save Component'}
+              </button>
+            </div>
+          </form>
         </div>
       )}
 
