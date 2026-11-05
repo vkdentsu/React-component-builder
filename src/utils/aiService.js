@@ -1,5 +1,3 @@
-import { getApiUrl } from "./api";
-
 async function fileToBase64(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
