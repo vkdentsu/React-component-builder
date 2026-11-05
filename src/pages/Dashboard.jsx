@@ -120,14 +120,14 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
         return Promise.all([
             authenticatedFetch('/api/pages').then((r) => r.json()),
             authenticatedFetch('/api/components').then((r) => r.json()),
-            authenticatedFetch('/api/themes').then((r) => r.json()),
+            useBuilderStore.getState().fetchThemes(),
             authenticatedFetch('/api/auth/me').then((r) => r.json()),
             fetch(getApiUrl('/api/health')).then((r) => r.json()).catch(() => ({ status: 'error', database: 'unavailable' })),
         ]).then(([pagesRes, componentsRes, themesRes, userRes, healthRes]) => {
             if (pagesRes.data) setPages(pagesRes.data);
             if (componentsRes.data) setComponents(componentsRes.data);
-            if (themesRes.data) {
-                setThemes(themesRes.data);
+            if (themesRes) {
+                setThemes(Array.isArray(themesRes) ? themesRes : (themesRes.data || []));
             }
             if (userRes.data?.user) {
                 setCurrentUser(userRes.data.user);
@@ -173,15 +173,15 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
         Promise.all([
             authenticatedFetch('/api/pages').then((r) => r.json()),
             authenticatedFetch('/api/components').then((r) => r.json()),
-            authenticatedFetch('/api/themes').then((r) => r.json()),
+            useBuilderStore.getState().fetchThemes(),
             authenticatedFetch('/api/auth/me').then((r) => r.json()),
             fetch(getApiUrl('/api/health')).then((r) => r.json()).catch(() => ({ status: 'error', database: 'unavailable' })),
         ]).then(([pagesRes, componentsRes, themesRes, userRes, healthRes]) => {
             if (!isMounted) return;
             if (pagesRes.data) setPages(pagesRes.data);
             if (componentsRes.data) setComponents(componentsRes.data);
-            if (themesRes.data) {
-                setThemes(themesRes.data);
+            if (themesRes) {
+                setThemes(Array.isArray(themesRes) ? themesRes : (themesRes.data || []));
             }
             if (userRes.data?.user) {
                 setCurrentUser(userRes.data.user);
@@ -304,10 +304,25 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
         setCreateError('');
 
         try {
+            const storeThemes = useBuilderStore.getState().availableThemes?.length
+                ? useBuilderStore.getState().availableThemes
+                : themes;
             const storeDefaultId = useBuilderStore.getState().defaultThemeId;
-            const defaultTheme = themes.find((t) => t.id === storeDefaultId)
-                || (themes[0]?.id ? themes[0] : await ensureUserTheme());
-            const themeIdToUse = newPageThemeId || defaultTheme.id;
+            const defaultTheme = storeThemes.find((t) => t.id === storeDefaultId)
+                || storeThemes[0]
+                || useBuilderStore.getState().activeTheme;
+            const selectedTheme = storeThemes.find((t) => t.id === newPageThemeId);
+            const targetTheme = selectedTheme || defaultTheme;
+
+            let themeIdToUse = targetTheme?.id;
+            const isPreset = !themeIdToUse ||
+                String(themeIdToUse).startsWith('preset-') ||
+                Boolean(targetTheme?.isPreset);
+
+            if (isPreset) {
+                const persistedTheme = await ensureUserTheme(targetTheme || themeIdToUse);
+                themeIdToUse = persistedTheme.id;
+            }
 
             const res = await authenticatedFetch('/api/pages', {
                 method: 'POST',
@@ -333,8 +348,7 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
             showToast(`Page "${json.data.name}" created with theme! Opening builder...`);
 
             // Apply theme to builder store
-            const appliedTheme = themes.find((t) => t.id === themeIdToUse) || defaultTheme;
-            useBuilderStore.getState().selectTheme(appliedTheme.id);
+            useBuilderStore.getState().selectTheme(themeIdToUse);
 
             // Refresh list and navigate to builder with newly created page id
             await loadData();

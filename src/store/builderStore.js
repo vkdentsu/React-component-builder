@@ -11,7 +11,8 @@ import {
 } from '../utils/treeHelpers';
 import { validateImportJson, sanitizeRows } from '../utils/jsonImporter';
 import {
-  THEME_PRESETS,
+  BUILT_IN_PRESET_THEMES,
+  mergeThemes,
   normalizeThemeConfig,
 } from '../utils/themeDefaults';
 import { authenticatedFetch } from '../utils/api';
@@ -335,7 +336,7 @@ function getUniqueThemeSlug(name, themes, attempt = 0) {
     .replace(/^-|-$/g, '') || 'theme';
   const usedSlugs = new Set(
     themes
-      .filter((theme) => !String(theme.id).startsWith('preset-'))
+      .filter((theme) => !String(theme.id).startsWith('preset-') && !theme.isPreset)
       .map((theme) => theme.slug),
   );
   let suffix = attempt;
@@ -487,12 +488,11 @@ const useBuilderStore = create(
                 const loadedTheme = {
                   ...res.data,
                   configJson: normalizeThemeConfig(res.data.configJson),
+                  isPreset: false,
                 };
                 set((state) => ({
                   activeTheme: loadedTheme,
-                  availableThemes: state.availableThemes.some((t) => t.id === loadedTheme.id)
-                    ? state.availableThemes.map((t) => (t.id === loadedTheme.id ? loadedTheme : t))
-                    : [...state.availableThemes, loadedTheme],
+                  availableThemes: mergeThemes([loadedTheme, ...state.availableThemes], BUILT_IN_PRESET_THEMES),
                 }));
               }
             })
@@ -524,13 +524,7 @@ const useBuilderStore = create(
         const defaultId = get().defaultThemeId;
         const defaultTheme = get().availableThemes.find((t) => t.id === defaultId)
           || get().availableThemes[0]
-          || {
-          id: 'preset-0',
-          name: THEME_PRESETS[0].name,
-          slug: THEME_PRESETS[0].slug,
-          configJson: normalizeThemeConfig(THEME_PRESETS[0].configJson),
-          _count: { pages: 0 },
-        };
+          || BUILT_IN_PRESET_THEMES[0];
         const resolvedThemeId = themeId || defaultTheme.id;
         const appliedTheme = get().availableThemes.find((t) => t.id === resolvedThemeId) || defaultTheme;
 
@@ -633,20 +627,8 @@ const useBuilderStore = create(
 
       // ── Themes ─────────────────────────────────────────────────
       defaultThemeId: 'preset-0',
-      activeTheme: {
-        id: 'preset-0',
-        name: THEME_PRESETS[0].name,
-        slug: THEME_PRESETS[0].slug,
-        configJson: normalizeThemeConfig(THEME_PRESETS[0].configJson),
-        _count: { pages: 0 },
-      },
-      availableThemes: THEME_PRESETS.map((p, idx) => ({
-        id: `preset-${idx}`,
-        name: p.name,
-        slug: p.slug,
-        configJson: normalizeThemeConfig(p.configJson),
-        _count: { pages: 0 },
-      })),
+      activeTheme: BUILT_IN_PRESET_THEMES[0],
+      availableThemes: BUILT_IN_PRESET_THEMES,
       isThemeModalOpen: false,
       themeModalInitialTab: 'palette',
       themeLoading: false,
@@ -676,17 +658,10 @@ const useBuilderStore = create(
           const serverThemes = (json.data || []).map((t) => ({
             ...t,
             configJson: normalizeThemeConfig(t.configJson),
+            isPreset: false,
           }));
 
-          const presets = THEME_PRESETS.map((p, idx) => ({
-            id: `preset-${idx}`,
-            name: p.name,
-            slug: p.slug,
-            configJson: normalizeThemeConfig(p.configJson),
-            _count: { pages: 0 },
-          }));
-
-          const combined = serverThemes.length > 0 ? serverThemes : presets;
+          const combined = mergeThemes(serverThemes, BUILT_IN_PRESET_THEMES);
           const currentActive = get().activeTheme;
           let nextActive = currentActive;
 
@@ -705,14 +680,7 @@ const useBuilderStore = create(
           return combined;
         } catch (err) {
           console.warn('fetchThemes fallback to presets:', err.message);
-          const presets = THEME_PRESETS.map((p, idx) => ({
-            id: `preset-${idx}`,
-            name: p.name,
-            slug: p.slug,
-            configJson: normalizeThemeConfig(p.configJson),
-            _count: { pages: 0 },
-          }));
-          const fallbackList = get().availableThemes?.length > 0 ? get().availableThemes : presets;
+          const fallbackList = mergeThemes(get().availableThemes || [], BUILT_IN_PRESET_THEMES);
           set({
             themeLoading: false,
             themeError: err.message,
@@ -732,6 +700,9 @@ const useBuilderStore = create(
               ...target,
               configJson: normalizeThemeConfig(target.configJson),
             },
+            ...(state.builderMode === 'page'
+              ? { pageMeta: { ...state.pageMeta, themeId: target.id } }
+              : {}),
           };
         }),
 
@@ -796,10 +767,11 @@ const useBuilderStore = create(
             ...json.data,
             configJson: normalizeThemeConfig(json.data.configJson),
             _count: { pages: 0 },
+            isPreset: false,
           };
 
           set((s) => ({
-            availableThemes: [newTheme, ...s.availableThemes.filter((t) => !String(t.id).startsWith('preset-'))],
+            availableThemes: mergeThemes([newTheme, ...s.availableThemes], BUILT_IN_PRESET_THEMES),
             activeTheme: newTheme,
             themeLoading: false,
           }));
@@ -814,7 +786,7 @@ const useBuilderStore = create(
         set({ themeLoading: true, themeError: null });
         try {
           // If editing a preset, automatically fork it as a new custom theme
-          if (String(id).startsWith('preset-')) {
+          if (String(id).startsWith('preset-') || get().availableThemes.find((t) => t.id === id)?.isPreset) {
             return await get().createTheme({
               name: `${name || get().activeTheme?.name} (Custom)`,
               slug,
@@ -835,6 +807,7 @@ const useBuilderStore = create(
             if (get().availableThemes.some((theme) =>
               theme.id !== id &&
               !String(theme.id).startsWith('preset-') &&
+              !theme.isPreset &&
               theme.slug?.toLowerCase() === slug.toLowerCase())) {
               throw new Error('This theme slug is already in use.');
             }
@@ -855,10 +828,14 @@ const useBuilderStore = create(
           const updated = {
             ...json.data,
             configJson: normalizeThemeConfig(json.data.configJson),
+            isPreset: false,
           };
 
           set((s) => ({
-            availableThemes: s.availableThemes.map((t) => (t.id === id ? { ...t, ...updated } : t)),
+            availableThemes: mergeThemes(
+              s.availableThemes.map((t) => (t.id === id ? { ...t, ...updated } : t)),
+              BUILT_IN_PRESET_THEMES
+            ),
             activeTheme: s.activeTheme?.id === id ? { ...s.activeTheme, ...updated } : s.activeTheme,
             themeLoading: false,
           }));
@@ -888,16 +865,22 @@ const useBuilderStore = create(
       deleteTheme: async (id) => {
         set({ themeLoading: true, themeError: null });
         try {
-          if (!String(id).startsWith('preset-')) {
-            const res = await authenticatedFetch(`/api/themes/${id}`, { method: 'DELETE' });
-            if (!res.ok) {
-              const json = await res.json().catch(() => ({}));
-              throw new Error(json.error?.message || 'Failed to delete theme');
-            }
+          const target = get().availableThemes.find((t) => t.id === id);
+          if (String(id).startsWith('preset-') || target?.isPreset) {
+            throw new Error('Default preset themes cannot be deleted.');
+          }
+
+          const res = await authenticatedFetch(`/api/themes/${id}`, { method: 'DELETE' });
+          if (!res.ok) {
+            const json = await res.json().catch(() => ({}));
+            throw new Error(json.error?.message || 'Failed to delete theme');
           }
 
           set((s) => {
-            const nextList = s.availableThemes.filter((t) => t.id !== id);
+            const nextList = mergeThemes(
+              s.availableThemes.filter((t) => t.id !== id),
+              BUILT_IN_PRESET_THEMES
+            );
             const nextActive = s.activeTheme?.id === id ? nextList[0] || null : s.activeTheme;
             return {
               availableThemes: nextList,
@@ -1559,27 +1542,12 @@ const useBuilderStore = create(
         }
 
         if (!state.activeTheme || !state.activeTheme.configJson) {
-          const defaultPreset = THEME_PRESETS[0];
-          state.activeTheme = {
-            id: 'preset-0',
-            name: defaultPreset.name,
-            slug: defaultPreset.slug,
-            configJson: normalizeThemeConfig(defaultPreset.configJson),
-            _count: { pages: 0 },
-          };
+          state.activeTheme = BUILT_IN_PRESET_THEMES[0];
         } else {
           state.activeTheme.configJson = normalizeThemeConfig(state.activeTheme.configJson);
         }
 
-        if (!Array.isArray(state.availableThemes) || state.availableThemes.length === 0) {
-          state.availableThemes = THEME_PRESETS.map((p, idx) => ({
-            id: `preset-${idx}`,
-            name: p.name,
-            slug: p.slug,
-            configJson: normalizeThemeConfig(p.configJson),
-            _count: { pages: 0 },
-          }));
-        }
+        state.availableThemes = mergeThemes(state.availableThemes || [], BUILT_IN_PRESET_THEMES);
       },
     }
   )
