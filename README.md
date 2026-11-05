@@ -52,6 +52,13 @@ or `npm run db:deploy` to apply committed migrations. Start the backend with
 `npm run server`; it listens on port 3001 by default (override with `PORT`) and
 checks the database before accepting requests.
 
+The Vite development server forwards `/api` requests to
+`http://localhost:3001`, so start the backend alongside `npm run dev`. For a
+deployed frontend, set `VITE_BACKEND_URL` to the backend origin (for example,
+`https://api.example.com`, without an `/api` suffix) before building the
+frontend. If the backend uses a non-default local port, update the proxy target
+in `vite.config.js` to match.
+
 ## Expanding the ESLint configuration
 
 If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.

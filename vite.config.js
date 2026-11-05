@@ -63,6 +63,15 @@ export default defineConfig({
   plugins: [sassGlobImports(), react()],
   envPrefix: ['VITE_', 'Vite_BACKEND_URL'],
 
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+    },
+  },
+
   css: {
     preprocessorOptions: {
       scss: {
