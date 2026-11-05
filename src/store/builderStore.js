@@ -454,7 +454,7 @@ const useBuilderStore = create(
 
       setActiveDbPageId: (id) => set({ activeDbPageId: id }),
 
-      loadPageFromDb: (pageRecord) => {
+      loadPageFromDb: async (pageRecord) => {
         if (!pageRecord) return;
         const rawContent = pageRecord.contentJson || {};
         const rawRows = Array.isArray(rawContent.rows)
@@ -471,33 +471,60 @@ const useBuilderStore = create(
           rows: sanitizedRows,
         };
 
-        const assignedThemeId = pageRecord.themeId;
+        const assignedThemeId = pageRecord.themeId || rawContent.themeId || '';
         const available = get().availableThemes || [];
-        let assignedTheme = pageRecord.theme
-          ? {
+
+        // 1. Try availableThemes in store
+        let assignedTheme = available.find((t) => t.id === assignedThemeId);
+
+        // 2. Try pageRecord.theme if it contains a non-empty configJson
+        if (
+          !assignedTheme &&
+          pageRecord.theme?.configJson &&
+          typeof pageRecord.theme.configJson === 'object' &&
+          Object.keys(pageRecord.theme.configJson).length > 0
+        ) {
+          assignedTheme = {
             ...pageRecord.theme,
             configJson: normalizeThemeConfig(pageRecord.theme.configJson),
-          }
-          : available.find((t) => t.id === assignedThemeId);
+            isPreset: false,
+          };
+        }
 
-        if (!assignedTheme && assignedThemeId) {
-          authenticatedFetch(`/api/themes/${assignedThemeId}`)
-            .then((r) => r.json())
-            .then((res) => {
-              if (res?.data?.id) {
-                const loadedTheme = {
-                  ...res.data,
-                  configJson: normalizeThemeConfig(res.data.configJson),
+        // 3. Try presets if assignedThemeId is a preset id
+        if (!assignedTheme && assignedThemeId && String(assignedThemeId).startsWith('preset-')) {
+          assignedTheme = BUILT_IN_PRESET_THEMES.find((t) => t.id === assignedThemeId);
+        }
+
+        // 4. If assignedThemeId is a database theme not yet in availableThemes, fetch it from API
+        if (!assignedTheme && assignedThemeId && !String(assignedThemeId).startsWith('preset-')) {
+          try {
+            const res = await authenticatedFetch(`/api/themes/${assignedThemeId}`);
+            if (res.ok) {
+              const themeRes = await res.json();
+              if (themeRes?.data?.id) {
+                assignedTheme = {
+                  ...themeRes.data,
+                  configJson: normalizeThemeConfig(themeRes.data.configJson),
                   isPreset: false,
                 };
-                set((state) => ({
-                  activeTheme: loadedTheme,
-                  availableThemes: mergeThemes([loadedTheme, ...state.availableThemes], BUILT_IN_PRESET_THEMES),
-                }));
               }
-            })
-            .catch(() => { });
+            }
+          } catch (err) {
+            console.warn('Failed to fetch assigned theme from server:', err);
+          }
         }
+
+        const finalTheme = assignedTheme
+          ? {
+              ...assignedTheme,
+              configJson: normalizeThemeConfig(assignedTheme.configJson),
+            }
+          : get().activeTheme || BUILT_IN_PRESET_THEMES[0];
+
+        const nextAvailableThemes = assignedTheme
+          ? mergeThemes([assignedTheme, ...available], BUILT_IN_PRESET_THEMES)
+          : available;
 
         set({
           builderMode: 'page',
@@ -505,7 +532,7 @@ const useBuilderStore = create(
           pageMeta: {
             name: pageRecord.name || 'Untitled Page',
             slug: pageRecord.slug || '',
-            themeId: assignedThemeId || '',
+            themeId: assignedThemeId || finalTheme.id || '',
             status: pageRecord.status || 'DRAFT',
           },
           documents: [pageDoc],
@@ -514,7 +541,8 @@ const useBuilderStore = create(
           selectedId: null,
           selectedType: null,
           _history: { past: [], future: [] },
-          ...(assignedTheme ? { activeTheme: assignedTheme } : {}),
+          activeTheme: finalTheme,
+          availableThemes: nextAvailableThemes,
           ...(rawContent.globalFont ? { globalFont: rawContent.globalFont } : {}),
         });
       },
@@ -526,7 +554,9 @@ const useBuilderStore = create(
           || get().availableThemes[0]
           || BUILT_IN_PRESET_THEMES[0];
         const resolvedThemeId = themeId || defaultTheme.id;
-        const appliedTheme = get().availableThemes.find((t) => t.id === resolvedThemeId) || defaultTheme;
+        const appliedTheme = get().availableThemes.find((t) => t.id === resolvedThemeId)
+          || BUILT_IN_PRESET_THEMES.find((t) => t.id === resolvedThemeId)
+          || defaultTheme;
 
         set({
           builderMode: 'page',
@@ -636,10 +666,14 @@ const useBuilderStore = create(
 
       setDefaultTheme: (themeId) =>
         set((state) => {
-          const target = state.availableThemes.find((t) => t.id === themeId);
+          const target = state.availableThemes.find((t) => t.id === themeId)
+            || BUILT_IN_PRESET_THEMES.find((t) => t.id === themeId);
           return {
             defaultThemeId: themeId,
             ...(target ? { activeTheme: { ...target, configJson: normalizeThemeConfig(target.configJson) } } : {}),
+            ...(state.builderMode === 'page' || state.activeDbPageId
+              ? { pageMeta: { ...state.pageMeta, themeId: target ? target.id : themeId } }
+              : {}),
           };
         }),
 
@@ -665,7 +699,11 @@ const useBuilderStore = create(
           const currentActive = get().activeTheme;
           let nextActive = currentActive;
 
-          if (!currentActive || !combined.some((t) => t.id === currentActive.id)) {
+          // If currently editing a page with an assigned themeId, always ensure that theme is applied!
+          const activePageThemeId = (get().builderMode === 'page' || get().activeDbPageId) ? get().pageMeta?.themeId : null;
+          if (activePageThemeId && combined.some((t) => t.id === activePageThemeId)) {
+            nextActive = combined.find((t) => t.id === activePageThemeId);
+          } else if (!currentActive || !combined.some((t) => t.id === currentActive.id)) {
             nextActive = combined[0];
           } else {
             const match = combined.find((t) => t.id === currentActive.id);
@@ -681,11 +719,15 @@ const useBuilderStore = create(
         } catch (err) {
           console.warn('fetchThemes fallback to presets:', err.message);
           const fallbackList = mergeThemes(get().availableThemes || [], BUILT_IN_PRESET_THEMES);
+          const activePageThemeId = (get().builderMode === 'page' || get().activeDbPageId) ? get().pageMeta?.themeId : null;
+          const fallbackActive = (activePageThemeId && fallbackList.find((t) => t.id === activePageThemeId))
+            || get().activeTheme
+            || fallbackList[0];
           set({
             themeLoading: false,
             themeError: err.message,
             availableThemes: fallbackList,
-            activeTheme: get().activeTheme || fallbackList[0],
+            activeTheme: fallbackActive,
           });
           return fallbackList;
         }
@@ -693,14 +735,15 @@ const useBuilderStore = create(
 
       selectTheme: (themeId) =>
         set((state) => {
-          const target = state.availableThemes.find((t) => t.id === themeId);
+          const target = state.availableThemes.find((t) => t.id === themeId)
+            || BUILT_IN_PRESET_THEMES.find((t) => t.id === themeId);
           if (!target) return {};
           return {
             activeTheme: {
               ...target,
               configJson: normalizeThemeConfig(target.configJson),
             },
-            ...(state.builderMode === 'page'
+            ...(state.builderMode === 'page' || state.activeDbPageId
               ? { pageMeta: { ...state.pageMeta, themeId: target.id } }
               : {}),
           };
@@ -713,6 +756,9 @@ const useBuilderStore = create(
             ...theme,
             configJson: normalizeThemeConfig(theme.configJson),
           },
+          ...(theme?.id && (state.builderMode === 'page' || state.activeDbPageId)
+            ? { pageMeta: { ...state.pageMeta, themeId: theme.id } }
+            : {}),
         })),
 
       createTheme: async ({ name, slug: requestedSlug, configJson }) => {
@@ -774,6 +820,9 @@ const useBuilderStore = create(
             availableThemes: mergeThemes([newTheme, ...s.availableThemes], BUILT_IN_PRESET_THEMES),
             activeTheme: newTheme,
             themeLoading: false,
+            ...(s.builderMode === 'page' || s.activeDbPageId
+              ? { pageMeta: { ...s.pageMeta, themeId: newTheme.id } }
+              : {}),
           }));
           return newTheme;
         } catch (err) {

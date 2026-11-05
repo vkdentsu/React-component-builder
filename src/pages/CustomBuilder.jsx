@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import {
@@ -91,21 +91,28 @@ export default function CustomBuilder() {
     closeThemeModal,
   } = useBuilderStore();
   const isComponentMode = !pageIdFromUrl && builderMode === 'component';
+  const loadedPageIdRef = useRef(null);
 
   // Load database page if pageId is in URL
   useEffect(() => {
-    if (!pageIdFromUrl) return;
-
-    if (pageIdFromUrl === 'new') {
-      const name = searchParams.get('name') || 'New Page';
-      const slug = searchParams.get('slug') || 'new-page';
-      const themeId = searchParams.get('themeId') || '';
-      initNewDbPage({ name, slug, themeId });
+    if (!pageIdFromUrl) {
+      loadedPageIdRef.current = null;
       return;
     }
 
-    // Only load if different from activeDbPageId to prevent overwriting in-memory edits
-    if (pageIdFromUrl === activeDbPageId) return;
+    if (pageIdFromUrl === 'new') {
+      if (loadedPageIdRef.current !== 'new') {
+        loadedPageIdRef.current = 'new';
+        const name = searchParams.get('name') || 'New Page';
+        const slug = searchParams.get('slug') || 'new-page';
+        const themeId = searchParams.get('themeId') || '';
+        initNewDbPage({ name, slug, themeId });
+      }
+      return;
+    }
+
+    // Only load if not already loaded by this instance to prevent overwriting in-memory edits
+    if (loadedPageIdRef.current === pageIdFromUrl) return;
 
     let cancelled = false;
     const fetchPage = async () => {
@@ -114,7 +121,8 @@ export default function CustomBuilder() {
         if (!res.ok) throw new Error('Page was not found in database');
         const json = await res.json();
         if (!cancelled && json.data) {
-          loadPageFromDb(json.data);
+          loadedPageIdRef.current = pageIdFromUrl;
+          await loadPageFromDb(json.data);
           showToast(`Loaded page "${json.data.name}" from database.`);
         }
       } catch (err) {
@@ -128,7 +136,7 @@ export default function CustomBuilder() {
     return () => {
       cancelled = true;
     };
-  }, [pageIdFromUrl, activeDbPageId, initNewDbPage, loadPageFromDb, searchParams]);
+  }, [pageIdFromUrl, initNewDbPage, loadPageFromDb, searchParams]);
 
   // Save Page to Database Handler
   const handleSavePage = async (overrideMeta) => {
@@ -145,15 +153,8 @@ export default function CustomBuilder() {
     try {
       setIsSaving(true);
 
-      const contentJson = {
-        rows,
-        globalFont,
-        customFonts: useBuilderStore.getState().customFonts,
-        device: useBuilderStore.getState().device,
-      };
-
       // Ensure preset themes are persisted before saving the page
-      let themeIdToUse = meta.themeId || activeTheme?.id;
+      let themeIdToUse = overrideMeta?.themeId || activeTheme?.id || meta.themeId;
       const themeObj = availableThemes.find((t) => t.id === themeIdToUse) || activeTheme;
       const isPreset = !themeIdToUse ||
         String(themeIdToUse).startsWith('preset-') ||
@@ -168,10 +169,18 @@ export default function CustomBuilder() {
 
         // Replace in-memory ID with the persisted theme ID before saving
         setPageMeta({ themeId: persistedTheme.id });
-        if (activeTheme?.id === themeObj?.id || String(activeTheme?.id).startsWith('preset-')) {
-          selectTheme(persistedTheme.id);
-        }
+        selectTheme(persistedTheme.id);
+      } else {
+        setPageMeta({ themeId: themeIdToUse });
       }
+
+      const contentJson = {
+        rows,
+        globalFont,
+        customFonts: useBuilderStore.getState().customFonts,
+        device: useBuilderStore.getState().device,
+        themeId: themeIdToUse,
+      };
 
       if (activeDbPageId) {
         if (!themeIdToUse) {
@@ -195,7 +204,7 @@ export default function CustomBuilder() {
           throw new Error(json.error?.message || 'Failed to update page in database');
         }
 
-        setPageMeta(json.data);
+        setPageMeta({ ...json.data, themeId: themeIdToUse });
         showToast(`Page "${json.data.name}" saved to database!`);
       } else {
         const res = await authenticatedFetch('/api/pages', {
@@ -215,8 +224,9 @@ export default function CustomBuilder() {
           throw new Error(json.error?.message || 'Failed to create page in database');
         }
 
+        loadedPageIdRef.current = json.data.id;
         setActiveDbPageId(json.data.id);
-        setPageMeta(json.data);
+        setPageMeta({ ...json.data, themeId: themeIdToUse });
         window.history.replaceState(null, '', `/custom-builder?pageId=${json.data.id}`);
         showToast(`Page "${json.data.name}" created and saved!`);
       }
@@ -610,6 +620,29 @@ export default function CustomBuilder() {
                     className="flex-1 px-3 py-2 text-xs bg-white font-mono focus:outline-none"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  Page Theme
+                </label>
+                <select
+                  value={pageMeta?.themeId || activeTheme?.id || ''}
+                  onChange={(e) => {
+                    const chosenId = e.target.value;
+                    if (chosenId) {
+                      selectTheme(chosenId);
+                      setPageMeta({ themeId: chosenId });
+                    }
+                  }}
+                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                >
+                  {availableThemes.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} {t.isPreset ? '(Preset)' : ''}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">

@@ -30,6 +30,7 @@ import {
 import { authenticatedFetch, getApiUrl } from '../utils/api';
 import { clearAuthSession, getAuthUser, saveAuthUser } from '../utils/auth';
 import { ensureUserTheme } from '../utils/ensureUserTheme';
+import { BUILT_IN_PRESET_THEMES, mergeThemes } from '../utils/themeDefaults';
 import useBuilderStore from '../store/builderStore';
 import ConfigurationAndThemes from "./ConfigurationAndThemes";
 import MediaAssets from "../components/MediaAssets";
@@ -96,6 +97,20 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
     // Notification Toast
     const [toast, setToast] = useState(null);
     const [openingComponentId, setOpeningComponentId] = useState(null);
+    const [updatingPageThemeId, setUpdatingPageThemeId] = useState(null);
+
+    const allAvailableThemes = useMemo(() => {
+        return mergeThemes(
+            themes.length > 0 ? themes : useBuilderStore.getState().availableThemes,
+            BUILT_IN_PRESET_THEMES
+        );
+    }, [themes]);
+
+    const getPageTheme = (page) => {
+        return allAvailableThemes.find((t) => t.id === page.themeId) ||
+            page.theme ||
+            allAvailableThemes[0];
+    };
 
     const showToast = (message, type = 'success') => {
         setToast({ message, type });
@@ -417,6 +432,62 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
             await loadData();
         } catch (err) {
             showToast(err.message, 'error');
+        }
+    };
+
+    // Edit Page in Builder Handler
+    const handleEditPageInBuilder = (page) => {
+        if (page?.themeId) {
+            useBuilderStore.getState().selectTheme(page.themeId);
+        }
+        navigate(`/custom-builder?pageId=${page.id}`);
+    };
+
+    // Change Page Theme Handler
+    const handleChangePageTheme = async (page, newThemeId) => {
+        if (!newThemeId || newThemeId === page.themeId) return;
+        setUpdatingPageThemeId(page.id);
+        try {
+            const targetTheme = allAvailableThemes.find((t) => t.id === newThemeId);
+            let themeIdToUse = newThemeId;
+
+            const isPreset = String(newThemeId).startsWith('preset-') || Boolean(targetTheme?.isPreset);
+            if (isPreset) {
+                const persistedTheme = await ensureUserTheme(targetTheme || newThemeId);
+                themeIdToUse = persistedTheme.id;
+            }
+
+            const res = await authenticatedFetch(`/api/pages/${page.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ themeId: themeIdToUse }),
+            });
+            const json = await res.json();
+            if (!res.ok) {
+                throw new Error(json.error?.message || 'Failed to update page theme');
+            }
+
+            const updatedTheme = json.data?.theme || targetTheme;
+            setPages((prev) =>
+                prev.map((p) =>
+                    p.id === page.id
+                        ? { ...p, ...json.data, themeId: themeIdToUse, theme: updatedTheme }
+                        : p
+                )
+            );
+
+            // Sync with builder store if active
+            const store = useBuilderStore.getState();
+            if (store.activeDbPageId === page.id) {
+                store.selectTheme(themeIdToUse);
+            }
+
+            showToast(`Theme updated to "${targetTheme?.name || 'Selected Theme'}" for "${page.name}"`);
+        } catch (err) {
+            console.error('Failed to change theme:', err);
+            showToast(err.message || 'Failed to change page theme', 'error');
+        } finally {
+            setUpdatingPageThemeId(null);
         }
     };
 
@@ -774,62 +845,114 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                     </div>
                                 ) : (
                                     <div className="divide-y divide-slate-100">
-                                        {pages.slice(0, 5).map((page) => (
-                                            <div
-                                                key={page.id}
-                                                className="px-6 py-4 flex items-center justify-between hover:bg-slate-50/70 transition-colors group"
-                                            >
-                                                <div className="flex items-center gap-3 min-w-0">
-                                                    <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                                                        <FileText size={16} />
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <div className="flex items-center gap-2">
-                                                            <p className="text-xs font-semibold text-slate-800 truncate">
-                                                                {page.name}
-                                                            </p>
-                                                            <span
-                                                                className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${page.status === 'PUBLISHED'
-                                                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                                                    : 'bg-amber-50 text-amber-700 border border-amber-200'
-                                                                    }`}
-                                                            >
-                                                                {page.status}
-                                                            </span>
-                                                        </div>
-                                                        <p className="text-[11px] text-slate-400 font-mono mt-0.5">
-                                                            /{page.slug}
-                                                        </p>
-                                                    </div>
-                                                </div>
+                                        {pages.slice(0, 5).map((page) => {
+                                            const pageTheme = getPageTheme(page);
+                                            const themeColors = pageTheme?.configJson?.colors || {};
+                                            const isUpdating = updatingPageThemeId === page.id;
 
-                                                <div className="flex items-center gap-4">
-                                                    <span className="text-[11px] text-slate-400 hidden md:inline">
-                                                        Updated {new Date(page.updatedAt || page.createdAt).toLocaleDateString()}
-                                                    </span>
-                                                    <button
-                                                        onClick={() => navigate(`/custom-builder?pageId=${page.id}`)}
-                                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-blue-600 hover:bg-blue-50 border border-blue-200 transition-colors"
-                                                    >
-                                                        <Edit3 size={13} />
-                                                        <span>Edit in Builder</span>
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setResourceToDelete(page);
-                                                            setDeleteResourceType('page');
-                                                            setDeleteModalOpen(true);
-                                                        }}
-                                                        title={`Delete page ${page.name}`}
-                                                        aria-label={`Delete page ${page.name}`}
-                                                        className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors"
-                                                    >
-                                                        <Trash2 size={14} />
-                                                    </button>
+                                            return (
+                                                <div
+                                                    key={page.id}
+                                                    className="px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/70 transition-colors group"
+                                                >
+                                                    <div className="flex items-center gap-3 min-w-0">
+                                                        <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                                                            <FileText size={16} />
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="text-xs font-semibold text-slate-800 truncate">
+                                                                    {page.name}
+                                                                </p>
+                                                                <span
+                                                                    className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${page.status === 'PUBLISHED'
+                                                                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                                                        : 'bg-amber-50 text-amber-700 border border-amber-200'
+                                                                        }`}
+                                                                >
+                                                                    {page.status}
+                                                                </span>
+                                                            </div>
+                                                            <p className="text-[11px] text-slate-400 font-mono mt-0.5">
+                                                                /{page.slug}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex items-center flex-wrap sm:flex-nowrap gap-3 sm:gap-4 shrink-0">
+                                                        {/* Applied Theme with Change Option */}
+                                                        <div className="relative flex items-center">
+                                                            <div
+                                                                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs transition-all shadow-2xs ${
+                                                                    isUpdating
+                                                                        ? 'border-blue-300 bg-blue-50/50'
+                                                                        : 'border-slate-200/90 bg-white hover:border-slate-300 hover:bg-slate-50'
+                                                                }`}
+                                                                title={`Current Theme: ${pageTheme?.name || 'Default Theme'}. Click to change.`}
+                                                            >
+                                                                {/* Color swatches */}
+                                                                <div className="flex items-center -space-x-1 shrink-0">
+                                                                    <span
+                                                                        className="w-2.5 h-2.5 rounded-full border border-white shadow-2xs shrink-0"
+                                                                        style={{ backgroundColor: themeColors.primary || '#3b82f6' }}
+                                                                    />
+                                                                    <span
+                                                                        className="w-2.5 h-2.5 rounded-full border border-white shadow-2xs shrink-0"
+                                                                        style={{ backgroundColor: themeColors.secondary || '#8b5cf6' }}
+                                                                    />
+                                                                </div>
+                                                                <Palette size={12} className="text-violet-500 shrink-0" />
+                                                                <select
+                                                                    value={page.themeId || pageTheme?.id || ''}
+                                                                    onChange={(e) => handleChangePageTheme(page, e.target.value)}
+                                                                    disabled={isUpdating}
+                                                                    aria-label={`Change theme for page ${page.name}`}
+                                                                    className="bg-transparent text-xs font-medium text-slate-700 focus:outline-none cursor-pointer pr-4 appearance-none disabled:opacity-60 max-w-[140px] truncate"
+                                                                    style={{
+                                                                        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+                                                                        backgroundRepeat: 'no-repeat',
+                                                                        backgroundPosition: 'right center',
+                                                                    }}
+                                                                >
+                                                                    {allAvailableThemes.map((t) => (
+                                                                        <option key={t.id} value={t.id}>
+                                                                            {t.name} {t.isPreset ? '(Preset)' : ''}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                                {isUpdating && (
+                                                                    <RefreshCw size={11} className="animate-spin text-blue-600 shrink-0" />
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        <span className="text-[11px] text-slate-400 hidden lg:inline">
+                                                            Updated {new Date(page.updatedAt || page.createdAt).toLocaleDateString()}
+                                                        </span>
+                                                        <button
+                                                            onClick={() => handleEditPageInBuilder(page)}
+                                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-blue-600 hover:bg-blue-50 border border-blue-200 transition-colors"
+                                                        >
+                                                            <Edit3 size={13} />
+                                                            <span>Edit in Builder</span>
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setResourceToDelete(page);
+                                                                setDeleteResourceType('page');
+                                                                setDeleteModalOpen(true);
+                                                            }}
+                                                            title={`Delete page ${page.name}`}
+                                                            aria-label={`Delete page ${page.name}`}
+                                                            className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 )}
                             </div>
@@ -1095,10 +1218,55 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                                         </td>
 
                                                         <td className="py-4 px-6 text-slate-600">
-                                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 text-slate-700 text-[11px]">
-                                                                <Palette size={11} className="text-violet-500" />
-                                                                {page.theme?.name || 'Default Theme'}
-                                                            </span>
+                                                            {(() => {
+                                                                const pageTheme = getPageTheme(page);
+                                                                const themeColors = pageTheme?.configJson?.colors || {};
+                                                                const isUpdating = updatingPageThemeId === page.id;
+
+                                                                return (
+                                                                    <div
+                                                                        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs transition-all shadow-2xs ${
+                                                                            isUpdating
+                                                                                ? 'border-blue-300 bg-blue-50/50'
+                                                                                : 'border-slate-200/90 bg-white hover:border-slate-300 hover:bg-slate-50'
+                                                                        }`}
+                                                                        title={`Current Theme: ${pageTheme?.name || 'Default Theme'}. Click to change.`}
+                                                                    >
+                                                                        <div className="flex items-center -space-x-1 shrink-0">
+                                                                            <span
+                                                                                className="w-2.5 h-2.5 rounded-full border border-white shadow-2xs shrink-0"
+                                                                                style={{ backgroundColor: themeColors.primary || '#3b82f6' }}
+                                                                            />
+                                                                            <span
+                                                                                className="w-2.5 h-2.5 rounded-full border border-white shadow-2xs shrink-0"
+                                                                                style={{ backgroundColor: themeColors.secondary || '#8b5cf6' }}
+                                                                            />
+                                                                        </div>
+                                                                        <Palette size={12} className="text-violet-500 shrink-0" />
+                                                                        <select
+                                                                            value={page.themeId || pageTheme?.id || ''}
+                                                                            onChange={(e) => handleChangePageTheme(page, e.target.value)}
+                                                                            disabled={isUpdating}
+                                                                            aria-label={`Change theme for page ${page.name}`}
+                                                                            className="bg-transparent text-[11px] font-medium text-slate-700 focus:outline-none cursor-pointer pr-4 appearance-none disabled:opacity-60 max-w-[130px] truncate"
+                                                                            style={{
+                                                                                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+                                                                                backgroundRepeat: 'no-repeat',
+                                                                                backgroundPosition: 'right center',
+                                                                            }}
+                                                                        >
+                                                                            {allAvailableThemes.map((t) => (
+                                                                                <option key={t.id} value={t.id}>
+                                                                                    {t.name} {t.isPreset ? '(Preset)' : ''}
+                                                                                </option>
+                                                                            ))}
+                                                                        </select>
+                                                                        {isUpdating && (
+                                                                            <RefreshCw size={11} className="animate-spin text-blue-600 shrink-0" />
+                                                                        )}
+                                                                    </div>
+                                                                );
+                                                            })()}
                                                         </td>
 
                                                         <td className="py-4 px-6">
@@ -1135,9 +1303,7 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                                         <td className="py-4 px-6 text-right">
                                                             <div className="flex items-center justify-end gap-1">
                                                                 <button
-                                                                    onClick={() =>
-                                                                        navigate(`/custom-builder?pageId=${page.id}`)
-                                                                    }
+                                                                    onClick={() => handleEditPageInBuilder(page)}
                                                                     title="Edit in Component Builder"
                                                                     className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 border border-transparent hover:border-blue-200 transition-colors"
                                                                 >
