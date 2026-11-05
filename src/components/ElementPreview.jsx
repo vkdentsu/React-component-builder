@@ -338,9 +338,15 @@ function FooterPreview({ el, device }) {
         textAlign: el.textAlign || 'center',
       }}
     >
-      {el.brand && (
-        <div className="font-bold mb-2">
-          {el.brand}
+      {(el.logoUrl || el.brand) && (
+        <div className={`flex items-center gap-2 mb-2 ${
+          el.textAlign === 'left' ? 'justify-start' : el.textAlign === 'right' ? 'justify-end' : 'justify-center'
+        }`}>
+          {el.logoUrl && (
+            <img src={el.logoUrl} alt="footer logo" className="h-7 w-auto object-contain"
+              onError={(e) => { e.target.style.display = 'none'; }} />
+          )}
+          {el.brand && <span className="font-bold">{el.brand}</span>}
         </div>
       )}
 
