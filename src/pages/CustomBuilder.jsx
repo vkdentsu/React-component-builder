@@ -84,6 +84,9 @@ export default function CustomBuilder() {
     initNewDbPage,
     markComponentSaved,
     fetchThemes,
+    activeTheme,
+    availableThemes,
+    selectTheme,
     isThemeModalOpen,
     closeThemeModal,
   } = useBuilderStore();
@@ -149,8 +152,29 @@ export default function CustomBuilder() {
         device: useBuilderStore.getState().device,
       };
 
+      // Ensure preset themes are persisted before saving the page
+      let themeIdToUse = meta.themeId || activeTheme?.id;
+      const themeObj = availableThemes.find((t) => t.id === themeIdToUse) || activeTheme;
+      const isPreset = !themeIdToUse ||
+        String(themeIdToUse).startsWith('preset-') ||
+        Boolean(themeObj?.isPreset);
+
+      if (isPreset) {
+        const persistedTheme = await ensureUserTheme(themeObj || themeIdToUse);
+        if (!persistedTheme?.id) {
+          throw new Error('Failed to persist theme for this page.');
+        }
+        themeIdToUse = persistedTheme.id;
+
+        // Replace in-memory ID with the persisted theme ID before saving
+        setPageMeta({ themeId: persistedTheme.id });
+        if (activeTheme?.id === themeObj?.id || String(activeTheme?.id).startsWith('preset-')) {
+          selectTheme(persistedTheme.id);
+        }
+      }
+
       if (activeDbPageId) {
-        if (!meta.themeId) {
+        if (!themeIdToUse) {
           throw new Error('Please select a theme before saving.');
         }
         // Update existing page in database
@@ -161,7 +185,7 @@ export default function CustomBuilder() {
             name: meta.name.trim(),
             slug: meta.slug.trim(),
             contentJson,
-            ...(meta.themeId ? { themeId: meta.themeId } : {}),
+            themeId: themeIdToUse,
             status: meta.status || 'DRAFT',
           }),
         });
@@ -174,9 +198,6 @@ export default function CustomBuilder() {
         setPageMeta(json.data);
         showToast(`Page "${json.data.name}" saved to database!`);
       } else {
-        const theme = meta.themeId ? null : await ensureUserTheme();
-        const themeIdToUse = meta.themeId || theme.id;
-
         const res = await authenticatedFetch('/api/pages', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

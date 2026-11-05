@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import useBuilderStore from "../store/builderStore";
 import ThemeModal from "../components/ThemeModal";
+import { BUILT_IN_PRESET_THEMES, mergeThemes } from "../utils/themeDefaults";
 
 export default function ConfigurationAndThemes({ themes = [], onRefresh }) {
   const {
@@ -30,7 +31,10 @@ export default function ConfigurationAndThemes({ themes = [], onRefresh }) {
     window.setTimeout(() => setToastMessage(null), 3000);
   };
 
-  const allThemes = themes.length > 0 ? themes : useBuilderStore.getState().availableThemes;
+  const allThemes = mergeThemes(
+    themes.length > 0 ? themes : useBuilderStore.getState().availableThemes,
+    BUILT_IN_PRESET_THEMES
+  );
 
   const currentDefaultId = defaultThemeId || activeTheme?.id || allThemes[0]?.id;
 
@@ -57,7 +61,7 @@ export default function ConfigurationAndThemes({ themes = [], onRefresh }) {
   };
 
   const handleDeleteTheme = async (theme) => {
-    if (String(theme.id).startsWith("preset-")) {
+    if (String(theme.id).startsWith("preset-") || theme.isPreset) {
       showToast("Default preset themes cannot be deleted.", "error");
       return;
     }
@@ -218,7 +222,7 @@ export default function ConfigurationAndThemes({ themes = [], onRefresh }) {
             const borderRadius = theme.configJson?.borderRadius || {};
             const isActive = theme.id === activeTheme?.id;
             const isDefault = theme.id === currentDefaultId;
-            const isPreset = String(theme.id).startsWith("preset-");
+            const isPreset = Boolean(theme.isPreset || String(theme.id).startsWith("preset-"));
 
             return (
               <div

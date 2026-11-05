@@ -34,7 +34,7 @@ const slugify = (value) => value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-'
 function uniqueSlug(name, themes, excludeId) {
   const base = slugify(name);
   const used = new Set(themes
-    .filter((theme) => theme.id !== excludeId && !String(theme.id).startsWith('preset-'))
+    .filter((theme) => theme.id !== excludeId && !String(theme.id).startsWith('preset-') && !theme.isPreset)
     .map((theme) => theme.slug?.toLowerCase()));
   if (!used.has(base)) return base;
   let suffix = 2;
@@ -45,7 +45,7 @@ function uniqueSlug(name, themes, excludeId) {
 function validateTheme(name, slug, tokens, themes, selectedId) {
   if (!name.trim()) return 'Project name is required.';
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) return 'Slug must use lowercase letters, numbers, and single hyphens only.';
-  if (themes.some((theme) => theme.id !== selectedId && !String(theme.id).startsWith('preset-') && theme.slug?.toLowerCase() === slug.toLowerCase())) return 'This slug is already in use.';
+  if (themes.some((theme) => theme.id !== selectedId && !String(theme.id).startsWith('preset-') && !theme.isPreset && theme.slug?.toLowerCase() === slug.toLowerCase())) return 'This slug is already in use.';
 
   const invalidColor = Object.entries(tokens.colors).find(([, value]) => !/^#[0-9a-f]{6}$/i.test(value));
   if (invalidColor) return `Enter a valid HEX value for ${invalidColor[0]}.`;
@@ -216,7 +216,9 @@ export default function ThemeModal({ onClose, initialThemeId, onSaved }) {
 
     try {
       let savedTheme;
-      if (isNewTheme || String(selectedThemeId).startsWith('preset-')) {
+      const isPresetTheme = String(selectedThemeId).startsWith('preset-') ||
+        availableThemes.find((theme) => theme.id === selectedThemeId)?.isPreset;
+      if (isNewTheme || isPresetTheme) {
         savedTheme = await createTheme({ name: projectName.trim(), slug: slugName, configJson });
         setSelectedThemeId(savedTheme.id);
         setIsNewTheme(false);
@@ -257,7 +259,9 @@ export default function ThemeModal({ onClose, initialThemeId, onSaved }) {
 
   const handleDuplicate = async () => {
     const name = `${projectName.trim() || 'Theme'} Copy`;
-    if (isNewTheme || String(selectedThemeId).startsWith('preset-')) {
+    const isPresetTheme = String(selectedThemeId).startsWith('preset-') ||
+      availableThemes.find((theme) => theme.id === selectedThemeId)?.isPreset;
+    if (isNewTheme || isPresetTheme) {
       handleStartNew(configForSave(), name);
       return;
     }

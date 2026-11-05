@@ -473,3 +473,45 @@ export function resolveRadius(rounded, defaultToken = '') {
   };
   return radiusMap[rounded] || defaultToken;
 }
+
+export const BUILT_IN_PRESET_THEMES = THEME_PRESETS.map((p, idx) => ({
+  id: `preset-${idx}`,
+  name: p.name,
+  slug: p.slug,
+  configJson: normalizeThemeConfig(p.configJson),
+  _count: { pages: 0 },
+  isPreset: true,
+}));
+
+export function mergeThemes(customThemes = [], presets = BUILT_IN_PRESET_THEMES) {
+  const seenIds = new Set();
+  const result = [];
+
+  const safeCustom = Array.isArray(customThemes) ? customThemes : [];
+  const safePresets = Array.isArray(presets) ? presets : BUILT_IN_PRESET_THEMES;
+
+  // Add custom / server themes first
+  for (const theme of safeCustom) {
+    if (!theme || !theme.id || seenIds.has(theme.id)) continue;
+    seenIds.add(theme.id);
+    result.push({
+      ...theme,
+      configJson: normalizeThemeConfig(theme.configJson),
+      isPreset: Boolean(theme.isPreset),
+    });
+  }
+
+  // Add built-in presets without duplicates
+  for (const preset of safePresets) {
+    if (!preset || !preset.id || seenIds.has(preset.id)) continue;
+    seenIds.add(preset.id);
+    result.push({
+      ...preset,
+      configJson: normalizeThemeConfig(preset.configJson),
+      isPreset: true,
+    });
+  }
+
+  return result;
+}
+
