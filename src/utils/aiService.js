@@ -1,5 +1,3 @@
-import { getApiUrl } from "./api";
-
 async function fileToBase64(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -47,7 +45,7 @@ export async function convertDesignToJSX(
         }
         : null;
 
-    const response = await fetch(getApiUrl("/api/generate"), {
+    const response = await fetch("/api/generate", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
