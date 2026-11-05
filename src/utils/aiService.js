@@ -47,7 +47,7 @@ export async function convertDesignToJSX(
         }
         : null;
 
-    const response = await fetch(getApiUrl("/api/generate"), {
+    const response = await fetch("/api/generate", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
