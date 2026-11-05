@@ -68,6 +68,7 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
 
     // Database Data States
     const [pages, setPages] = useState([]);
+    const [components, setComponents] = useState([]);
     const [themes, setThemes] = useState([]);
     const [health, setHealth] = useState({ status: 'checking', database: 'checking' });
     const [loading, setLoading] = useState(true);
@@ -87,11 +88,13 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
 
     // Delete Confirmation Modal State
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-    const [pageToDelete, setPageToDelete] = useState(null);
+    const [resourceToDelete, setResourceToDelete] = useState(null);
+    const [deleteResourceType, setDeleteResourceType] = useState('page');
     const [deleting, setDeleting] = useState(false);
 
     // Notification Toast
     const [toast, setToast] = useState(null);
+    const [openingComponentId, setOpeningComponentId] = useState(null);
 
     const showToast = (message, type = 'success') => {
         setToast({ message, type });
@@ -115,11 +118,13 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
         setError(null);
         return Promise.all([
             authenticatedFetch('/api/pages').then((r) => r.json()),
+            authenticatedFetch('/api/components').then((r) => r.json()),
             authenticatedFetch('/api/themes').then((r) => r.json()),
             authenticatedFetch('/api/auth/me').then((r) => r.json()),
             fetch(getApiUrl('/api/health')).then((r) => r.json()).catch(() => ({ status: 'error', database: 'unavailable' })),
-        ]).then(([pagesRes, themesRes, userRes, healthRes]) => {
+        ]).then(([pagesRes, componentsRes, themesRes, userRes, healthRes]) => {
             if (pagesRes.data) setPages(pagesRes.data);
+            if (componentsRes.data) setComponents(componentsRes.data);
             if (themesRes.data) {
                 setThemes(themesRes.data);
             }
@@ -140,16 +145,40 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
         loadData();
     };
 
+    const handleOpenComponent = async (componentId) => {
+        setOpeningComponentId(componentId);
+        try {
+            const response = await authenticatedFetch(`/api/components/${componentId}`);
+            const result = await response.json();
+            if (!response.ok) {
+                throw new Error(result.error?.message || 'Could not open this component.');
+            }
+            useBuilderStore.getState().loadComponentFromDb(result.data);
+            navigate('/custom-builder');
+        } catch (err) {
+            showToast(err.message || 'Could not open this component.', 'error');
+        } finally {
+            setOpeningComponentId(null);
+        }
+    };
+
+    const handleCreateComponent = () => {
+        useBuilderStore.getState().newComponent();
+        navigate('/custom-builder');
+    };
+
     useEffect(() => {
         let isMounted = true;
         Promise.all([
             authenticatedFetch('/api/pages').then((r) => r.json()),
+            authenticatedFetch('/api/components').then((r) => r.json()),
             authenticatedFetch('/api/themes').then((r) => r.json()),
             authenticatedFetch('/api/auth/me').then((r) => r.json()),
             fetch(getApiUrl('/api/health')).then((r) => r.json()).catch(() => ({ status: 'error', database: 'unavailable' })),
-        ]).then(([pagesRes, themesRes, userRes, healthRes]) => {
+        ]).then(([pagesRes, componentsRes, themesRes, userRes, healthRes]) => {
             if (!isMounted) return;
             if (pagesRes.data) setPages(pagesRes.data);
+            if (componentsRes.data) setComponents(componentsRes.data);
             if (themesRes.data) {
                 setThemes(themesRes.data);
             }
@@ -316,22 +345,28 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
         }
     };
 
-    // Delete Page Handler
+    // Delete confirmation handler
     const confirmDelete = async () => {
-        if (!pageToDelete) return;
+        if (!resourceToDelete) return;
         setDeleting(true);
         try {
-            const res = await authenticatedFetch(`/api/pages/${pageToDelete.id}`, {
+            const endpoint = deleteResourceType === 'component' ? 'components' : 'pages';
+            const res = await authenticatedFetch(`/api/${endpoint}/${resourceToDelete.id}`, {
                 method: 'DELETE',
             });
             if (!res.ok && res.status !== 204) {
-                throw new Error('Failed to delete page');
+                const result = await res.json();
+                throw new Error(result.error?.message || `Failed to delete ${deleteResourceType}.`);
             }
 
-            setPages((prev) => prev.filter((p) => p.id !== pageToDelete.id));
+            if (deleteResourceType === 'component') {
+                setComponents((prev) => prev.filter((component) => component.id !== resourceToDelete.id));
+            } else {
+                setPages((prev) => prev.filter((page) => page.id !== resourceToDelete.id));
+            }
             setDeleteModalOpen(false);
-            showToast(`Page "${pageToDelete.name}" deleted successfully.`);
-            setPageToDelete(null);
+            showToast(`${deleteResourceType === 'component' ? 'Component' : 'Page'} "${resourceToDelete.name}" deleted successfully.`);
+            setResourceToDelete(null);
         } catch (err) {
             showToast(err.message, 'error');
         } finally {
@@ -595,6 +630,16 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                             <span>Create Page</span>
                                         </button>
                                         <button
+                                            onClick={() => {
+                                                useBuilderStore.getState().newComponent();
+                                                navigate('/custom-builder');
+                                            }}
+                                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold text-xs border border-white/20 transition-all hover:scale-[1.02]"
+                                        >
+                                            <Code2 size={15} />
+                                            <span>Create Component</span>
+                                        </button>
+                                        <button
                                             onClick={() => setActiveTab('pages')}
                                             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-700/60 hover:bg-blue-700 text-white font-medium text-xs border border-white/20 transition-all"
                                         >
@@ -753,6 +798,106 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                                     >
                                                         <Edit3 size={13} />
                                                         <span>Edit in Builder</span>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setResourceToDelete(page);
+                                                            setDeleteResourceType('page');
+                                                            setDeleteModalOpen(true);
+                                                        }}
+                                                        title={`Delete page ${page.name}`}
+                                                        aria-label={`Delete page ${page.name}`}
+                                                        className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Saved Custom Components */}
+                            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+                                <div className="p-5 sm:px-6 border-b border-slate-100 flex items-center justify-between">
+                                    <div>
+                                        <h3 className="text-sm font-semibold text-slate-800">
+                                            Saved Custom Components
+                                        </h3>
+                                        <p className="text-xs text-slate-400 mt-0.5">
+                                            Reusable components saved from the builder
+                                        </p>
+                                    </div>
+                                    <span className="text-xs font-medium text-slate-400">
+                                        {components.length} saved
+                                    </span>
+                                </div>
+
+                                {loading ? (
+                                    <div className="py-10 flex flex-col items-center justify-center text-slate-400 text-xs">
+                                        <RefreshCw className="animate-spin mb-2" size={18} />
+                                        <span>Loading saved components...</span>
+                                    </div>
+                                ) : components.length === 0 ? (
+                                    <div className="py-10 px-4 flex flex-col items-center justify-center text-center">
+                                        <div className="w-11 h-11 rounded-full bg-violet-50 flex items-center justify-center text-violet-500 mb-3">
+                                            <Code2 size={19} />
+                                        </div>
+                                        <p className="text-sm font-medium text-slate-700">No custom components saved yet</p>
+                                        <p className="text-xs text-slate-400 mt-1">
+                                            Create a component and save it to reuse it across your pages.
+                                        </p>
+                                        <button
+                                            onClick={handleCreateComponent}
+                                            className="mt-4 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-medium text-xs flex items-center gap-1.5 shadow-sm transition-colors"
+                                        >
+                                            <Plus size={14} />
+                                            <span>Create Component</span>
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="divide-y divide-slate-100">
+                                        {components.slice(0, 5).map((component) => (
+                                            <div
+                                                key={component.id}
+                                                className="px-6 py-4 flex items-center justify-between hover:bg-slate-50/70 transition-colors"
+                                            >
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div className="w-9 h-9 rounded-lg bg-violet-50 text-violet-600 flex items-center justify-center shrink-0">
+                                                        <Code2 size={16} />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="text-xs font-semibold text-slate-800 truncate">
+                                                            {component.name}
+                                                        </p>
+                                                        <p className="text-[11px] text-slate-400 mt-0.5">
+                                                            Updated {new Date(component.updatedAt || component.createdAt).toLocaleDateString()}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() => handleOpenComponent(component.id)}
+                                                        disabled={openingComponentId !== null}
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-violet-600 hover:bg-violet-50 border border-violet-200 transition-colors disabled:opacity-50"
+                                                    >
+                                                        <Edit3 size={13} />
+                                                        <span>{openingComponentId === component.id ? 'Opening...' : 'Open in Builder'}</span>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setResourceToDelete(component);
+                                                            setDeleteResourceType('component');
+                                                            setDeleteModalOpen(true);
+                                                        }}
+                                                        title={`Delete component ${component.name}`}
+                                                        aria-label={`Delete component ${component.name}`}
+                                                        className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors"
+                                                    >
+                                                        <Trash2 size={14} />
                                                     </button>
                                                 </div>
                                             </div>
@@ -994,7 +1139,8 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
 
                                                                 <button
                                                                     onClick={() => {
-                                                                        setPageToDelete(page);
+                                                                        setResourceToDelete(page);
+                                                                        setDeleteResourceType('page');
                                                                         setDeleteModalOpen(true);
                                                                     }}
                                                                     title="Delete Page"
@@ -1456,21 +1602,26 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
             {/* ========================================================================= */}
             {/* MODAL: DELETE CONFIRMATION                                                */}
             {/* ========================================================================= */}
-            {deleteModalOpen && pageToDelete && (
+            {deleteModalOpen && resourceToDelete && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-200 p-6 text-center">
                         <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-3">
                             <Trash2 size={22} />
                         </div>
-                        <h3 className="font-bold text-base text-slate-800">Delete Page?</h3>
+                        <h3 className="font-bold text-base text-slate-800">
+                            Delete {deleteResourceType === 'component' ? 'Component' : 'Page'}?
+                        </h3>
                         <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                            Are you sure you want to delete <strong className="text-slate-800">"{pageToDelete.name}"</strong>? This will permanently remove the page and its component layout from the database.
+                            Are you sure you want to delete <strong className="text-slate-800">"{resourceToDelete.name}"</strong>? This will permanently remove this {deleteResourceType} from the database.
                         </p>
 
                         <div className="mt-6 flex items-center justify-center gap-3">
                             <button
                                 type="button"
-                                onClick={() => setDeleteModalOpen(false)}
+                                onClick={() => {
+                                    setDeleteModalOpen(false);
+                                    setResourceToDelete(null);
+                                }}
                                 className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
                             >
                                 Cancel
