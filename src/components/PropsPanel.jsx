@@ -1411,6 +1411,33 @@ function ToggleProps({ el, update }) {
   );
 }
 
+function FooterProps({ el, update }) {
+  return (
+    <>
+      <Section title="Brand & Logo">
+        <Field label="Brand name"><Inp value={el.brand} onChange={(v) => update({ brand: v })} /></Field>
+        <Field label="Logo image"><ImageUploadField value={el.logoUrl} onChange={(v) => update({ logoUrl: v })} placeholder="https://logo.png" /></Field>
+      </Section>
+      <Section title="Content">
+        <Field label="Links (comma separated)"><Inp value={el.links} onChange={(v) => update({ links: v })} placeholder="Privacy Policy, Terms, Contact" /></Field>
+        <Field label="Copyright text"><Inp value={el.copyright} onChange={(v) => update({ copyright: v })} /></Field>
+      </Section>
+      <Section title="Style">
+        <Field label="Background"><ColorPicker value={el.bg} onChange={(v) => update({ bg: v })} /></Field>
+        <Field label="Text color"><ColorPicker value={el.color} onChange={(v) => update({ color: v })} /></Field>
+        <Field label="Text align">
+          <Sel value={el.textAlign || 'center'} onChange={(v) => update({ textAlign: v })}
+            options={[{value:'left',label:'Left'},{value:'center',label:'Center'},{value:'right',label:'Right'}]} />
+        </Field>
+        <ResponsiveFontSizeControl value={el.fontSize} onChange={(v) => update({ fontSize: v })} label="Text font size" min={10} max={24} />
+        <ResponsiveFontWeightControl value={el.fontWeight} onChange={(v) => update({ fontWeight: v })} label="Text font weight" />
+        <ResponsiveLineHeightControl value={el.lineHeight} onChange={(v) => update({ lineHeight: v })} label="Text line height" min={0.8} max={2.5} />
+        <Toggle checked={el.shadow} onChange={(v) => update({ shadow: v })} label="Drop shadow" />
+      </Section>
+    </>
+  );
+}
+
 /* Panel registry */
 const PANELS = {
   button:    ButtonProps,
@@ -1431,6 +1458,7 @@ const PANELS = {
   navbar:    NavbarProps,
   hero:      HeroProps,
   formgroup: FormGroupProps,
+  footer:    FooterProps,
 };
 
 /* ── Main export */
