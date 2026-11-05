@@ -32,6 +32,7 @@ import { clearAuthSession, getAuthUser, saveAuthUser } from '../utils/auth';
 import { ensureUserTheme } from '../utils/ensureUserTheme';
 import useBuilderStore from '../store/builderStore';
 import ConfigurationAndThemes from "./ConfigurationAndThemes";
+import MediaAssets from "../components/MediaAssets";
 
 export default function Dashboard({ initialTab = 'dashboard' }) {
     const navigate = useNavigate();
@@ -1171,68 +1172,7 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                     {/* TAB 4: MEDIA VIEW                                                         */}
                     {/* ========================================================================= */}
                     {activeTab === 'media' && (
-                        <div className="space-y-6 animate-in fade-in duration-200">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <h1 className="text-2xl font-bold text-slate-800">Media Assets</h1>
-                                    <p className="text-xs text-slate-500 mt-0.5">
-                                        Upload and manage project media for hero banners, cards, and image elements.
-                                    </p>
-                                </div>
-                                <button
-                                    onClick={() => showToast('Media upload modal (placeholder)')}
-                                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition-all"
-                                >
-                                    <Upload size={14} />
-                                    <span>Upload Asset</span>
-                                </button>
-                            </div>
-
-                            {/* Upload Dropzone Placeholder */}
-                            <div
-                                onClick={() => showToast('Media upload dialog (placeholder)')}
-                                className="border-2 border-dashed border-slate-300 hover:border-blue-400 rounded-2xl p-10 flex flex-col items-center justify-center text-center cursor-pointer bg-white hover:bg-blue-50/20 transition-all"
-                            >
-                                <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-3">
-                                    <Upload size={20} />
-                                </div>
-                                <p className="text-sm font-semibold text-slate-700">
-                                    Drag and drop files here, or browse
-                                </p>
-                                <p className="text-xs text-slate-400 mt-1 max-w-sm">
-                                    PNG, JPG, SVG, WebP up to 10MB supported for component image elements.
-                                </p>
-                            </div>
-
-                            {/* Sample Media Cards */}
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                                {[
-                                    { title: 'Hero Background', url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&auto=format&fit=crop&q=60' },
-                                    { title: 'Product Showcase', url: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=500&auto=format&fit=crop&q=60' },
-                                    { title: 'Abstract Gradient', url: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=500&auto=format&fit=crop&q=60' },
-                                    { title: 'App Mockup', url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=500&auto=format&fit=crop&q=60' },
-                                ].map((item, idx) => (
-                                    <div
-                                        key={idx}
-                                        className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs group"
-                                    >
-                                        <div className="h-32 bg-slate-100 overflow-hidden relative">
-                                            <img
-                                                src={item.url}
-                                                alt={item.title}
-                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                            />
-                                        </div>
-                                        <div className="p-3">
-                                            <p className="text-xs font-semibold text-slate-800 truncate">
-                                                {item.title}
-                                            </p>
-                                            <p className="text-[10px] text-slate-400 mt-0.5">Ready for Builder</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
+                        <MediaAssets />
                     )}
 
                     {/* ========================================================================= */}
