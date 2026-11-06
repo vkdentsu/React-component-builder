@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import * as Babel from "@babel/standalone";
+import BrandLogo from "../components/BrandLogo";
 
 function Preview() {
     const location = useLocation();
@@ -198,100 +199,126 @@ function Preview() {
     return (
         <div
             style={{
+                maxWidth: "1200px",
                 minHeight: "100vh",
-                padding: "24px",
-                background: "#f5f5f5",
+                margin: "0 auto",
+                display: "flex",
+                flexDirection: "column",
             }}
         >
-
             <div
                 style={{
+                    padding: "60px 40px",
                     display: "flex",
-                    justifyContent: "space-between",
+                    flexDirection: "column",
                     alignItems: "center",
-                    marginBottom: "20px",
+                    justifyContent: "center",
                 }}
             >
-
-                <h2
-                    style={{
-                        margin: 0,
-                    }}
-                >
-                    Preview:{" "}
-                    {pageName || "Generated Component"}
-                </h2>
-
-                <button
-                    onClick={() =>
-                        navigate("/generated", {
-                            state: {
-                                pageName,
-                                generatedJSX,
-                            },
-                        })
-                    }
-                    style={{
-                        padding: "10px 20px",
-                        border: "none",
-                        borderRadius: "8px",
-                        background: "#080808",
-                        color: "#fff",
-                        cursor: "pointer",
-                        fontSize: "16px",
-                    }}
-                >
-                    Back to Code
-                </button>
-
-            </div>
-
-            {error ? (
-
                 <div
                     style={{
-                        background: "#fff",
-                        padding: "24px",
-                        borderRadius: "12px",
+                        width: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        marginBottom: "48px",
                     }}
                 >
-
-                    <h3
-                        style={{
-                            color: "#dc2626",
-                        }}
-                    >
-                        Preview Error
-                    </h3>
-
-                    <pre
-                        style={{
-                            whiteSpace: "pre-wrap",
-                        }}
-                    >
-                        {error}
-                    </pre>
-
+                    <BrandLogo />
                 </div>
-
-            ) : (
-
-                <iframe
-                    title="Generated React component preview"
-                    sandbox="allow-scripts"
-                    srcDoc={previewDocument}
+                <div
                     style={{
-                        display: "block",
-                        width: "100%",
-                        height: "calc(100vh - 120px)",
-                        border: "1px solid #d1d5db",
-                        borderRadius: "12px",
-                        background: "#fff",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: "8px",
+                        width: "100%"
                     }}
-                />
-
-            )}
-
+                >
+                    <div
+                        style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            gap: "8px",
+                            width: "100%"
+                        }}
+                    >
+                        <p
+                            style={{
+                                marginBottom: "4px",
+                                marginLeft: "2px",
+                                fontSize: "18px",
+                            }}
+                        >
+                            Preview of{" "}
+                            {pageName || "Generated Component"}
+                        </p>
+                        <button
+                            onClick={() =>
+                                navigate("/generated", {
+                                    state: {
+                                        pageName,
+                                        generatedJSX,
+                                    },
+                                })
+                            }
+                            style={{
+                                fontSize: "18px",
+                                fontWeight: "600",
+                                height: "38px",
+                                width: "260px",
+                                borderRadius: "12px",
+                                border: "none",
+                                cursor: "pointer",
+                                backgroundColor: "#7c3aed",
+                                color: "white",
+                                maxWidth: "180px",
+                            }}
+                        >
+                            Back to Code
+                        </button>
+                    </div>
+                    {error ? (
+                        <div
+                            style={{
+                                background: "#fff",
+                                padding: "24px",
+                                borderRadius: "12px",
+                            }}
+                        >
+                            <h3
+                                style={{
+                                    color: "#dc2626",
+                                }}
+                            >
+                                Preview Error
+                            </h3>
+                            <pre
+                                style={{
+                                    whiteSpace: "pre-wrap",
+                                }}
+                            >
+                                {error}
+                            </pre>
+                        </div>
+                    ) : (
+                        <iframe
+                            title="Generated React component preview"
+                            sandbox="allow-scripts"
+                            srcDoc={previewDocument}
+                            style={{
+                                display: "block",
+                                width: "100%",
+                                height: "calc(100vh - 120px)",
+                                border: "1px solid #d1d5db",
+                                borderRadius: "12px",
+                                background: "#fff",
+                            }}
+                        />
+                    )}
+                </div>
+            </div>
         </div>
     );
 }

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { convertDesignToJSX } from "../utils/aiService";
+import BrandLogo from "../components/BrandLogo";
 
 function Processing() {
     const location = useLocation();
@@ -157,6 +158,16 @@ function Processing() {
                 padding: "40px",
             }}
         >
+            <div
+                style={{
+                    position: "absolute",
+                    top: "60px",
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                }}
+            >
+                <BrandLogo />
+            </div>
 
             {!error ? (
 
