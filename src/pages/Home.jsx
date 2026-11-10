@@ -2,7 +2,7 @@
 // import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Home.scss";
-import logo from "../assets/logo.png";
+import BrandLogo from "../components/BrandLogo";
 // import GOOGLE_FONTS from "../utils/googleFonts";
 // import { normalizeThemeConfig } from "../utils/themeDefaults";
 // import useBuilderStore from "../store/builderStore";
@@ -175,7 +175,7 @@ export default function Home() {
       <div className="wrap">
         <nav>
           <div className="logo">
-            <img src={logo} alt="Compify" />
+            <BrandLogo />
           </div>
           <div className="navLinks">
             <a href="#features">Features</a>

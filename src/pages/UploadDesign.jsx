@@ -1,5 +1,6 @@
 import { useState } from "react";
 import UploadBox from "../components/UploadBox";
+import BrandLogo from "../components/BrandLogo";
 import { useNavigate } from "react-router-dom";
 
 function UploadDesign() {
@@ -58,7 +59,6 @@ const handleContinue = () => {
         >
             <div
                 style={{
-                    flex: 1,
                     padding: "60px 40px",
                     display: "flex",
                     flexDirection: "column",
@@ -66,13 +66,17 @@ const handleContinue = () => {
                     justifyContent: "center",
                 }}
             >
-                <h1
+                <div
                     style={{
-                        marginBottom: "36px",
+                        width: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        marginBottom: "48px",
                     }}
                 >
-                    Upload Your Design
-                </h1>
+                    <BrandLogo />
+                </div>
                 <div
                     style={{
                         width: "450px",
