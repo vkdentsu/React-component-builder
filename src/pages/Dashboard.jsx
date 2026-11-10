@@ -96,6 +96,7 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
     // Notification Toast
     const [toast, setToast] = useState(null);
     const [openingComponentId, setOpeningComponentId] = useState(null);
+    const [openingPageId, setOpeningPageId] = useState(null);
 
     const showToast = (message, type = 'success') => {
         setToast({ message, type });
@@ -160,6 +161,30 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
             showToast(err.message || 'Could not open this component.', 'error');
         } finally {
             setOpeningComponentId(null);
+        }
+    };
+
+    const handleOpenPage = async (page) => {
+        setOpeningPageId(page.id);
+        try {
+            let pageRecord = page;
+            if (!pageRecord.contentJson) {
+                const response = await authenticatedFetch(`/api/pages/${page.id}`);
+                const result = await response.json();
+                if (!response.ok) {
+                    throw new Error(result.error?.message || 'Could not open this page.');
+                }
+                pageRecord = result.data;
+            }
+
+            const route = pageRecord.contentJson?.type === 'generated-jsx'
+                ? `/generated?pageId=${encodeURIComponent(pageRecord.id)}`
+                : `/custom-builder?pageId=${encodeURIComponent(pageRecord.id)}`;
+            navigate(route);
+        } catch (err) {
+            showToast(err.message || 'Could not open this page.', 'error');
+        } finally {
+            setOpeningPageId(null);
         }
     };
 
@@ -808,11 +833,12 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                                         Updated {new Date(page.updatedAt || page.createdAt).toLocaleDateString()}
                                                     </span>
                                                     <button
-                                                        onClick={() => navigate(`/custom-builder?pageId=${page.id}`)}
+                                                        onClick={() => handleOpenPage(page)}
+                                                        disabled={openingPageId === page.id}
                                                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-blue-600 hover:bg-blue-50 border border-blue-200 transition-colors"
                                                     >
                                                         <Edit3 size={13} />
-                                                        <span>Edit in Builder</span>
+                                                        <span>{openingPageId === page.id ? 'Opening...' : 'Edit in Builder'}</span>
                                                     </button>
                                                     <button
                                                         type="button"
@@ -1135,9 +1161,8 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                                         <td className="py-4 px-6 text-right">
                                                             <div className="flex items-center justify-end gap-1">
                                                                 <button
-                                                                    onClick={() =>
-                                                                        navigate(`/custom-builder?pageId=${page.id}`)
-                                                                    }
+                                                                    onClick={() => handleOpenPage(page)}
+                                                                    disabled={openingPageId === page.id}
                                                                     title="Edit in Component Builder"
                                                                     className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 border border-transparent hover:border-blue-200 transition-colors"
                                                                 >

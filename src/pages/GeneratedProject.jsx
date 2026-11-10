@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { authenticatedFetch } from "../utils/api";
 import { ensureUserTheme } from "../utils/ensureUserTheme";
 import BrandLogo from "../components/BrandLogo";
@@ -7,6 +7,8 @@ import BrandLogo from "../components/BrandLogo";
 function GeneratedProject() {
     const navigate = useNavigate();
     const location = useLocation();
+    const [searchParams] = useSearchParams();
+    const pageIdFromUrl = searchParams.get("pageId");
 
     const buttonStyle = {
         fontSize: "18px",
@@ -19,35 +21,81 @@ function GeneratedProject() {
         color: "white",
     };
 
-    const pageName = location.state?.pageName || "GeneratedPage";
+    const [pageName, setPageName] = useState(
+        location.state?.pageName || "GeneratedPage",
+    );
     const [copied, setCopied] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
-    const [savedPageId, setSavedPageId] = useState(null);
+    const [loadedPageId, setLoadedPageId] = useState(null);
+    const [failedPageId, setFailedPageId] = useState(null);
+    const [savedPageId, setSavedPageId] = useState(pageIdFromUrl);
     const [saveMessage, setSaveMessage] = useState("");
     const [saveError, setSaveError] = useState("");
 
-    const generatedCodeFromState = location.state?.generatedJSX;
-    const jsxContent = generatedCodeFromState ? generatedCodeFromState : '';
+    const [jsxContent, setJsxContent] = useState(
+        location.state?.generatedJSX || "",
+    );
+    const isLoadingPage = Boolean(pageIdFromUrl && loadedPageId !== pageIdFromUrl);
+    const pageLoadFailed = Boolean(pageIdFromUrl && failedPageId === pageIdFromUrl);
+
+    useEffect(() => {
+        if (!pageIdFromUrl) return undefined;
+
+        let cancelled = false;
+
+        const loadPage = async () => {
+            try {
+                const response = await authenticatedFetch(`/api/pages/${pageIdFromUrl}`);
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error?.message || "Failed to load page.");
+                }
+
+                const page = result.data;
+                if (!page?.id || page.contentJson?.type !== "generated-jsx") {
+                    throw new Error("This database page does not contain generated JSX.");
+                }
+
+                if (!cancelled) {
+                    setPageName(page.name);
+                    setJsxContent(page.contentJson.jsx || "");
+                    setSavedPageId(page.id);
+                    setSaveMessage("Page loaded from the database.");
+                    setSaveError("");
+                    setLoadedPageId(pageIdFromUrl);
+                    setFailedPageId(null);
+                }
+            } catch (error) {
+                if (!cancelled) {
+                    setSaveError(error.message || "Failed to load page.");
+                    setLoadedPageId(pageIdFromUrl);
+                    setFailedPageId(pageIdFromUrl);
+                }
+            }
+        };
+
+        loadPage();
+        return () => {
+            cancelled = true;
+        };
+    }, [pageIdFromUrl]);
 
     const handleSave = async () => {
-        if (isSaving) { return; }
+        if (isSaving || pageLoadFailed || (pageIdFromUrl && isLoadingPage)) { return; }
 
         setIsSaving(true);
         setSaveMessage("");
         setSaveError("");
 
         try {
+            const pageIdToUpdate = pageIdFromUrl === savedPageId
+                ? savedPageId
+                : null;
             const theme = await ensureUserTheme();
             const slug = pageName.trim().toLowerCase()
                 .replace(/[^a-z0-9]+/g, "-")
                 .replace(/^-|-$/g, "") || "generatedContent";
-
-            console.log('test001');
-            console.log('pageName', pageName);
-            console.log('slug', slug);
-            console.log('themeId', theme.id);
-            console.log('jsxContent', jsxContent);
-            console.log('test002');
 
             const pagePayload = {
                 name: pageName.trim(),
@@ -60,9 +108,9 @@ function GeneratedProject() {
                 status: "DRAFT",
             };
             const response = await authenticatedFetch(
-                savedPageId ? `/api/pages/${savedPageId}` : "/api/pages",
+                pageIdToUpdate ? `/api/pages/${pageIdToUpdate}` : "/api/pages",
                 {
-                    method: savedPageId ? "PATCH" : "POST",
+                    method: pageIdToUpdate ? "PATCH" : "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(pagePayload),
                 },
@@ -78,6 +126,10 @@ function GeneratedProject() {
             
             setSavedPageId(result.data.id);
             setSaveMessage("Page saved to the database.");
+            navigate(`/generated?pageId=${encodeURIComponent(result.data.id)}`, {
+                replace: true,
+                state: { pageName: result.data.name, generatedJSX: jsxContent },
+            });
         } catch (error) {
             console.error("Save generated page error:", error);
             setSaveError(error.message || "Failed to save page.");
@@ -225,7 +277,7 @@ function GeneratedProject() {
                             </button>
                             <button
                                 onClick={handleSave}
-                                disabled={isSaving}
+                                disabled={isSaving || pageLoadFailed || (Boolean(pageIdFromUrl) && isLoadingPage)}
                                 style={{
                                     ...buttonStyle,
                                     backgroundColor: "#16a34a",
@@ -233,11 +285,19 @@ function GeneratedProject() {
                                     fontSize: "18px",
                                     height: "38px",
                                     maxWidth: "220px",
-                                    opacity: isSaving ? 0.7 : 1,
-                                    cursor: isSaving ? "wait" : "pointer",
+                                    opacity: isSaving || pageLoadFailed || (Boolean(pageIdFromUrl) && isLoadingPage) ? 0.7 : 1,
+                                    cursor: isSaving || pageLoadFailed || (Boolean(pageIdFromUrl) && isLoadingPage) ? "wait" : "pointer",
                                 }}
                             >
-                                {isSaving ? "Saving..." : savedPageId ? "Update" : "Save"}
+                                {pageLoadFailed
+                                    ? "Unavailable"
+                                    : pageIdFromUrl && isLoadingPage
+                                    ? "Loading..."
+                                    : isSaving
+                                      ? "Saving..."
+                                      : pageIdFromUrl && savedPageId === pageIdFromUrl
+                                        ? "Update"
+                                        : "Save"}
                             </button>
                         </div>
                     </div>
