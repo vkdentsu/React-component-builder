@@ -97,6 +97,7 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
     // Notification Toast
     const [toast, setToast] = useState(null);
     const [openingComponentId, setOpeningComponentId] = useState(null);
+    const [openingPageId, setOpeningPageId] = useState(null);
     const [updatingPageThemeId, setUpdatingPageThemeId] = useState(null);
 
     const allAvailableThemes = useMemo(() => {
@@ -435,12 +436,37 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
         }
     };
 
-    // Edit Page in Builder Handler
-    const handleEditPageInBuilder = (page) => {
-        if (page?.themeId) {
-            useBuilderStore.getState().selectTheme(page.themeId);
+    // Open a page in the editor appropriate to its content type.
+    const handleOpenPage = async (page) => {
+        setOpeningPageId(page.id);
+        try {
+            let pageRecord = page;
+            if (!pageRecord.contentJson) {
+                const response = await authenticatedFetch(`/api/pages/${page.id}`);
+                const result = await response.json();
+                if (!response.ok) {
+                    throw new Error(result.error?.message || 'Could not open this page.');
+                }
+                pageRecord = result.data;
+            }
+            if (!pageRecord?.id) {
+                throw new Error('Could not open this page.');
+            }
+
+            if (pageRecord.contentJson?.type === 'generated-jsx') {
+                navigate(`/generated?pageId=${encodeURIComponent(pageRecord.id)}`);
+                return;
+            }
+
+            if (pageRecord?.themeId) {
+                useBuilderStore.getState().selectTheme(pageRecord.themeId);
+            }
+            navigate(`/custom-builder?pageId=${encodeURIComponent(pageRecord.id)}`);
+        } catch (err) {
+            showToast(err.message || 'Could not open this page.', 'error');
+        } finally {
+            setOpeningPageId(null);
         }
-        navigate(`/custom-builder?pageId=${page.id}`);
     };
 
     // Change Page Theme Handler
@@ -930,11 +956,12 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                                             Updated {new Date(page.updatedAt || page.createdAt).toLocaleDateString()}
                                                         </span>
                                                         <button
-                                                            onClick={() => handleEditPageInBuilder(page)}
-                                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-blue-600 hover:bg-blue-50 border border-blue-200 transition-colors"
+                                                            onClick={() => handleOpenPage(page)}
+                                                            disabled={openingPageId === page.id}
+                                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-blue-600 hover:bg-blue-50 border border-blue-200 transition-colors disabled:opacity-60 disabled:cursor-wait"
                                                         >
                                                             <Edit3 size={13} />
-                                                            <span>Edit in Builder</span>
+                                                            <span>{openingPageId === page.id ? 'Opening...' : 'Edit in Builder'}</span>
                                                         </button>
                                                         <button
                                                             type="button"
@@ -1303,9 +1330,11 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                                         <td className="py-4 px-6 text-right">
                                                             <div className="flex items-center justify-end gap-1">
                                                                 <button
-                                                                    onClick={() => handleEditPageInBuilder(page)}
-                                                                    title="Edit in Component Builder"
-                                                                    className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 border border-transparent hover:border-blue-200 transition-colors"
+                                                                    onClick={() => handleOpenPage(page)}
+                                                                    disabled={openingPageId === page.id}
+                                                                    title={openingPageId === page.id ? 'Opening page...' : 'Edit in Component Builder'}
+                                                                    aria-label={openingPageId === page.id ? 'Opening page' : `Edit ${page.name} in Component Builder`}
+                                                                    className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 border border-transparent hover:border-blue-200 transition-colors disabled:opacity-60 disabled:cursor-wait"
                                                                 >
                                                                     <Edit3 size={14} />
                                                                 </button>

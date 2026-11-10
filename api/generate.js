@@ -102,6 +102,7 @@ export default async function handler(req, res) {
             12. Do not use Tailwind unless absolutely necessary.
             13. The component must be directly usable in a React application.
             14. Component name must be exactly: ${pageName}
+            
 
             Return ONLY the JSX component.`,
         });
