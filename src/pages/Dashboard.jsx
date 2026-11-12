@@ -27,6 +27,7 @@ import {
     RefreshCw,
     Globe,
     Upload,
+    House,
 } from 'lucide-react';
 import { authenticatedFetch, getApiUrl } from '../utils/api';
 import { clearAuthSession, getAuthUser, saveAuthUser } from '../utils/auth';
@@ -54,6 +55,28 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
         return 'dashboard';
     };
 
+    const handleSetHomepage = async (page) => {
+        const pageId = page && homepagePageId !== page.id ? page.id : null;
+        try {
+            const response = await authenticatedFetch('/api/pages/homepage', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pageId }),
+            });
+            const result = await response.json();
+            if (!response.ok) {
+                throw new Error(result.error?.message || 'Could not update your homepage.');
+            }
+
+            setHomepagePageId(result.data?.id || null);
+            showToast(pageId
+                ? `"${page.name}" is now the public homepage for everyone.`
+                : 'The public homepage selection was cleared.');
+        } catch (err) {
+            showToast(err.message || 'Could not update your homepage.', 'error');
+        }
+    };
+
     const [activeTab, setActiveTab] = useState(determineInitialTab);
     const [prevInitialTab, setPrevInitialTab] = useState(initialTab);
     if (prevInitialTab !== initialTab) {
@@ -73,6 +96,7 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
 
     // Database Data States
     const [pages, setPages] = useState([]);
+    const [homepagePageId, setHomepagePageId] = useState(null);
     const [components, setComponents] = useState([]);
     const [themes, setThemes] = useState([]);
     const [health, setHealth] = useState({ status: 'checking', database: 'checking' });
@@ -138,12 +162,14 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
         setError(null);
         return Promise.all([
             authenticatedFetch('/api/pages').then((r) => r.json()),
+            authenticatedFetch('/api/pages/homepage').then((r) => r.json()),
             authenticatedFetch('/api/components').then((r) => r.json()),
             useBuilderStore.getState().fetchThemes(),
             authenticatedFetch('/api/auth/me').then((r) => r.json()),
             fetch(getApiUrl('/api/health')).then((r) => r.json()).catch(() => ({ status: 'error', database: 'unavailable' })),
-        ]).then(([pagesRes, componentsRes, themesRes, userRes, healthRes]) => {
+        ]).then(([pagesRes, homepageRes, componentsRes, themesRes, userRes, healthRes]) => {
             if (pagesRes.data) setPages(pagesRes.data);
+            if (homepageRes.data !== undefined) setHomepagePageId(homepageRes.data?.id || null);
             if (componentsRes.data) setComponents(componentsRes.data);
             if (themesRes) {
                 setThemes(Array.isArray(themesRes) ? themesRes : (themesRes.data || []));
@@ -191,13 +217,15 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
         let isMounted = true;
         Promise.all([
             authenticatedFetch('/api/pages').then((r) => r.json()),
+            authenticatedFetch('/api/pages/homepage').then((r) => r.json()),
             authenticatedFetch('/api/components').then((r) => r.json()),
             useBuilderStore.getState().fetchThemes(),
             authenticatedFetch('/api/auth/me').then((r) => r.json()),
             fetch(getApiUrl('/api/health')).then((r) => r.json()).catch(() => ({ status: 'error', database: 'unavailable' })),
-        ]).then(([pagesRes, componentsRes, themesRes, userRes, healthRes]) => {
+        ]).then(([pagesRes, homepageRes, componentsRes, themesRes, userRes, healthRes]) => {
             if (!isMounted) return;
             if (pagesRes.data) setPages(pagesRes.data);
+            if (homepageRes.data !== undefined) setHomepagePageId(homepageRes.data?.id || null);
             if (componentsRes.data) setComponents(componentsRes.data);
             if (themesRes) {
                 setThemes(Array.isArray(themesRes) ? themesRes : (themesRes.data || []));
@@ -397,6 +425,7 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                 setComponents((prev) => prev.filter((component) => component.id !== resourceToDelete.id));
             } else {
                 setPages((prev) => prev.filter((page) => page.id !== resourceToDelete.id));
+                if (homepagePageId === resourceToDelete.id) setHomepagePageId(null);
             }
             setDeleteModalOpen(false);
             showToast(`${deleteResourceType === 'component' ? 'Component' : 'Page'} "${resourceToDelete.name}" deleted successfully.`);
@@ -1159,6 +1188,9 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                     <p className="text-xs text-slate-500 mt-0.5">
                                         Manage database-backed pages, edit in the component builder, and publish.
                                     </p>
+                                    <p className="mt-1 text-[11px] text-amber-700">
+                                        Homepage selection is shared publicly. Any signed-in account can change it; only published pages can be selected.
+                                    </p>
                                 </div>
 
                                 <button
@@ -1169,6 +1201,19 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                     <span>Create Page</span>
                                 </button>
                             </div>
+
+                            {homepagePageId && (
+                                <div className="flex items-center justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-800">
+                                    <span>A public homepage is currently selected.</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleSetHomepage(null)}
+                                        className="shrink-0 font-semibold underline underline-offset-2 hover:text-blue-950"
+                                    >
+                                        Clear selection
+                                    </button>
+                                </div>
+                            )}
 
                             {/* Search & Filter Bar */}
                             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200/80 shadow-xs">
@@ -1266,6 +1311,11 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                                                     <FileText size={15} />
                                                                 </div>
                                                                 <span className="truncate max-w-[200px]">{page.name}</span>
+                                                                {homepagePageId === page.id && (
+                                                                    <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700">
+                                                                        <House size={10} /> Homepage
+                                                                    </span>
+                                                                )}
                                                             </div>
                                                             {isDesignConversion && (
                                                                 <p className="ml-10 mt-1 max-w-xs text-[11px] font-normal leading-4 text-violet-700">
@@ -1363,6 +1413,25 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
 
                                                         <td className="py-4 px-6 text-right">
                                                             <div className="flex items-center justify-end gap-1">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleSetHomepage(page)}
+                                                                    disabled={page.status !== 'PUBLISHED' && homepagePageId !== page.id}
+                                                                    title={homepagePageId === page.id
+                                                                        ? 'Clear homepage selection'
+                                                                        : page.status === 'PUBLISHED'
+                                                                            ? 'Set as the public homepage for everyone'
+                                                                            : 'Publish this page before setting it as the homepage'}
+                                                                    aria-label={homepagePageId === page.id ? `Clear homepage selection for ${page.name}` : `Set ${page.name} as homepage`}
+                                                                    className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1.5 text-[11px] font-medium transition-colors ${
+                                                                        homepagePageId === page.id
+                                                                            ? 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100'
+                                                                            : 'border-transparent text-slate-500 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-40'
+                                                                    }`}
+                                                                >
+                                                                    <House size={13} />
+                                                                    {homepagePageId === page.id ? 'Homepage' : page.status === 'PUBLISHED' ? 'Set home' : 'Publish first'}
+                                                                </button>
                                                                 <button
                                                                     onClick={() => handleOpenPage(page)}
                                                                     disabled={openingPageId === page.id}

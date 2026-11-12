@@ -1,8 +1,10 @@
 
-// import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Home.scss";
 import BrandLogo from "../components/BrandLogo";
+import PageHome from "./PageHome";
+import { getApiUrl } from "../utils/api";
 // import GOOGLE_FONTS from "../utils/googleFonts";
 // import { normalizeThemeConfig } from "../utils/themeDefaults";
 // import useBuilderStore from "../store/builderStore";
@@ -31,6 +33,41 @@ import BrandLogo from "../components/BrandLogo";
 
 export default function Home() {
   const navigate = useNavigate();
+  const [homepagePage, setHomepagePage] = useState(null);
+  const [homepageLoaded, setHomepageLoaded] = useState(false);
+  const [homepageError, setHomepageError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(getApiUrl("/api/homepage"))
+      .then(async (response) => {
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.error?.message || "Could not load the public homepage.");
+        }
+        if (!cancelled) setHomepagePage(result.data || null);
+      })
+      .catch((error) => {
+        console.error("Failed to load public homepage:", error);
+        if (!cancelled) setHomepageError(error.message || "Could not load the public homepage.");
+      })
+      .finally(() => {
+        if (!cancelled) setHomepageLoaded(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!homepageLoaded) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-sm text-slate-500">
+        Loading your homepage...
+      </div>
+    );
+  }
+  if (homepagePage) return <PageHome page={homepagePage} />;
 
   // const [showBuilder, setShowBuilder] = useState(false);
   // const [fontType, setFontType] = useState("google");
@@ -172,6 +209,11 @@ export default function Home() {
 
   return (
     <div className="compifyHome">
+      {homepageError && (
+        <p role="alert" className="bg-amber-50 px-4 py-2 text-center text-xs text-amber-800">
+          {homepageError} Showing the default homepage instead.
+        </p>
+      )}
       <div className="wrap">
         <nav>
           <div className="logo">

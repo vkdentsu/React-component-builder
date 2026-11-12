@@ -145,7 +145,7 @@ function PreviewRow({ row, device }) {
   );
 }
 
-function PreviewRows({ rows, device }) {
+export function PreviewRows({ rows, device }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       {rows.map((row) => (
