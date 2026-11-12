@@ -12,6 +12,7 @@ import {
     Trash2,
     Copy,
     ChevronDown,
+    Eye,
     User,
     Sliders,
     Sparkles,
@@ -34,6 +35,8 @@ import { BUILT_IN_PRESET_THEMES, mergeThemes } from '../utils/themeDefaults';
 import useBuilderStore from '../store/builderStore';
 import ConfigurationAndThemes from "./ConfigurationAndThemes";
 import MediaAssets from "../components/MediaAssets";
+
+const isDesignConvertedPage = (page) => page.contentJson?.type === 'generated-jsx';
 
 export default function Dashboard({ initialTab = 'dashboard' }) {
     const navigate = useNavigate();
@@ -453,8 +456,13 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                 throw new Error('Could not open this page.');
             }
 
-            if (pageRecord.contentJson?.type === 'generated-jsx') {
-                navigate(`/generated?pageId=${encodeURIComponent(pageRecord.id)}`);
+            if (isDesignConvertedPage(pageRecord)) {
+                navigate('/preview', {
+                    state: {
+                        pageName: pageRecord.name,
+                        generatedJSX: pageRecord.contentJson.jsx,
+                    },
+                });
                 return;
             }
 
@@ -875,6 +883,7 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                             const pageTheme = getPageTheme(page);
                                             const themeColors = pageTheme?.configJson?.colors || {};
                                             const isUpdating = updatingPageThemeId === page.id;
+                                            const isDesignConversion = isDesignConvertedPage(page);
 
                                             return (
                                                 <div
@@ -902,6 +911,11 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                                             <p className="text-[11px] text-slate-400 font-mono mt-0.5">
                                                                 /{page.slug}
                                                             </p>
+                                                            {isDesignConversion && (
+                                                                <p className="mt-1 text-[11px] leading-4 text-violet-700">
+                                                                    Created using design conversion; this page cannot be edited in the Page Builder.
+                                                                </p>
+                                                            )}
                                                         </div>
                                                     </div>
 
@@ -958,10 +972,22 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                                         <button
                                                             onClick={() => handleOpenPage(page)}
                                                             disabled={openingPageId === page.id}
-                                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-blue-600 hover:bg-blue-50 border border-blue-200 transition-colors disabled:opacity-60 disabled:cursor-wait"
+                                                            title={isDesignConversion ? 'Preview design-converted page' : 'Edit in Builder'}
+                                                            aria-label={isDesignConversion ? `Preview ${page.name}` : `Edit ${page.name} in Builder`}
+                                                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors disabled:opacity-60 disabled:cursor-wait ${
+                                                                isDesignConversion
+                                                                    ? 'text-violet-700 hover:bg-violet-50 border-violet-200'
+                                                                    : 'text-blue-600 hover:bg-blue-50 border-blue-200'
+                                                            }`}
                                                         >
-                                                            <Edit3 size={13} />
-                                                            <span>{openingPageId === page.id ? 'Opening...' : 'Edit in Builder'}</span>
+                                                            {isDesignConversion ? <Eye size={13} /> : <Edit3 size={13} />}
+                                                            <span>
+                                                                {openingPageId === page.id
+                                                                    ? 'Opening...'
+                                                                    : isDesignConversion
+                                                                        ? 'Preview'
+                                                                        : 'Edit in Builder'}
+                                                            </span>
                                                         </button>
                                                         <button
                                                             type="button"
@@ -1226,7 +1252,10 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
-                                                {filteredPages.map((page) => (
+                                                {filteredPages.map((page) => {
+                                                    const isDesignConversion = isDesignConvertedPage(page);
+
+                                                    return (
                                                     <tr
                                                         key={page.id}
                                                         className="hover:bg-slate-50/70 transition-colors group"
@@ -1238,6 +1267,11 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                                                 </div>
                                                                 <span className="truncate max-w-[200px]">{page.name}</span>
                                                             </div>
+                                                            {isDesignConversion && (
+                                                                <p className="ml-10 mt-1 max-w-xs text-[11px] font-normal leading-4 text-violet-700">
+                                                                    Created using design conversion; this page cannot be edited in the Page Builder.
+                                                                </p>
+                                                            )}
                                                         </td>
 
                                                         <td className="py-4 px-6 font-mono text-slate-500 text-[11px]">
@@ -1332,11 +1366,24 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                                                 <button
                                                                     onClick={() => handleOpenPage(page)}
                                                                     disabled={openingPageId === page.id}
-                                                                    title={openingPageId === page.id ? 'Opening page...' : 'Edit in Component Builder'}
-                                                                    aria-label={openingPageId === page.id ? 'Opening page' : `Edit ${page.name} in Component Builder`}
-                                                                    className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 border border-transparent hover:border-blue-200 transition-colors disabled:opacity-60 disabled:cursor-wait"
+                                                                    title={openingPageId === page.id
+                                                                        ? 'Opening page...'
+                                                                        : isDesignConversion
+                                                                            ? 'Preview design-converted page'
+                                                                            : 'Edit in Component Builder'}
+                                                                    aria-label={openingPageId === page.id
+                                                                        ? 'Opening page'
+                                                                        : isDesignConversion
+                                                                            ? `Preview ${page.name}`
+                                                                            : `Edit ${page.name} in Component Builder`}
+                                                                    className={`inline-flex items-center gap-1.5 rounded-lg border border-transparent px-2 py-1.5 transition-colors disabled:opacity-60 disabled:cursor-wait ${
+                                                                        isDesignConversion
+                                                                            ? 'text-violet-700 hover:bg-violet-50 hover:border-violet-200'
+                                                                            : 'text-blue-600 hover:bg-blue-50 hover:border-blue-200'
+                                                                    }`}
                                                                 >
-                                                                    <Edit3 size={14} />
+                                                                    {isDesignConversion ? <Eye size={14} /> : <Edit3 size={14} />}
+                                                                    {isDesignConversion && <span>Preview</span>}
                                                                 </button>
 
                                                                 <button
@@ -1361,7 +1408,8 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                                             </div>
                                                         </td>
                                                     </tr>
-                                                ))}
+                                                    );
+                                                })}
                                             </tbody>
                                         </table>
                                     </div>
