@@ -31,6 +31,7 @@ import {
 import { authenticatedFetch, getApiUrl } from '../utils/api';
 import { clearAuthSession, getAuthUser, saveAuthUser } from '../utils/auth';
 import { ensureUserTheme } from '../utils/ensureUserTheme';
+import { BUILT_IN_PRESET_THEMES, mergeThemes } from '../utils/themeDefaults';
 import useBuilderStore from '../store/builderStore';
 import ConfigurationAndThemes from "./ConfigurationAndThemes";
 import MediaAssets from "../components/MediaAssets";
