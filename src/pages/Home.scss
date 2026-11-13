@@ -1,5 +1,11 @@
 @use '../styles/variables' as *;
+html {
+  scroll-behavior: smooth;
+}
 
+#design-workflow {
+  scroll-margin-top: 30px;
+}
 .compifyHome {
   background: $color-white;
   color: $color-navy;

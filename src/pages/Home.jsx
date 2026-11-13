@@ -3,6 +3,7 @@
 import { useNavigate } from "react-router-dom";
 import "./Home.scss";
 import BrandLogo from "../components/BrandLogo";
+import HomeAnimation from "../components/HomeAnimation";
 // import GOOGLE_FONTS from "../utils/googleFonts";
 // import { normalizeThemeConfig } from "../utils/themeDefaults";
 // import useBuilderStore from "../store/builderStore";
@@ -178,12 +179,12 @@ export default function Home() {
             <BrandLogo />
           </div>
           <div className="navLinks">
-            <a href="#features">Features</a>
-            <a href="#cta">Get started</a>
+            <a href="#get-started">Get started</a>
+            <a href="#design-workflow">Build Using Design</a>
           </div>
         </nav>
 
-        <header className="hero">
+        <header id="get-started" className="hero">
           <h1>Build your React theme.</h1>
           <h1>
             <span>Make it uniquely yours.</span>
@@ -227,6 +228,8 @@ export default function Home() {
             </button>
           </div>
         </header>
+
+        <HomeAnimation />
 
         {/* {showBuilder && (
           <section className="themeSetup" id="theme-setup">
