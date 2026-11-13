@@ -311,8 +311,6 @@ const makeRow = (cols = 2) => ({
 });
 
 const createDefaultRows = (templateId) => {
-  console.log('Creating default rows with navbar, hero, and footer...',{templates: BUILT_IN_TEMPLATES},{activeTemplate: BUILT_IN_TEMPLATES[0].name}, {currentTemplate: BUILT_IN_TEMPLATES[0]});
-  console.log('Template ID:', templateId);
   const navbarRow = makeRow(1);
   navbarRow.cols[0].elements.push(makeElement("navbar"));
 
@@ -473,7 +471,6 @@ const useBuilderStore = create(
           name: docName,
           rows: sanitizedRows,
         };
-        console.log('no page record');
 
         const assignedThemeId = pageRecord.themeId || rawContent.themeId || '';
         const available = get().availableThemes || [];
@@ -549,7 +546,6 @@ const useBuilderStore = create(
           availableThemes: nextAvailableThemes,
           ...(rawContent.globalFont ? { globalFont: rawContent.globalFont } : {}),
         });
-        console.log('loaded page from db', pageRecord.id, pageRecord.name, finalTheme.id);
       },
 
       initNewDbPage: ({ name = 'New Page', slug = 'new-page', themeId = '' } = {}) => {
@@ -580,7 +576,6 @@ const useBuilderStore = create(
           _history: { past: [], future: [] },
           activeTheme: appliedTheme,
         });
-        console.log('initialized new db page', name, slug, resolvedThemeId);
       },
 
       loadComponentFromDb: (componentRecord) => {
