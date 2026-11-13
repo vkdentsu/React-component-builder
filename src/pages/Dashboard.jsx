@@ -32,7 +32,9 @@ import { authenticatedFetch, getApiUrl } from '../utils/api';
 import { clearAuthSession, getAuthUser, saveAuthUser } from '../utils/auth';
 import { ensureUserTheme } from '../utils/ensureUserTheme';
 import { BUILT_IN_PRESET_THEMES, mergeThemes } from '../utils/themeDefaults';
+import { BUILT_IN_TEMPLATES } from '../utils/templates';
 import useBuilderStore from '../store/builderStore';
+import {createDefaultRows} from '../store/builderStore';
 import ConfigurationAndThemes from "./ConfigurationAndThemes";
 import MediaAssets from "../components/MediaAssets";
 
@@ -75,6 +77,7 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
     const [pages, setPages] = useState([]);
     const [components, setComponents] = useState([]);
     const [themes, setThemes] = useState([]);
+    const [templates, setTemplates] = useState([]);
     const [health, setHealth] = useState({ status: 'checking', database: 'checking' });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -90,6 +93,7 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
     const [newPageThemeId, setNewPageThemeId] = useState('');
     const [creatingPage, setCreatingPage] = useState(false);
     const [createError, setCreateError] = useState('');
+    const [newPageTemplate, setNewPageTemplate] = useState('Select Template');
 
     // Delete Confirmation Modal State
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -1751,6 +1755,27 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                         className="flex-1 px-3 py-2 text-xs bg-white font-mono focus:outline-none"
                                     />
                                 </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-medium text-slate-700 mb-1">
+                                    Select Template (optional)
+                                </label>
+                                <select
+                                    value={newPageTemplate || 'none'}
+                                    onChange={(e) => setNewPageTemplate(e.target.value)}
+                                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                >
+                                    <option value="none">{newPageTemplate}</option>
+                                    <option value="basic">
+                                        Default Theme ({templates.find((t) => t.id === useBuilderStore.getState().defaultTemplateId)?.name || templates[0]?.name || 'Basic Template'})
+                                    </option>
+                                    {templates.map((t) => (
+                                        <option key={t.id} value={t.id}>
+                                            {t.name} {t.id === useBuilderStore.getState().defaultTemplateId ? '(Default)' : ''}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
 
                             <div>
