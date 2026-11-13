@@ -31,10 +31,7 @@ import {
 import { authenticatedFetch, getApiUrl } from '../utils/api';
 import { clearAuthSession, getAuthUser, saveAuthUser } from '../utils/auth';
 import { ensureUserTheme } from '../utils/ensureUserTheme';
-import { BUILT_IN_PRESET_THEMES, mergeThemes } from '../utils/themeDefaults';
-import { BUILT_IN_TEMPLATES } from '../utils/templates';
 import useBuilderStore from '../store/builderStore';
-import {createDefaultRows} from '../store/builderStore';
 import ConfigurationAndThemes from "./ConfigurationAndThemes";
 import MediaAssets from "../components/MediaAssets";
 
@@ -77,7 +74,6 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
     const [pages, setPages] = useState([]);
     const [components, setComponents] = useState([]);
     const [themes, setThemes] = useState([]);
-    const [templates, setTemplates] = useState([]);
     const [health, setHealth] = useState({ status: 'checking', database: 'checking' });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
