@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import "./HomeAnimation.scss";
+import "./DesignAnimation.scss";
 
 const STEPS = [
   "Upload Design",
@@ -8,6 +8,7 @@ const STEPS = [
   "Generate JSX",
   "Preview",
   "Copy / Download",
+  "Save",
 ];
 
 const CODE = [
@@ -43,14 +44,46 @@ const CODE = [
 ];
 
 const SAMPLE_CARDS = [
-  { name: "Samuel Robinson", color: "#52e8bc", bio: "Creating beautiful interfaces." },
-  { name: "Ron Lee", color: "#9dc5ff", bio: "UX Designer at StudioD." },
-  { name: "Terry Gomez", color: "#bdc9f3", bio: "Love spending time with animals." },
-  { name: "William Stewart", color: "#9be0f5", bio: "Creative chef and designer." },
-  { name: "Alyssa Silva", color: "#a4d5e9", bio: "Fashion and design enthusiast." },
-  { name: "Suzy Cole", color: "#f6b5d1", bio: "UI/UX Designer and freelancer." },
-  { name: "Donald Richardson", color: "#ffd5a7", bio: "Writer and illustrator." },
-  { name: "Melinda Cole", color: "#ff929f", bio: "Interior design enthusiast." },
+  {
+    name: "Samuel Robinson",
+    color: "#52e8bc",
+    bio: "Creating beautiful interfaces.",
+  },
+  {
+    name: "Ron Lee",
+    color: "#9dc5ff",
+    bio: "UX Designer at StudioD.",
+  },
+  {
+    name: "Terry Gomez",
+    color: "#bdc9f3",
+    bio: "Love spending time with animals.",
+  },
+  {
+    name: "William Stewart",
+    color: "#9be0f5",
+    bio: "Creative chef and designer.",
+  },
+  {
+    name: "Alyssa Silva",
+    color: "#a4d5e9",
+    bio: "Fashion and design enthusiast.",
+  },
+  {
+    name: "Suzy Cole",
+    color: "#f6b5d1",
+    bio: "UI/UX Designer and freelancer.",
+  },
+  {
+    name: "Donald Richardson",
+    color: "#ffd5a7",
+    bio: "Writer and illustrator.",
+  },
+  {
+    name: "Melinda Cole",
+    color: "#ff929f",
+    bio: "Interior design enthusiast.",
+  },
 ];
 
 export default function HomeAnimation() {
@@ -61,6 +94,7 @@ export default function HomeAnimation() {
   const [preview, setPreview] = useState(false);
   const [codeLines, setCodeLines] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [cycle, setCycle] = useState(0);
 
   useEffect(() => {
@@ -70,6 +104,7 @@ export default function HomeAnimation() {
       timers.push(setTimeout(callback, delay));
     };
 
+    // Reset animation
     setStage(0);
     setUploaded(false);
     setProcessing(false);
@@ -77,33 +112,36 @@ export default function HomeAnimation() {
     setPreview(false);
     setCodeLines(0);
     setCopied(false);
+    setSaved(false);
 
-    // 1. Upload design
+    // 1. Upload Design
     at(() => {
-      setStage(1);
+      setStage(0);
       setUploaded(true);
     }, 1600);
 
-    // 2. Analyze design
+    // 2. Analyze Design
     at(() => {
-      setStage(2);
+      setStage(1);
       setProcessing(true);
     }, 3800);
 
     // 3. Generate JSX
     at(() => {
-      setStage(3);
+      setStage(2);
       setProcessing(false);
       setGenerated(true);
 
       CODE.forEach((_, index) => {
-        at(() => setCodeLines(index + 1), index * 90);
+        at(() => {
+          setCodeLines(index + 1);
+        }, index * 90);
       });
     }, 6400);
 
-    // 4. Show live preview
+    // 4. Live Preview
     at(() => {
-      setStage(4);
+      setStage(3);
       setPreview(true);
     }, 10500);
 
@@ -113,12 +151,20 @@ export default function HomeAnimation() {
       setCopied(true);
     }, 12600);
 
+    // 6. Save
+    at(() => {
+      setStage(5);
+      setSaved(true);
+    }, 14000);
+
     // Restart animation
     at(() => {
       setCycle((previous) => previous + 1);
-    }, 15500);
+    }, 17000);
 
-    return () => timers.forEach(clearTimeout);
+    return () => {
+      timers.forEach(clearTimeout);
+    };
   }, [cycle]);
 
   const mode = preview
@@ -131,22 +177,17 @@ export default function HomeAnimation() {
 
   return (
     <section className="compifyAnimation" id="design-workflow">
-        <div className="workflowHeading">
+      <div className="workflowHeading">
         <span className="workflowLabel">BUILD USING DESIGN</span>
-
-        <h2>
-            Turn your designs into <span>React components.</span>
-        </h2>
-
+        <h2>Turn your designs into <span>React components.</span></h2>
         <p>
-            Upload your desktop or mobile design, let AI analyze the layout,
-            and generate reusable React JSX with a live preview.
+          Upload your desktop or mobile design, let AI analyze the layout,
+          and generate reusable React JSX with a live preview.
         </p>
-        </div>
+      </div>
+
       <div className="animationWrap">
-
         <div className={`animationDemo${preview ? " previewMode" : ""}`}>
-
           {/* Browser header */}
           <div className="animationBar">
             <div className="browserDots">
@@ -154,11 +195,11 @@ export default function HomeAnimation() {
               <b />
               <b />
             </div>
+
             <em>{mode}</em>
           </div>
 
           <div className="animationBody">
-
             {/* LEFT PANEL */}
             <aside className="animationSidebar">
               <h4>{preview ? "COMPONENTS" : "WORKFLOW"}</h4>
@@ -196,11 +237,12 @@ export default function HomeAnimation() {
 
             {/* CENTER CANVAS */}
             <main className="animationCanvas">
-
               {/* Upload design state */}
-              <div className={`uploadPreview ${
-                !generated && !processing ? "visible" : ""
-                }`}>
+              <div
+                className={`uploadPreview ${
+                  !generated && !processing ? "visible" : ""
+                }`}
+              >
                 <div className="uploadTitle">
                   <strong>CardsSection</strong>
                   <span>{uploaded ? "Uploaded" : "Page Name"}</span>
@@ -210,7 +252,10 @@ export default function HomeAnimation() {
                   <div className="uploadCard">
                     <div className="folderIcon">📁</div>
                     <strong>Desktop Design</strong>
-                    <span>{uploaded ? "cardsSection.jpg" : "Browse File"}</span>
+                    <span>
+                      {uploaded ? "cardsSection.jpg" : "Browse File"}
+                    </span>
+
                     <div className="uploadProgress">
                       <i className={uploaded ? "completed" : ""} />
                     </div>
@@ -219,7 +264,10 @@ export default function HomeAnimation() {
                   <div className="uploadCard">
                     <div className="folderIcon">📁</div>
                     <strong>Mobile Design</strong>
-                    <span>{uploaded ? "Mobile design ready" : "Browse File"}</span>
+                    <span>
+                      {uploaded ? "Mobile design ready" : "Browse File"}
+                    </span>
+
                     <div className="uploadProgress">
                       <i className={uploaded ? "completed" : ""} />
                     </div>
@@ -232,12 +280,17 @@ export default function HomeAnimation() {
               </div>
 
               {/* Processing state */}
-              <div className={`processingPreview ${processing ? "visible" : ""}`}>
+              <div
+                className={`processingPreview ${
+                  processing ? "visible" : ""
+                }`}
+              >
                 <div className="processingIcon">
                   <span />
                 </div>
 
                 <strong>Analyzing your design layout...</strong>
+
                 <p>
                   Generating React component for{" "}
                   <b>CardsSection</b>
@@ -251,16 +304,18 @@ export default function HomeAnimation() {
               </div>
 
               {/* Generated component preview */}
-              <div className={`generatedPreview ${
-                generated ? "visible" : ""
-                }`}>
+              <div
+                className={`generatedPreview ${
+                  generated ? "visible" : ""
+                }`}
+              >
                 <div className="generatedHeading">
                   <strong>Preview of CardsSection</strong>
                   <span>React Component</span>
                 </div>
 
                 <div className="profileGrid">
-                  {SAMPLE_CARDS.map((card, index) => (
+                  {SAMPLE_CARDS.map((card) => (
                     <div
                       className="profileCard"
                       key={card.name}
@@ -284,7 +339,6 @@ export default function HomeAnimation() {
                   ))}
                 </div>
               </div>
-
             </main>
 
             {/* RIGHT CODE PANEL */}
@@ -304,11 +358,14 @@ export default function HomeAnimation() {
                 ))}
               </div>
 
-              <div className={`copyToast ${copied ? "show" : ""}`}>
+              <div className={`copyToast ${copied && !saved ? "show" : ""}`}>
                 ✓ Copied · CardsSection.jsx
               </div>
-            </aside>
 
+              <div className={`saveToast ${saved ? "show" : ""}`}>
+                ✓ Saved · CardsSection.jsx
+              </div>
+            </aside>
           </div>
         </div>
 
@@ -327,8 +384,6 @@ export default function HomeAnimation() {
         </div>
 
         <div className="workflowCTA">
-          <p>Ready to transform your design into React components?</p>
-
           <button
             type="button"
             onClick={() => window.location.assign("/upload")}

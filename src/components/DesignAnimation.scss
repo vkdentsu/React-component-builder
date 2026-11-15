@@ -1,4 +1,7 @@
 
+  .compifyAnimation {
+    border-bottom: 1px solid #e3e9f2;
+  }
 .compifyAnimation {
   --anim-bg: #f6f8fc;
   --anim-fg: #0b1b33;
@@ -555,6 +558,28 @@
     }
   }
 
+
+  .saveToast {
+    position: absolute;
+    right: 12px;
+    bottom: 48px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: #7c3aed;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: 0.4s ease;
+
+    &.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+
   // Bottom workflow indicators
   .animationSteps {
     display: flex;
@@ -588,11 +613,11 @@
     text-align: center;
     margin: 32px auto 10px;
 
-    p {
-      color: #5b6b82;
-      font-size: 14px;
-      margin: 0 0 14px;
-    }
+    // p {
+    //   color: #5b6b82;
+    //   font-size: 14px;
+    //   margin: 0 0 14px;
+    // }
 
     button {
       min-height: 48px;
