@@ -69,7 +69,34 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
     const [profileImage, setProfileImage] = useState(null);
     const [profileError, setProfileError] = useState('');
     const [savingProfile, setSavingProfile] = useState(false);
+    const [integrationConnections, setIntegrationConnections] = useState({ github: null, vercel: null });
+    const [integrationTokens, setIntegrationTokens] = useState({ github: '', vercel: '' });
+    const [savingIntegration, setSavingIntegration] = useState(null);
+    const [integrationLoading, setIntegrationLoading] = useState(true);
+    const [integrationError, setIntegrationError] = useState('');
+    const [integrationMessage, setIntegrationMessage] = useState('');
     const profileDisplayName = currentUser?.name?.trim() || currentUser?.email || 'Your profile';
+
+    useEffect(() => {
+        let isMounted = true;
+        authenticatedFetch('/api/integrations/connections')
+            .then(async (response) => {
+                const result = await response.json();
+                if (!response.ok) {
+                    throw new Error(result.error?.message || 'Could not load connected providers.');
+                }
+                if (isMounted) setIntegrationConnections(result.data || { github: null, vercel: null });
+            })
+            .catch((err) => {
+                if (isMounted) setIntegrationError(err.message || 'Could not load connected providers.');
+            })
+            .finally(() => {
+                if (isMounted) setIntegrationLoading(false);
+            });
+        return () => {
+            isMounted = false;
+        };
+    }, []);
 
     // Database Data States
     const [pages, setPages] = useState([]);
@@ -294,6 +321,58 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
             setProfileError(err.message || 'Could not update your profile.');
         } finally {
             setSavingProfile(false);
+        }
+    };
+
+    const handleSaveIntegrationToken = async (provider, event) => {
+        event.preventDefault();
+        const token = integrationTokens[provider].trim();
+        if (!token) {
+            setIntegrationError(`Enter a ${provider === 'github' ? 'GitHub' : 'Vercel'} token first.`);
+            return;
+        }
+
+        setSavingIntegration(provider);
+        setIntegrationError('');
+        setIntegrationMessage('');
+        try {
+            const response = await authenticatedFetch(`/api/integrations/credentials/${provider}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token }),
+            });
+            const result = await response.json();
+            if (!response.ok) {
+                throw new Error(result.error?.message || `Could not save the ${provider} token.`);
+            }
+            setIntegrationConnections((current) => ({ ...current, [provider]: result.data }));
+            setIntegrationTokens((current) => ({ ...current, [provider]: '' }));
+            setIntegrationMessage(`${provider === 'github' ? 'GitHub' : 'Vercel'} token validated and saved securely.`);
+        } catch (err) {
+            setIntegrationError(err.message || `Could not save the ${provider} token.`);
+        } finally {
+            setSavingIntegration(null);
+        }
+    };
+
+    const handleDisconnectIntegration = async (provider) => {
+        setSavingIntegration(provider);
+        setIntegrationError('');
+        setIntegrationMessage('');
+        try {
+            const response = await authenticatedFetch(`/api/integrations/${provider}`, {
+                method: 'DELETE',
+            });
+            if (!response.ok) {
+                const result = await response.json();
+                throw new Error(result.error?.message || `Could not remove the ${provider} token.`);
+            }
+            setIntegrationConnections((current) => ({ ...current, [provider]: null }));
+            setIntegrationMessage(`${provider === 'github' ? 'GitHub' : 'Vercel'} token removed.`);
+        } catch (err) {
+            setIntegrationError(err.message || `Could not remove the ${provider} token.`);
+        } finally {
+            setSavingIntegration(null);
         }
     };
     // Handle auto-slug creation
@@ -1443,6 +1522,77 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                     Global application parameters, database connection, and API status.
                                 </p>
                             </div>
+
+                            <section className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-6 space-y-5">
+                                <div>
+                                    <h2 className="text-sm font-semibold text-slate-800">Publishing credentials</h2>
+                                    <p className="text-xs text-slate-500 mt-1">
+                                        Add a GitHub token and a Vercel token here. Tokens are validated, encrypted on the server, and never shown again.
+                                    </p>
+                                </div>
+                                {integrationError && <p role="alert" className="text-xs text-rose-600">{integrationError}</p>}
+                                {integrationMessage && <p role="status" className="text-xs text-emerald-700">{integrationMessage}</p>}
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                                    {[
+                                        { provider: 'github', label: 'GitHub', hint: 'Needs permission to create repositories and push contents.' },
+                                        { provider: 'vercel', label: 'Vercel', hint: 'Needs permission to create projects and deployments. Builder files are uploaded directly to Vercel.' },
+                                    ].map(({ provider, label, hint }) => (
+                                        <form
+                                            key={provider}
+                                            onSubmit={(event) => handleSaveIntegrationToken(provider, event)}
+                                            className="rounded-xl border border-slate-200 p-4 space-y-3"
+                                        >
+                                            <div className="flex items-center justify-between gap-2">
+                                                <h3 className="text-sm font-semibold text-slate-800">{label}</h3>
+                                                {integrationConnections[provider] ? (
+                                                    <span className="text-xs text-emerald-700">
+                                                        Connected as {integrationConnections[provider].accountName}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-xs text-slate-500">
+                                                        {integrationLoading ? 'Checking...' : 'Not connected'}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <label htmlFor={`${provider}-credential`} className="block text-xs font-medium text-slate-600">
+                                                {label} personal access token
+                                            </label>
+                                            <input
+                                                id={`${provider}-credential`}
+                                                type="password"
+                                                autoComplete="new-password"
+                                                value={integrationTokens[provider]}
+                                                onChange={(event) => setIntegrationTokens((current) => ({
+                                                    ...current,
+                                                    [provider]: event.target.value,
+                                                }))}
+                                                placeholder={integrationConnections[provider] ? 'Enter a new token to replace the saved one' : `Paste ${label} token`}
+                                                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            />
+                                            <p className="text-[11px] text-slate-500">{hint}</p>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    type="submit"
+                                                    disabled={savingIntegration !== null || !integrationTokens[provider].trim()}
+                                                    className="px-3 py-2 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg"
+                                                >
+                                                    {savingIntegration === provider ? 'Validating...' : integrationConnections[provider] ? 'Replace token' : 'Save token'}
+                                                </button>
+                                                {integrationConnections[provider] && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleDisconnectIntegration(provider)}
+                                                        disabled={savingIntegration !== null}
+                                                        className="px-3 py-2 text-xs font-medium text-rose-700 bg-rose-50 hover:bg-rose-100 disabled:opacity-50 rounded-lg"
+                                                    >
+                                                        Remove token
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </form>
+                                    ))}
+                                </div>
+                            </section>
 
                             <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs divide-y divide-slate-100">
                                 {/* System Status */}

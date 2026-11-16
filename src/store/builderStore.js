@@ -441,6 +441,13 @@ const useBuilderStore = create(
       // Documents 
       documents: [makeDocument('My Component')],
       activeDocId: null, // set on first access below
+      publishingResults: {},
+      setPublishingResults: (documentId, result) => set((state) => ({
+        publishingResults: {
+          ...state.publishingResults,
+          [documentId]: result,
+        },
+      })),
 
       // Database Page Integration
       builderMode: 'component',
@@ -1554,6 +1561,7 @@ const useBuilderStore = create(
         return {
           documents,
           activeDocId: state.activeDocId,
+          publishingResults: state.publishingResults,
           rows: state.rows,
           selectedId: state.selectedId,
           selectedType: state.selectedType,

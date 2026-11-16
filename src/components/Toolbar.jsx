@@ -9,7 +9,7 @@ const DEVICES = [
   { id: 'mobile', label: 'Mobile', Icon: Smartphone },
 ];
 
-export default function Toolbar({ onExport, onExportJson, onImportJson, onPreview, canUndo, canRedo, onSavePage, isSaving }) {
+export default function Toolbar({ onExport, onExportJson, onImportJson, onPreview, onPublishGithub, onDeployVercel, githubConnected, vercelConnected, hasPublishedRepository, isPublishing, isDeploying, canUndo, canRedo, onSavePage, isSaving }) {
   const navigate = useNavigate();
   const { device, setDevice, clearAll, undo, redo } = useBuilderStore();
 
@@ -154,6 +154,22 @@ export default function Toolbar({ onExport, onExportJson, onImportJson, onPrevie
           <Code2 size={13} />
           <span className="hidden md:inline">Export JSX</span>
           <span className="md:hidden">JSX</span>
+        </button>
+        <button
+          onClick={onPublishGithub}
+          disabled={!githubConnected || isPublishing}
+          title={githubConnected ? 'Publish generated JSX to GitHub' : 'Add a GitHub token in Dashboard > Settings'}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-700 bg-white hover:bg-gray-50 disabled:opacity-50 rounded-lg border border-gray-200 transition-colors duration-150"
+        >
+          <span>{isPublishing ? 'Publishing...' : 'Publish to GitHub'}</span>
+        </button>
+        <button
+          onClick={onDeployVercel}
+          disabled={!vercelConnected || !hasPublishedRepository || isDeploying}
+          title={!vercelConnected ? 'Add a Vercel token in Dashboard > Settings' : !hasPublishedRepository ? 'Publish to GitHub first' : 'Deploy the current Builder project directly to Vercel'}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-white bg-black hover:bg-gray-800 disabled:opacity-50 rounded-lg transition-colors duration-150"
+        >
+          <span>{isDeploying ? 'Deploying...' : 'Deploy to Vercel'}</span>
         </button>
       </div>
     </header>
