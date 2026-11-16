@@ -1,0 +1,607 @@
+
+.componentAnimation {
+  --component-bg: #f6f8fc;
+  --component-fg: #0b1b33;
+  --component-muted: #5b6b82;
+  --component-line: #e3e9f2;
+  --component-accent: #7c3aed;
+  --component-accent-light: rgba(124, 58, 237, 0.12);
+  --component-green: #18c7b5;
+  --component-glow: rgba(124, 58, 237, 0.14);
+
+  width: 100%;
+  padding: 48px 0 52px;
+  color: var(--component-fg);
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  line-height: 1.6;
+  overflow: hidden;
+  scroll-margin-top: 90px;
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  // Section heading
+  .componentAnimationHeading {
+    max-width: 760px;
+    margin: 0 auto 36px;
+    padding: 0 20px;
+    text-align: center;
+
+    .componentAnimationLabel {
+      display: inline-block;
+      padding: 7px 16px;
+      border-radius: 30px;
+      background: rgba(124, 58, 237, 0.09);
+      color: var(--component-accent);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+    }
+
+    h2 {
+      margin: 18px 0 12px;
+      font-size: clamp(30px, 4vw, 44px);
+      line-height: 1.2;
+      letter-spacing: -1.5px;
+      color: var(--component-fg);
+
+      span {
+        background: linear-gradient(90deg, #7c3aed, #a855f7);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+    }
+
+    p {
+      max-width: 650px;
+      margin: 0 auto;
+      color: var(--component-muted);
+      font-size: 16px;
+      line-height: 1.7;
+    }
+  }
+
+  // Main builder container
+  .componentAnimationWrap {
+    max-width: 1125px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  .componentDemo {
+    width: 100%;
+    max-width: 1068px;
+    margin: 0 auto;
+    overflow: hidden;
+    border: 1px solid var(--component-line);
+    border-radius: 22px;
+    background: #fff;
+    box-shadow: 0 30px 70px var(--component-glow);
+    text-align: left;
+  }
+
+  // Browser header
+  .componentBar {
+    height: 60px;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--component-line);
+
+    em {
+      font-style: normal;
+      font-size: 12px;
+      padding: 6px 14px;
+      border-radius: 30px;
+      color: var(--component-accent);
+      background: var(--component-accent-light);
+    }
+  }
+
+  .componentBrowserDots {
+    display: flex;
+    gap: 8px;
+
+    b {
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: #e1e7f0;
+    }
+  }
+
+  // Three-column builder layout
+  .componentBody {
+    display: grid;
+    grid-template-columns: 178px minmax(0, 1fr) 272px;
+    min-height: 390px;
+  }
+
+  // Left component palette
+  .componentPalette {
+    padding: 19px 14px;
+    border-right: 1px solid var(--component-line);
+    background: #fff;
+
+    h4 {
+      margin: 0 0 12px;
+      color: var(--component-muted);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+    }
+  }
+
+  .componentChip {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 9px;
+    padding: 11px 10px;
+    border: 1px dashed #dce5f2;
+    border-radius: 10px;
+    background: #f7f9fc;
+    color: var(--component-fg);
+    font-size: 13px;
+    transition: 0.3s ease;
+
+    span {
+      font-size: 15px;
+    }
+  }
+
+  // Centre canvas
+  .componentCanvas {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+    min-height: 390px;
+    padding: 20px;
+    overflow: hidden;
+    background: #fff;
+  }
+
+  .componentBlock {
+    padding: 13px 15px;
+    border: 1.5px solid transparent;
+    border-radius: 11px;
+    background: var(--component-bg);
+    color: var(--component-fg);
+    font-size: 13px;
+    opacity: 0;
+    transform: translateY(14px);
+    transition:
+      opacity 0.5s ease,
+      transform 0.5s ease,
+      border-color 0.3s ease,
+      box-shadow 0.3s ease;
+
+    &.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    &.selected {
+      border-color: var(--component-accent);
+      box-shadow: 0 0 0 4px var(--component-accent-light);
+    }
+
+    strong {
+      font-size: 13px;
+      font-weight: 700;
+    }
+  }
+
+  // Dragging component
+  .componentGhost {
+    position: absolute;
+    z-index: 3;
+    top: 30px;
+    left: -90px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: var(--component-accent);
+    color: #fff;
+    font-size: 12px;
+    opacity: 0;
+    box-shadow: 0 8px 20px var(--component-glow);
+    animation: componentDrag 1.8s ease forwards;
+  }
+
+  .componentColumns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+
+    div {
+      min-width: 0;
+      height: 55px;
+      border-radius: 9px;
+      background: #d5e0ff;
+    }
+  }
+
+  .componentFormTitle {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 13px;
+  }
+
+  .componentInput {
+    width: 100%;
+    height: 36px;
+    padding: 8px 11px;
+    border: 1px solid #dce5f2;
+    border-radius: 8px;
+    background: #fff;
+    color: var(--component-muted);
+    font-size: 12px;
+  }
+
+  .componentSubmit {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 8px 18px;
+    border-radius: 9px;
+    background: var(--component-accent);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    transition: background 0.4s ease;
+
+    &.alternate {
+      background: var(--component-green);
+    }
+  }
+
+  // Right JSX editor
+  .componentCode {
+    position: relative;
+    min-width: 0;
+    padding: 17px 15px;
+    overflow: hidden;
+    border-left: 1px solid var(--component-line);
+    background: #0a1e38;
+    color: #cfe0f7;
+
+    h4 {
+      margin: 0 0 12px;
+      color: #a78bfa;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+    }
+  }
+
+  .componentCodeContent {
+    overflow: hidden;
+  }
+
+  .componentCodeLine {
+    display: block;
+    min-height: 24px;
+    overflow: hidden;
+    white-space: pre;
+    font: 11px/1.8 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    opacity: 0;
+    transform: translateX(5px);
+    transition: 0.3s ease;
+
+    &.visible {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .tk {
+    color: #b69aff;
+  }
+
+  .tg {
+    color: #5fe0c8;
+  }
+
+  // Copied confirmation
+  .componentCopyToast {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: var(--component-green);
+    color: #04302a;
+    font-size: 11px;
+    font-weight: 600;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: 0.35s ease;
+
+    &.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  // Preview state
+  .componentDemo.previewMode {
+    .componentPalette {
+      opacity: 0.35;
+    }
+
+    .componentBlock {
+      background: #f8faff;
+    }
+  }
+
+  // Bottom workflow steps
+  .componentAnimationSteps {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 9px;
+    max-width: 1100px;
+    margin: 27px auto 0;
+  }
+
+  .componentAnimationStep {
+    padding: 9px 16px;
+    border: 1px solid var(--component-line);
+    border-radius: 30px;
+    background: #fff;
+    color: var(--component-muted);
+    font-size: 13px;
+    transition: 0.3s ease;
+
+    &.active {
+      border-color: var(--component-accent);
+      background: var(--component-accent);
+      color: #fff;
+      transform: translateY(-3px);
+      box-shadow: 0 7px 17px var(--component-glow);
+    }
+  }
+
+  // CTA
+  .componentAnimationCTA {
+    margin: 32px auto 10px;
+    text-align: center;
+
+    p {
+      margin: 0 0 14px;
+      color: var(--component-muted);
+      font-size: 14px;
+    }
+
+    button {
+      min-height: 48px;
+      padding: 12px 32px;
+      border: none;
+      border-radius: 9px;
+      background: var(--component-accent);
+      color: #fff;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 7px 22px var(--component-glow);
+      transition: 0.25s ease;
+
+      &:hover {
+        background: #6d28d9;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(124, 58, 237, 0.28);
+      }
+
+      &:focus-visible {
+        outline: 3px solid rgba(124, 58, 237, 0.3);
+        outline-offset: 4px;
+      }
+    }
+  }
+}
+
+// Drag animation
+@keyframes componentDrag {
+  0% {
+    opacity: 0;
+    transform: translate(-40px, 120px);
+  }
+
+  15% {
+    opacity: 1;
+  }
+
+  85% {
+    opacity: 1;
+    transform: translate(300px, 10px);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(300px, 10px);
+  }
+}
+
+// Tablet
+@media (max-width: 900px) {
+  .componentAnimation {
+    .componentBody {
+      grid-template-columns: 145px minmax(0, 1fr) 220px;
+    }
+
+    .componentCanvas {
+      padding: 14px;
+    }
+
+    .componentCode {
+      padding: 14px 11px;
+    }
+
+    .componentCodeLine {
+      font-size: 10px;
+    }
+
+    .componentGhost {
+      animation-name: componentDragTablet;
+    }
+  }
+}
+
+@keyframes componentDragTablet {
+  0% {
+    opacity: 0;
+    transform: translate(-30px, 110px);
+  }
+
+  15% {
+    opacity: 1;
+  }
+
+  85% {
+    opacity: 1;
+    transform: translate(160px, 10px);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(160px, 10px);
+  }
+}
+
+// Mobile
+@media (max-width: 650px) {
+  .componentAnimation {
+    padding: 36px 0 40px;
+
+    .componentAnimationHeading {
+      margin-bottom: 25px;
+      padding: 0 16px;
+
+      .componentAnimationLabel {
+        padding: 6px 12px;
+        font-size: 10px;
+      }
+
+      h2 {
+        margin: 14px 0 10px;
+        font-size: 29px;
+        letter-spacing: -0.8px;
+      }
+
+      p {
+        font-size: 14px;
+      }
+    }
+
+    .componentAnimationWrap {
+      padding: 0 12px;
+    }
+
+    .componentDemo {
+      border-radius: 14px;
+    }
+
+    .componentBar {
+      height: 48px;
+      padding: 0 14px;
+    }
+
+    .componentBrowserDots b {
+      width: 10px;
+      height: 10px;
+    }
+
+    .componentBody {
+      grid-template-columns: 1fr;
+    }
+
+    .componentPalette,
+    .componentCode {
+      display: none;
+    }
+
+    .componentCanvas {
+      min-height: 330px;
+      padding: 15px;
+    }
+
+    .componentBlock {
+      padding: 12px;
+    }
+
+    .componentColumns {
+      gap: 8px;
+
+      div {
+        height: 48px;
+      }
+    }
+
+    .componentAnimationSteps {
+      gap: 7px;
+      margin-top: 18px;
+    }
+
+    .componentAnimationStep {
+      padding: 7px 11px;
+      font-size: 11px;
+    }
+
+    .componentAnimationCTA {
+      margin-top: 25px;
+
+      p {
+        padding: 0 8px;
+        font-size: 13px;
+      }
+
+      button {
+        width: 100%;
+        max-width: 280px;
+      }
+    }
+
+    .componentGhost {
+      animation-name: componentDragMobile;
+    }
+  }
+}
+
+@keyframes componentDragMobile {
+  0% {
+    opacity: 0;
+    transform: translate(-30px, 100px);
+  }
+
+  15% {
+    opacity: 1;
+  }
+
+  85% {
+    opacity: 1;
+    transform: translate(110px, 10px);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(110px, 10px);
+  }
+}
+
+// Reduced motion accessibility
+@media (prefers-reduced-motion: reduce) {
+  .componentAnimation *,
+  .componentAnimation *::before,
+  .componentAnimation *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
