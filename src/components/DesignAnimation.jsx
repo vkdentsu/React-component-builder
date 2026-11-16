@@ -105,14 +105,16 @@ export default function HomeAnimation() {
     };
 
     // Reset animation
-    setStage(0);
-    setUploaded(false);
-    setProcessing(false);
-    setGenerated(false);
-    setPreview(false);
-    setCodeLines(0);
-    setCopied(false);
-    setSaved(false);
+    at(() => {
+      setStage(0);
+      setUploaded(false);
+      setProcessing(false);
+      setGenerated(false);
+      setPreview(false);
+      setCodeLines(0);
+      setCopied(false);
+      setSaved(false);
+    }, 0);
 
     // 1. Upload Design
     at(() => {

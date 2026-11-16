@@ -43,13 +43,15 @@ export default function ComponentAnimation() {
     };
 
     // Reset animation
-    setStage(0);
-    setBlocks(0);
-    setSelected(false);
-    setAltButton(false);
-    setPreview(false);
-    setLines(0);
-    setCopied(false);
+    at(() => {
+      setStage(0);
+      setBlocks(0);
+      setSelected(false);
+      setAltButton(false);
+      setPreview(false);
+      setLines(0);
+      setCopied(false);
+    }, 0);
 
     // 1. Drag and drop components
     at(() => {
