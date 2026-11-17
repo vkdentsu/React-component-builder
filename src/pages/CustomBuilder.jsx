@@ -240,6 +240,15 @@ export default function CustomBuilder() {
     }
   };
 
+  const handleViewAsPublish = () => {
+    const targetPageId = activeDbPageId || (pageIdFromUrl && pageIdFromUrl !== 'new' ? pageIdFromUrl : null);
+    if (targetPageId) {
+      window.open(`/published/${encodeURIComponent(targetPageId)}`, '_blank');
+    } else {
+      showToast('Please save your page first before viewing as publish.', 'error');
+    }
+  };
+
   useEffect(() => {
     fetchThemes();
   }, [fetchThemes]);
@@ -518,6 +527,7 @@ export default function CustomBuilder() {
           onExportJson={() => setExportJsonOpen(true)}
           onImportJson={() => setImportJsonOpen(true)}
           onPreview={() => setPreviewOpen(true)}
+          onViewAsPublish={!isComponentMode ? handleViewAsPublish : undefined}
           canUndo={canUndo()}
           canRedo={canRedo()}
           onSavePage={!isComponentMode ? () => handleSavePage() : undefined}

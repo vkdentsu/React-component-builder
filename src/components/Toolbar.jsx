@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Monitor, Tablet, Smartphone, Trash2, Code2, Undo2, Redo2, Eye, Upload, FileJson, ArrowLeft, Save } from 'lucide-react';
+import { Monitor, Tablet, Smartphone, Trash2, Code2, Undo2, Redo2, Eye, Upload, FileJson, ArrowLeft, Save, Globe } from 'lucide-react';
 import useBuilderStore from '../store/builderStore';
 import DocumentSwitcher from './DocumentSwitcher';
 
@@ -9,7 +9,7 @@ const DEVICES = [
   { id: 'mobile', label: 'Mobile', Icon: Smartphone },
 ];
 
-export default function Toolbar({ onExport, onExportJson, onImportJson, onPreview, canUndo, canRedo, onSavePage, isSaving }) {
+export default function Toolbar({ onExport, onExportJson, onImportJson, onPreview, onViewAsPublish, canUndo, canRedo, onSavePage, isSaving }) {
   const navigate = useNavigate();
   const { device, setDevice, clearAll, undo, redo } = useBuilderStore();
 
@@ -110,6 +110,19 @@ export default function Toolbar({ onExport, onExportJson, onImportJson, onPrevie
           <Eye size={13} />
           <span>Preview</span>
         </button>
+
+        {/* View as Publish */}
+        {onViewAsPublish && (
+          <button
+            onClick={onViewAsPublish}
+            title="View as Publish"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors duration-150 shadow-xs"
+          >
+            <Globe size={13} className="text-emerald-600 shrink-0" />
+            <span className="hidden sm:inline">View as Publish</span>
+            <span className="sm:hidden">Publish View</span>
+          </button>
+        )}
 
         {/* Import JSON CTA */}
         <button

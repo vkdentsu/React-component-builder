@@ -11,7 +11,7 @@ const DEVICES = [
 ];
 
 /* Render a full rows tree recursively without dnd chrome */
-function PreviewElement({ el, device }) {
+export function PreviewElement({ el, device }) {
   const hideOn = el.hideOn || {};
   const hidden =
     (device === 'mobile'  && hideOn.mobile)  ||
@@ -34,7 +34,7 @@ function PreviewElement({ el, device }) {
   );
 }
 
-function PreviewCol({ col, device }) {
+export function PreviewCol({ col, device }) {
   const horizontalPadding = col.horizontalPadding || {
   desktop: 0,
   tablet: 0,
@@ -87,7 +87,7 @@ const paddingX =
   );
 }
 
-function PreviewRow({ row, device }) {
+export function PreviewRow({ row, device }) {
   const isStacked = row.stackOnMobile && device === 'mobile';
   const verticalPadding = row.verticalPadding || {
     desktop: row.paddingY || 2,
@@ -145,7 +145,7 @@ function PreviewRow({ row, device }) {
   );
 }
 
-function PreviewRows({ rows, device }) {
+export function PreviewRows({ rows, device }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       {rows.map((row) => (
