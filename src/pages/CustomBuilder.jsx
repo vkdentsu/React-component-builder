@@ -32,6 +32,41 @@ import ElementPreview from '../components/ElementPreview';
 import { loadGoogleFont } from "../utils/loadGoogleFont";
 import { authenticatedFetch } from '../utils/api';
 import { ensureUserTheme } from '../utils/ensureUserTheme';
+import { generateJSX } from '../utils/codeGen';
+
+function isHttpsUrl(value) {
+  if (typeof value !== 'string') return false;
+  try {
+    return new URL(value).protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+function isPublishingResult(value) {
+  const deployment = value?.deployment;
+  return typeof deployment?.projectId === 'string'
+    && isHttpsUrl(deployment.projectUrl)
+    && typeof deployment.deploymentId === 'string'
+    && (deployment.deploymentUrl === null || isHttpsUrl(deployment.deploymentUrl))
+    && typeof deployment.deploymentState === 'string';
+}
+
+async function savePublishingResult(documentId, publishingResult) {
+  const response = await authenticatedFetch(
+    `/api/integrations/publishing-results/${encodeURIComponent(documentId)}`,
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(publishingResult),
+    },
+  );
+  const result = await response.json();
+  if (!response.ok) {
+    throw new Error(result.error?.message || 'Could not save publishing links.');
+  }
+  return result.data;
+}
 
 export default function CustomBuilder() {
   const [searchParams] = useSearchParams();
@@ -48,10 +83,13 @@ export default function CustomBuilder() {
   const [componentName, setComponentName] = useState('');
   const [isSavingComponent, setIsSavingComponent] = useState(false);
   const [toast, setToast] = useState(null);
-  const showToast = (message, type = 'success') => {
+  const [integrationConnections, setIntegrationConnections] = useState({ vercel: null });
+  const [isDeploying, setIsDeploying] = useState(false);
+  const loadedPublishingResultsRef = useRef(new Set());
+  const showToast = useCallback((message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3500);
-  };
+  }, []);
 
   const handleClose = () => setExportOpen(false);
 
@@ -77,6 +115,8 @@ export default function CustomBuilder() {
     activeDbPageId,
     documents,
     activeDocId,
+    publishingResults,
+    setPublishingResults,
     pageMeta,
     setPageMeta,
     setActiveDbPageId,
@@ -92,6 +132,122 @@ export default function CustomBuilder() {
   } = useBuilderStore();
   const isComponentMode = !pageIdFromUrl && builderMode === 'component';
   const loadedPageIdRef = useRef(null);
+  const activeDocument = documents.find((document) => document.id === activeDocId);
+  const savedPublishingResults = publishingResults?.[activeDocId];
+  const deployment = savedPublishingResults?.deployment
+    && typeof savedPublishingResults.deployment.projectId === 'string'
+    && (savedPublishingResults.deployment.deploymentUrl === null
+      || isHttpsUrl(savedPublishingResults.deployment.deploymentUrl))
+    ? savedPublishingResults.deployment
+    : null;
+
+  useEffect(() => {
+    let cancelled = false;
+    authenticatedFetch('/api/integrations/connections')
+      .then(async (response) => {
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error?.message || 'Could not load publishing credentials.');
+        if (!cancelled) setIntegrationConnections(result.data || { vercel: null });
+      })
+      .catch((error) => {
+        if (!cancelled) showToast(error.message || 'Could not load publishing credentials.', 'error');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [showToast]);
+
+  useEffect(() => {
+    if (!activeDocId || loadedPublishingResultsRef.current.has(activeDocId)) return undefined;
+    loadedPublishingResultsRef.current.add(activeDocId);
+    let cancelled = false;
+    authenticatedFetch(`/api/integrations/publishing-results/${encodeURIComponent(activeDocId)}`)
+      .then(async (response) => {
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error?.message || 'Could not load publishing links.');
+        if (cancelled) {
+          loadedPublishingResultsRef.current.delete(activeDocId);
+          return;
+        }
+        if (isPublishingResult(result.data)) {
+          if (JSON.stringify(savedPublishingResults) !== JSON.stringify(result.data)) {
+            setPublishingResults(activeDocId, result.data);
+          }
+          return;
+        }
+        const cachedResult = savedPublishingResults;
+        if (isPublishingResult(cachedResult)) {
+          try {
+            await savePublishingResult(activeDocId, cachedResult);
+          } catch (error) {
+            if (!cancelled) {
+              showToast(`Could not migrate saved publishing links to the database: ${error.message}`, 'error');
+            }
+          }
+        }
+      })
+      .catch((error) => {
+        loadedPublishingResultsRef.current.delete(activeDocId);
+        if (!cancelled) showToast(error.message || 'Could not load publishing links.', 'error');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeDocId, savedPublishingResults, setPublishingResults, showToast]);
+
+  const handleDeployToVercel = async () => {
+    if (!integrationConnections.vercel) {
+      showToast('Add a Vercel token under Dashboard > Settings first.', 'error');
+      return;
+    }
+    if (!activeDocument || !rows.length) {
+      showToast('Add content to the builder before deploying.', 'error');
+      return;
+    }
+
+    setIsDeploying(true);
+    setToast(null);
+    try {
+      const pageName = activeDocument.name
+        .replace(/[^a-zA-Z0-9 ]/g, ' ')
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join('') || 'MyComponent';
+      const jsx = generateJSX(rows, pageName, globalFont);
+      const projectName = activeDocument.name
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9._-]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'generated-project';
+      const response = await authenticatedFetch('/api/integrations/vercel/deploy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: projectName,
+          pageName,
+          jsx,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error?.message || 'Could not deploy to Vercel.');
+      if (!result.data?.projectId) throw new Error('Vercel did not return deployment details.');
+      const publishingResult = { deployment: result.data };
+      setPublishingResults(activeDocument.id, publishingResult);
+      try {
+        await savePublishingResult(activeDocument.id, publishingResult);
+        showToast(result.data.deploymentUrl
+          ? `Deployment ready: ${result.data.deploymentUrl}`
+          : 'Deployment started. Check the Vercel dashboard for its status.');
+      } catch (error) {
+        showToast(`Deployment started, but could not save its link to the database: ${error.message}`, 'error');
+      }
+    } catch (error) {
+      showToast(error.message || 'Could not deploy to Vercel.', 'error');
+    } finally {
+      setIsDeploying(false);
+    }
+  };
 
   // Load database page if pageId is in URL
   useEffect(() => {
@@ -136,7 +292,7 @@ export default function CustomBuilder() {
     return () => {
       cancelled = true;
     };
-  }, [pageIdFromUrl, initNewDbPage, loadPageFromDb, searchParams]);
+  }, [pageIdFromUrl, initNewDbPage, loadPageFromDb, searchParams, showToast]);
 
   // Save Page to Database Handler
   const handleSavePage = async (overrideMeta) => {
@@ -518,6 +674,9 @@ export default function CustomBuilder() {
           onExportJson={() => setExportJsonOpen(true)}
           onImportJson={() => setImportJsonOpen(true)}
           onPreview={() => setPreviewOpen(true)}
+          onDeployVercel={handleDeployToVercel}
+          vercelConnected={Boolean(integrationConnections.vercel)}
+          isDeploying={isDeploying}
           canUndo={canUndo()}
           canRedo={canRedo()}
           onSavePage={!isComponentMode ? () => handleSavePage() : undefined}
@@ -526,6 +685,13 @@ export default function CustomBuilder() {
           onEditPageSettings={() => setPageSettingsOpen(true)}
 
         />
+        {deployment?.deploymentUrl && (
+          <div className="flex flex-wrap gap-x-5 gap-y-1 px-4 py-2 bg-emerald-50 border-b border-emerald-200 text-xs text-emerald-800">
+            <span>
+              Vercel: <a className="font-semibold underline" href={deployment.deploymentUrl} target="_blank" rel="noreferrer">{deployment.deploymentUrl}</a>
+            </span>
+          </div>
+        )}
         <div className="flex flex-1 min-h-0">
           <Sidebar
             onSaveComponent={isComponentMode ? () => {

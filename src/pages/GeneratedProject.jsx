@@ -89,9 +89,7 @@ function GeneratedProject() {
         setSaveError("");
 
         try {
-            const pageIdToUpdate = pageIdFromUrl === savedPageId
-                ? savedPageId
-                : null;
+            const pageIdToUpdate = savedPageId;
             const theme = await ensureUserTheme();
             const slug = pageName.trim().toLowerCase()
                 .replace(/[^a-z0-9]+/g, "-")

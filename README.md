@@ -10,6 +10,12 @@ Completed as of now
 - Undo, Redo changes
 - Device preview Desktop / Tablet / Mobile
 - Export as .jsx file
+- Deploy generated React projects directly to Vercel
+
+Save your Vercel access token under Dashboard > Settings. Then, in the Builder
+toolbar, choose **Deploy to Vercel**. The project files are uploaded directly
+to Vercel. The token is validated and encrypted by the backend, not stored in
+the browser.
 
 ## Node version
 LTS 
