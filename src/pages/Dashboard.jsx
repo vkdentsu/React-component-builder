@@ -477,6 +477,15 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
         }
     };
 
+    // View as Publish handler
+    const handleViewAsPublish = (page) => {
+        const url = `/published/${encodeURIComponent(page.id)}`;
+        const newWindow = window.open(url, '_blank');
+        if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+            navigate(url);
+        }
+    };
+
     // Change Page Theme Handler
     const handleChangePageTheme = async (page, newThemeId) => {
         if (!newThemeId || newThemeId === page.themeId) return;
@@ -991,6 +1000,16 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                                         </button>
                                                         <button
                                                             type="button"
+                                                            onClick={() => handleViewAsPublish(page)}
+                                                            title="View as Publish"
+                                                            aria-label={`View ${page.name} as published`}
+                                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors"
+                                                        >
+                                                            <Globe size={13} className="text-emerald-600" />
+                                                            <span>View as Publish</span>
+                                                        </button>
+                                                        <button
+                                                            type="button"
                                                             onClick={() => {
                                                                 setResourceToDelete(page);
                                                                 setDeleteResourceType('page');
@@ -1362,7 +1381,18 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                                         </td>
 
                                                         <td className="py-4 px-6 text-right">
-                                                            <div className="flex items-center justify-end gap-1">
+                                                            <div className="flex items-center justify-end gap-1.5">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleViewAsPublish(page)}
+                                                                    title="View as Publish"
+                                                                    aria-label={`View ${page.name} as published`}
+                                                                    className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200/90 bg-emerald-50 px-2.5 py-1.5 text-[11px] font-medium text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300 transition-colors shadow-2xs"
+                                                                >
+                                                                    <Globe size={13} className="text-emerald-600" />
+                                                                    <span>View as Publish</span>
+                                                                </button>
+
                                                                 <button
                                                                     onClick={() => handleOpenPage(page)}
                                                                     disabled={openingPageId === page.id}

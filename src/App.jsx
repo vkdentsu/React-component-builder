@@ -17,6 +17,7 @@ import Preview from "./pages/Preview";
 import ThemesPage from "./pages/ThemesPage";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
+import PublishedPage from "./pages/PublishedPage";
 import { clearAuthSession, hasUnexpiredAuthToken } from "./utils/auth";
 
 function RequireAuth({ children }) {
@@ -67,6 +68,7 @@ function App() {
           }
         />
         <Route path="/preview" element={<Preview />} />
+        <Route path="/published/:idOrSlug" element={<PublishedPage />} />
         <Route
           path="/themes"
           element={
