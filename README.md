@@ -10,12 +10,12 @@ Completed as of now
 - Undo, Redo changes
 - Device preview Desktop / Tablet / Mobile
 - Export as .jsx file
-- Publish generated React projects to GitHub and deploy them with Vercel
+- Deploy generated React projects directly to Vercel
 
-Save your GitHub and Vercel access tokens under Dashboard > Settings. Then, in
-the Builder toolbar after **Export JSX**, choose **Publish to GitHub** and
-**Deploy to Vercel**. Tokens are validated and encrypted by the backend, not
-stored in the browser. Connect the GitHub repository to your Vercel account.
+Save your Vercel access token under Dashboard > Settings. Then, in the Builder
+toolbar, choose **Deploy to Vercel**. The project files are uploaded directly
+to Vercel. The token is validated and encrypted by the backend, not stored in
+the browser.
 
 ## Node version
 LTS 

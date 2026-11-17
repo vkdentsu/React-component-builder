@@ -44,15 +44,12 @@ function isHttpsUrl(value) {
 }
 
 function isPublishingResult(value) {
-  const repository = value?.repository;
-  return repository
-    && Number.isSafeInteger(repository.id)
-    && typeof repository.fullName === 'string'
-    && typeof repository.commitSha === 'string'
-    && isHttpsUrl(repository.htmlUrl)
-    && (value.deployment === null
-      || (typeof value.deployment?.projectId === 'string'
-        && (value.deployment.deploymentUrl === null || isHttpsUrl(value.deployment.deploymentUrl))));
+  const deployment = value?.deployment;
+  return typeof deployment?.projectId === 'string'
+    && isHttpsUrl(deployment.projectUrl)
+    && typeof deployment.deploymentId === 'string'
+    && (deployment.deploymentUrl === null || isHttpsUrl(deployment.deploymentUrl))
+    && typeof deployment.deploymentState === 'string';
 }
 
 async function savePublishingResult(documentId, publishingResult) {
@@ -86,8 +83,7 @@ export default function CustomBuilder() {
   const [componentName, setComponentName] = useState('');
   const [isSavingComponent, setIsSavingComponent] = useState(false);
   const [toast, setToast] = useState(null);
-  const [integrationConnections, setIntegrationConnections] = useState({ github: null, vercel: null });
-  const [isPublishing, setIsPublishing] = useState(false);
+  const [integrationConnections, setIntegrationConnections] = useState({ vercel: null });
   const [isDeploying, setIsDeploying] = useState(false);
   const loadedPublishingResultsRef = useRef(new Set());
   const showToast = useCallback((message, type = 'success') => {
@@ -138,12 +134,6 @@ export default function CustomBuilder() {
   const loadedPageIdRef = useRef(null);
   const activeDocument = documents.find((document) => document.id === activeDocId);
   const savedPublishingResults = publishingResults?.[activeDocId];
-  const githubRepository = savedPublishingResults?.repository
-    && typeof savedPublishingResults.repository.fullName === 'string'
-    && typeof savedPublishingResults.repository.commitSha === 'string'
-    && isHttpsUrl(savedPublishingResults.repository.htmlUrl)
-    ? savedPublishingResults.repository
-    : null;
   const deployment = savedPublishingResults?.deployment
     && typeof savedPublishingResults.deployment.projectId === 'string'
     && (savedPublishingResults.deployment.deploymentUrl === null
@@ -157,7 +147,7 @@ export default function CustomBuilder() {
       .then(async (response) => {
         const result = await response.json();
         if (!response.ok) throw new Error(result.error?.message || 'Could not load publishing credentials.');
-        if (!cancelled) setIntegrationConnections(result.data || { github: null, vercel: null });
+        if (!cancelled) setIntegrationConnections(result.data || { vercel: null });
       })
       .catch((error) => {
         if (!cancelled) showToast(error.message || 'Could not load publishing credentials.', 'error');
@@ -205,68 +195,9 @@ export default function CustomBuilder() {
     };
   }, [activeDocId, savedPublishingResults, setPublishingResults, showToast]);
 
-  const handlePublishToGitHub = async () => {
-    if (!integrationConnections.github) {
-      showToast('Add a GitHub token under Dashboard > Settings first.', 'error');
-      return;
-    }
-    if (!activeDocument || !rows.length) {
-      showToast('Add content to the builder before publishing.', 'error');
-      return;
-    }
-
-    setIsPublishing(true);
-    setToast(null);
-    try {
-      const componentName = activeDocument.name
-        .replace(/[^a-zA-Z0-9 ]/g, ' ')
-        .split(/\s+/)
-        .filter(Boolean)
-        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-        .join('') || 'MyComponent';
-      const generatedJSX = generateJSX(rows, componentName, globalFont);
-      const repoName = activeDocument.name
-        .trim()
-        .toLowerCase()
-        .replace(/[^a-z0-9._-]+/g, '-')
-        .replace(/^-+|-+$/g, '') || 'generated-project';
-      const response = await authenticatedFetch('/api/integrations/github/publish', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: repoName,
-          private: true,
-          pageName: componentName,
-          jsx: generatedJSX,
-        }),
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error?.message || 'Could not publish to GitHub.');
-      if (!result.data?.htmlUrl || !result.data?.commitSha) {
-        throw new Error('GitHub did not return repository details.');
-      }
-      const publishingResult = { repository: result.data, deployment: null };
-      setPublishingResults(activeDocument.id, publishingResult);
-      try {
-        await savePublishingResult(activeDocument.id, publishingResult);
-        showToast(`Published ${result.data.fullName} to GitHub.`);
-      } catch (error) {
-        showToast(`Published ${result.data.fullName}, but could not save its links to the database: ${error.message}`, 'error');
-      }
-    } catch (error) {
-      showToast(error.message || 'Could not publish to GitHub.', 'error');
-    } finally {
-      setIsPublishing(false);
-    }
-  };
-
   const handleDeployToVercel = async () => {
     if (!integrationConnections.vercel) {
       showToast('Add a Vercel token under Dashboard > Settings first.', 'error');
-      return;
-    }
-    if (!githubRepository) {
-      showToast('Publish to GitHub first.', 'error');
       return;
     }
     if (!activeDocument || !rows.length) {
@@ -284,7 +215,11 @@ export default function CustomBuilder() {
         .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
         .join('') || 'MyComponent';
       const jsx = generateJSX(rows, pageName, globalFont);
-      const projectName = githubRepository.fullName.split('/').pop();
+      const projectName = activeDocument.name
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9._-]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'generated-project';
       const response = await authenticatedFetch('/api/integrations/vercel/deploy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -297,7 +232,7 @@ export default function CustomBuilder() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error?.message || 'Could not deploy to Vercel.');
       if (!result.data?.projectId) throw new Error('Vercel did not return deployment details.');
-      const publishingResult = { repository: githubRepository, deployment: result.data };
+      const publishingResult = { deployment: result.data };
       setPublishingResults(activeDocument.id, publishingResult);
       try {
         await savePublishingResult(activeDocument.id, publishingResult);
@@ -739,12 +674,8 @@ export default function CustomBuilder() {
           onExportJson={() => setExportJsonOpen(true)}
           onImportJson={() => setImportJsonOpen(true)}
           onPreview={() => setPreviewOpen(true)}
-          onPublishGithub={handlePublishToGitHub}
           onDeployVercel={handleDeployToVercel}
-          githubConnected={Boolean(integrationConnections.github)}
           vercelConnected={Boolean(integrationConnections.vercel)}
-          hasPublishedRepository={Boolean(githubRepository)}
-          isPublishing={isPublishing}
           isDeploying={isDeploying}
           canUndo={canUndo()}
           canRedo={canRedo()}
@@ -754,18 +685,11 @@ export default function CustomBuilder() {
           onEditPageSettings={() => setPageSettingsOpen(true)}
 
         />
-        {(githubRepository || deployment?.deploymentUrl) && (
+        {deployment?.deploymentUrl && (
           <div className="flex flex-wrap gap-x-5 gap-y-1 px-4 py-2 bg-emerald-50 border-b border-emerald-200 text-xs text-emerald-800">
-            {githubRepository && (
-              <span>
-                GitHub: <a className="font-semibold underline" href={githubRepository.htmlUrl} target="_blank" rel="noreferrer">{githubRepository.fullName}</a>
-              </span>
-            )}
-            {deployment?.deploymentUrl && (
-              <span>
-                Vercel: <a className="font-semibold underline" href={deployment.deploymentUrl} target="_blank" rel="noreferrer">{deployment.deploymentUrl}</a>
-              </span>
-            )}
+            <span>
+              Vercel: <a className="font-semibold underline" href={deployment.deploymentUrl} target="_blank" rel="noreferrer">{deployment.deploymentUrl}</a>
+            </span>
           </div>
         )}
         <div className="flex flex-1 min-h-0">

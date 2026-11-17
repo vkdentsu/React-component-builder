@@ -69,8 +69,8 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
     const [profileImage, setProfileImage] = useState(null);
     const [profileError, setProfileError] = useState('');
     const [savingProfile, setSavingProfile] = useState(false);
-    const [integrationConnections, setIntegrationConnections] = useState({ github: null, vercel: null });
-    const [integrationTokens, setIntegrationTokens] = useState({ github: '', vercel: '' });
+    const [integrationConnections, setIntegrationConnections] = useState({ vercel: null });
+    const [integrationTokens, setIntegrationTokens] = useState({ vercel: '' });
     const [savingIntegration, setSavingIntegration] = useState(null);
     const [integrationLoading, setIntegrationLoading] = useState(true);
     const [integrationError, setIntegrationError] = useState('');
@@ -85,7 +85,7 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                 if (!response.ok) {
                     throw new Error(result.error?.message || 'Could not load connected providers.');
                 }
-                if (isMounted) setIntegrationConnections(result.data || { github: null, vercel: null });
+                if (isMounted) setIntegrationConnections(result.data || { vercel: null });
             })
             .catch((err) => {
                 if (isMounted) setIntegrationError(err.message || 'Could not load connected providers.');
@@ -328,7 +328,7 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
         event.preventDefault();
         const token = integrationTokens[provider].trim();
         if (!token) {
-            setIntegrationError(`Enter a ${provider === 'github' ? 'GitHub' : 'Vercel'} token first.`);
+            setIntegrationError('Enter a Vercel token first.');
             return;
         }
 
@@ -347,7 +347,7 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
             }
             setIntegrationConnections((current) => ({ ...current, [provider]: result.data }));
             setIntegrationTokens((current) => ({ ...current, [provider]: '' }));
-            setIntegrationMessage(`${provider === 'github' ? 'GitHub' : 'Vercel'} token validated and saved securely.`);
+            setIntegrationMessage('Vercel token validated and saved securely.');
         } catch (err) {
             setIntegrationError(err.message || `Could not save the ${provider} token.`);
         } finally {
@@ -368,7 +368,7 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                 throw new Error(result.error?.message || `Could not remove the ${provider} token.`);
             }
             setIntegrationConnections((current) => ({ ...current, [provider]: null }));
-            setIntegrationMessage(`${provider === 'github' ? 'GitHub' : 'Vercel'} token removed.`);
+            setIntegrationMessage('Vercel token removed.');
         } catch (err) {
             setIntegrationError(err.message || `Could not remove the ${provider} token.`);
         } finally {
@@ -1527,14 +1527,13 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                 <div>
                                     <h2 className="text-sm font-semibold text-slate-800">Publishing credentials</h2>
                                     <p className="text-xs text-slate-500 mt-1">
-                                        Add a GitHub token and a Vercel token here. Tokens are validated, encrypted on the server, and never shown again.
+                                        Add a Vercel token here. It is validated, encrypted on the server, and never shown again.
                                     </p>
                                 </div>
                                 {integrationError && <p role="alert" className="text-xs text-rose-600">{integrationError}</p>}
                                 {integrationMessage && <p role="status" className="text-xs text-emerald-700">{integrationMessage}</p>}
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                                <div className="grid grid-cols-1 gap-5">
                                     {[
-                                        { provider: 'github', label: 'GitHub', hint: 'Needs permission to create repositories and push contents.' },
                                         { provider: 'vercel', label: 'Vercel', hint: 'Needs permission to create projects and deployments. Builder files are uploaded directly to Vercel.' },
                                     ].map(({ provider, label, hint }) => (
                                         <form
