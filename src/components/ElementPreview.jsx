@@ -175,10 +175,98 @@ const renderFormFieldPreview = (field, index, typography = {}) => {
 };
 
 /* ── Navbar ──────────────────────────────────────────────────────────── */
-function NavbarPreview({ el, device }) {
+const toSlug = (value) =>
+  String(value || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+
+function resolveNavItemsForElement(rawLinks, linkUrlsMap, publishedPages, draftPages = []) {
+  const linkUrls = linkUrlsMap && typeof linkUrlsMap === 'object' ? linkUrlsMap : {};
+
+  // In the Component Builder canvas / preview modal (where publishedPages is undefined),
+  // display all configured menu items as-is.
+  if (!Array.isArray(publishedPages)) {
+    return rawLinks.map((label) => ({
+      label,
+      url: linkUrls[label] || `/${toSlug(label)}`,
+      isPublishedLink: false,
+    }));
+  }
+
+  const publishedSlugSet = new Set(
+    publishedPages.map((p) => String(p.slug || '').toLowerCase().trim())
+  );
+  const draftSlugSet = new Set(
+    draftPages.map((p) => String(p.slug || '').toLowerCase().trim())
+  );
+
+  const items = [];
+  for (const label of rawLinks) {
+    const labelLower = label.toLowerCase().trim();
+    const labelSlug = toSlug(label);
+    const configuredUrl = typeof linkUrls[label] === 'string' && linkUrls[label].trim()
+      ? linkUrls[label].trim()
+      : null;
+
+    let targetSlug = configuredUrl
+      ? configuredUrl.replace(/^\/+/, '').toLowerCase()
+      : null;
+
+    if (!targetSlug) {
+      // Auto-match by page name or slug (including prefix match like "About" -> "about-us", "Contact" -> "contact-us")
+      const matchedPub = publishedPages.find((p) => {
+        const pName = String(p.name || '').toLowerCase().trim();
+        const pSlug = String(p.slug || '').toLowerCase().trim();
+        return (
+          pName === labelLower ||
+          pSlug === labelSlug ||
+          toSlug(p.name) === labelSlug ||
+          pSlug.startsWith(`${labelSlug}-`)
+        );
+      });
+      const matchedDraft = !matchedPub && draftPages.find((p) => {
+        const pName = String(p.name || '').toLowerCase().trim();
+        const pSlug = String(p.slug || '').toLowerCase().trim();
+        return (
+          pName === labelLower ||
+          pSlug === labelSlug ||
+          toSlug(p.name) === labelSlug ||
+          pSlug.startsWith(`${labelSlug}-`)
+        );
+      });
+
+      if (matchedPub) {
+        targetSlug = String(matchedPub.slug).trim();
+      } else if (matchedDraft) {
+        targetSlug = String(matchedDraft.slug).trim();
+      } else {
+        targetSlug = labelSlug;
+      }
+    }
+
+    // Do not display links to Draft pages on the published website
+    if (draftSlugSet.has(targetSlug.toLowerCase()) && !publishedSlugSet.has(targetSlug.toLowerCase())) {
+      continue;
+    }
+
+    const finalUrl = configuredUrl || (targetSlug ? `/${targetSlug.replace(/^\/+/, '')}` : '#');
+    items.push({
+      label,
+      url: finalUrl,
+      isPublishedLink: true,
+    });
+  }
+
+  return items;
+}
+
+function NavbarPreview({ el, device, publishedPages, draftPages, onNavigatePublished }) {
   const [openMenu, setOpenMenu] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const links = (el.links || '').split(',').map((l) => l.trim()).filter(Boolean);
+  const navItems = resolveNavItemsForElement(links, el.linkUrls, publishedPages, draftPages);
 
   let submenus = {};
   try { 
@@ -201,23 +289,49 @@ function NavbarPreview({ el, device }) {
     </div>
   );
 
+  const resolveSubItems = (parentLabel) => {
+    const rawSubItems = submenus[parentLabel]
+      ? submenus[parentLabel].split(',').map((s) => s.trim()).filter(Boolean)
+      : [];
+    return resolveNavItemsForElement(rawSubItems, el.linkUrls, publishedPages, draftPages);
+  };
+
   // Rendered exactly once — never duplicated, regardless of logo alignment.
   const navLinks = (
     <div className={`flex items-center gap-1 ${getResponsiveTypographyClasses(el, device)}`}>
-      {links.map((link, i) => {
-        const hasSub = submenus[link]?.length > 0;
-        const subItems = hasSub ? submenus[link].split(',').map((s) => s.trim()) : [];
+      {navItems.map(({ label: link, url: targetUrl, isPublishedLink }, i) => {
+        const subItems = resolveSubItems(link);
+        const hasSub = subItems.length > 0;
         return (
           <div key={i} className="relative">
-            <button
-              onMouseEnter={() => hasSub && setOpenMenu(link)}
-              onMouseLeave={() => setOpenMenu(null)}
-              className={`flex items-center gap-0.5 px-2 py-1 rounded hover:bg-black/5 transition-colors whitespace-nowrap ${getResponsiveTypographyClasses(el, device)}`}
-              style={{ color: el.color }}
-            >
-              {link}
-              {hasSub && <ChevronDown size={11} />}
-            </button>
+            {isPublishedLink ? (
+              <a
+                href={targetUrl}
+                onClick={(e) => {
+                  if (onNavigatePublished && targetUrl.startsWith('/')) {
+                    e.preventDefault();
+                    onNavigatePublished(targetUrl);
+                  }
+                }}
+                onMouseEnter={() => hasSub && setOpenMenu(link)}
+                onMouseLeave={() => setOpenMenu(null)}
+                className={`flex items-center gap-0.5 px-2 py-1 rounded hover:bg-black/5 transition-colors whitespace-nowrap no-underline ${getResponsiveTypographyClasses(el, device)}`}
+                style={{ color: el.color }}
+              >
+                {link}
+                {hasSub && <ChevronDown size={11} />}
+              </a>
+            ) : (
+              <button
+                onMouseEnter={() => hasSub && setOpenMenu(link)}
+                onMouseLeave={() => setOpenMenu(null)}
+                className={`flex items-center gap-0.5 px-2 py-1 rounded hover:bg-black/5 transition-colors whitespace-nowrap ${getResponsiveTypographyClasses(el, device)}`}
+                style={{ color: el.color }}
+              >
+                {link}
+                {hasSub && <ChevronDown size={11} />}
+              </button>
+            )}
             {hasSub && openMenu === link && (
               <div
                 className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-50 min-w-[140px]"
@@ -225,9 +339,25 @@ function NavbarPreview({ el, device }) {
                 onMouseLeave={() => setOpenMenu(null)}
               >
                 {subItems.map((sub, j) => (
-                  <div key={j} className={`px-3 py-1.5 text-gray-700 hover:bg-gray-50 cursor-pointer whitespace-nowrap ${getResponsiveTypographyClasses(el, device)}`}>
-                    {sub}
-                  </div>
+                  sub.isPublishedLink ? (
+                    <a
+                      key={j}
+                      href={sub.url}
+                      onClick={(e) => {
+                        if (onNavigatePublished && sub.url.startsWith('/')) {
+                          e.preventDefault();
+                          onNavigatePublished(sub.url);
+                        }
+                      }}
+                      className={`block px-3 py-1.5 text-gray-700 hover:bg-gray-50 cursor-pointer whitespace-nowrap no-underline ${getResponsiveTypographyClasses(el, device)}`}
+                    >
+                      {sub.label}
+                    </a>
+                  ) : (
+                    <div key={j} className={`px-3 py-1.5 text-gray-700 hover:bg-gray-50 cursor-pointer whitespace-nowrap ${getResponsiveTypographyClasses(el, device)}`}>
+                      {sub.label}
+                    </div>
+                  )
                 ))}
               </div>
             )}
@@ -241,14 +371,22 @@ function NavbarPreview({ el, device }) {
   // submenus expand inline instead of on hover (no hover affordance on touch).
   const mobileLinks = (
     <div className="flex flex-col gap-0.5 px-1 pb-2">
-      {links.map((link, i) => {
-        const hasSub = submenus[link]?.length > 0;
-        const subItems = hasSub ? submenus[link].split(',').map((s) => s.trim()) : [];
+      {navItems.map(({ label: link, url: targetUrl, isPublishedLink }, i) => {
+        const subItems = resolveSubItems(link);
+        const hasSub = subItems.length > 0;
         const expanded = openMenu === link;
         return (
           <div key={i}>
             <button
-              onClick={() => setOpenMenu(expanded ? null : (hasSub ? link : null))}
+              onClick={() => {
+                if (hasSub) {
+                  setOpenMenu(expanded ? null : link);
+                } else if (isPublishedLink && targetUrl) {
+                  setMobileMenuOpen(false);
+                  if (onNavigatePublished && targetUrl.startsWith('/')) onNavigatePublished(targetUrl);
+                  else window.location.href = targetUrl;
+                }
+              }}
               className={`w-full flex items-center justify-between px-2 py-2 rounded hover:bg-black/5 text-left ${getResponsiveTypographyClasses(el, device)}`}
               style={{ color: el.color }}
             >
@@ -258,7 +396,24 @@ function NavbarPreview({ el, device }) {
             {hasSub && expanded && (
               <div className="flex flex-col pl-4 pb-1">
                 {subItems.map((sub, j) => (
-                  <div key={j} className={`px-2 py-1.5 text-gray-600 ${getResponsiveTypographyClasses(el, device)}`}>{sub}</div>
+                  sub.isPublishedLink ? (
+                    <a
+                      key={j}
+                      href={sub.url}
+                      onClick={(e) => {
+                        setMobileMenuOpen(false);
+                        if (onNavigatePublished && sub.url.startsWith('/')) {
+                          e.preventDefault();
+                          onNavigatePublished(sub.url);
+                        }
+                      }}
+                      className={`px-2 py-1.5 text-gray-600 no-underline ${getResponsiveTypographyClasses(el, device)}`}
+                    >
+                      {sub.label}
+                    </a>
+                  ) : (
+                    <div key={j} className={`px-2 py-1.5 text-gray-600 ${getResponsiveTypographyClasses(el, device)}`}>{sub.label}</div>
+                  )
                 ))}
               </div>
             )}
@@ -468,7 +623,7 @@ function HeroPreview({ el, device }) {
 }
 
 /* ── Main export ─────────────────────────────────────────────────────── */
-export default function ElementPreview({ el, device }) {
+export default function ElementPreview({ el, device, publishedPages, draftPages, onNavigatePublished }) {
   const hideOn = el.hideOn || {};
   const hidden =
     (device === 'mobile'  && hideOn.mobile)  ||
@@ -842,7 +997,7 @@ export default function ElementPreview({ el, device }) {
       return <hr className="w-full" style={{ borderColor: resolveColor(el.color, 'var(--theme-border)'), borderTopWidth: el.thickness || 1, borderTopStyle: 'solid', margin: 0 }} />;
 
     case 'navbar':
-      return <NavbarPreview el={el} device={device} />;
+      return <NavbarPreview el={el} device={device} publishedPages={publishedPages} draftPages={draftPages} onNavigatePublished={onNavigatePublished} />;
 
     case 'footer':
       return <FooterPreview el={el} device={device} />;

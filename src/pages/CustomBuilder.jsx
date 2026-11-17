@@ -79,6 +79,7 @@ export default function CustomBuilder() {
   const [activeDrag, setActiveDrag] = useState(null);
   // Saving & Toast states
   const [isSaving, setIsSaving] = useState(false);
+  const [isPublishingPage, setIsPublishingPage] = useState(false);
   const [saveComponentOpen, setSaveComponentOpen] = useState(false);
   const [componentName, setComponentName] = useState('');
   const [isSavingComponent, setIsSavingComponent] = useState(false);
@@ -396,6 +397,137 @@ export default function CustomBuilder() {
     }
   };
 
+  // Publish or Preview as Published Handler in Page Builder
+  const handlePublishOrPreviewPage = async (openAfterPublish = false) => {
+    if (pageMeta?.status === 'PUBLISHED' && pageMeta?.slug) {
+      window.open(`/${pageMeta.slug.replace(/^\/+/, '')}`, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    const meta = pageMeta;
+    if (!meta?.name?.trim() || !meta?.slug?.trim()) {
+      setPageSettingsOpen(true);
+      return;
+    }
+
+    try {
+      setIsPublishingPage(true);
+
+      let themeIdToUse = activeTheme?.id || meta.themeId;
+      const themeObj = availableThemes.find((t) => t.id === themeIdToUse) || activeTheme;
+      const isPreset = !themeIdToUse ||
+        String(themeIdToUse).startsWith('preset-') ||
+        Boolean(themeObj?.isPreset);
+
+      if (isPreset) {
+        const persistedTheme = await ensureUserTheme(themeObj || themeIdToUse);
+        if (!persistedTheme?.id) {
+          throw new Error('Failed to persist theme for this page.');
+        }
+        themeIdToUse = persistedTheme.id;
+        setPageMeta({ themeId: persistedTheme.id });
+        selectTheme(persistedTheme.id);
+      } else {
+        setPageMeta({ themeId: themeIdToUse });
+      }
+
+      const contentJson = {
+        rows,
+        globalFont,
+        customFonts: useBuilderStore.getState().customFonts,
+        device: useBuilderStore.getState().device,
+        themeId: themeIdToUse,
+      };
+
+      let targetPageId = activeDbPageId;
+      if (targetPageId) {
+        const patchRes = await authenticatedFetch(`/api/pages/${targetPageId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: meta.name.trim(),
+            slug: meta.slug.trim(),
+            contentJson,
+            themeId: themeIdToUse,
+          }),
+        });
+        const patchJson = await patchRes.json();
+        if (!patchRes.ok) {
+          throw new Error(patchJson.error?.message || 'Failed to save page before publishing');
+        }
+      } else {
+        const createRes = await authenticatedFetch('/api/pages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: meta.name.trim(),
+            slug: meta.slug.trim(),
+            themeId: themeIdToUse,
+            contentJson,
+            status: 'PUBLISHED',
+          }),
+        });
+        const createJson = await createRes.json();
+        if (!createRes.ok) {
+          throw new Error(createJson.error?.message || 'Failed to create and publish page');
+        }
+        targetPageId = createJson.data.id;
+        loadedPageIdRef.current = targetPageId;
+        setActiveDbPageId(targetPageId);
+        window.history.replaceState(null, '', `/custom-builder?pageId=${targetPageId}`);
+      }
+
+      const publishRes = await authenticatedFetch(`/api/pages/${targetPageId}/publish`, {
+        method: 'POST',
+      });
+      const publishJson = await publishRes.json();
+      if (!publishRes.ok) {
+        throw new Error(publishJson.error?.message || 'Failed to publish page');
+      }
+
+      setPageMeta({ ...publishJson.data, themeId: themeIdToUse, status: 'PUBLISHED' });
+      showToast(`Page "${publishJson.data.name}" is now Published!`);
+      if (openAfterPublish === true && publishJson.data?.slug) {
+        window.open(`/${publishJson.data.slug.replace(/^\/+/, '')}`, '_blank', 'noopener,noreferrer');
+      }
+    } catch (err) {
+      console.error('Publish page error:', err);
+      showToast(err.message, 'error');
+    } finally {
+      setIsPublishingPage(false);
+    }
+  };
+
+  // Change Published Page back to Draft
+  const handleChangePageToDraft = async () => {
+    if (!activeDbPageId) return;
+    try {
+      setIsPublishingPage(true);
+      const res = await authenticatedFetch(`/api/pages/${activeDbPageId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'DRAFT' }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error?.message || 'Failed to change page status to Draft');
+      }
+      setPageMeta({ ...json.data, status: 'DRAFT' });
+      showToast(`Page "${json.data.name}" status changed to Draft.`);
+    } catch (err) {
+      console.error('Change to draft error:', err);
+      showToast(err.message, 'error');
+    } finally {
+      setIsPublishingPage(false);
+    }
+  };
+
+  const handleOpenPublishedUrl = () => {
+    if (pageMeta?.slug) {
+      window.open(`/${pageMeta.slug.replace(/^\/+/, '')}`, '_blank', 'noopener,noreferrer');
+    }
+  };
+
   useEffect(() => {
     fetchThemes();
   }, [fetchThemes]);
@@ -682,6 +814,10 @@ export default function CustomBuilder() {
           onSavePage={!isComponentMode ? () => handleSavePage() : undefined}
           isSaving={!isComponentMode && isSaving}
           pageMeta={pageMeta}
+          onPublishPage={!isComponentMode ? handlePublishOrPreviewPage : undefined}
+          onChangeToDraft={!isComponentMode ? handleChangePageToDraft : undefined}
+          onOpenPublishedUrl={!isComponentMode ? handleOpenPublishedUrl : undefined}
+          isPublishingPage={!isComponentMode && isPublishingPage}
           onEditPageSettings={() => setPageSettingsOpen(true)}
 
         />

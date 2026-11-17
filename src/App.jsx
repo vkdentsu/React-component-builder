@@ -17,6 +17,7 @@ import Preview from "./pages/Preview";
 import ThemesPage from "./pages/ThemesPage";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
+import PublishedPage from "./pages/PublishedPage";
 import { clearAuthSession, hasUnexpiredAuthToken } from "./utils/auth";
 
 function RequireAuth({ children }) {
@@ -81,6 +82,7 @@ function App() {
         <Route path="/pages" element={<RequireAuth><Dashboard initialTab="pages" /></RequireAuth>} />
         <Route path="/media" element={<RequireAuth><Dashboard initialTab="media" /></RequireAuth>} />
         <Route path="/settings" element={<RequireAuth><Dashboard initialTab="settings" /></RequireAuth>} />
+        <Route path="/:slug" element={<RequireAuth><PublishedPage /></RequireAuth>} />
       </Routes>
     </BrowserRouter>
   );
