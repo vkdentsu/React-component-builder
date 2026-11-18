@@ -15,6 +15,7 @@ import {
   mergeThemes,
   normalizeThemeConfig,
 } from '../utils/themeDefaults';
+import { BUILT_IN_TEMPLATES } from "../utils/templates";
 import { authenticatedFetch } from '../utils/api';
 import { getAuthUserId } from '../utils/auth';
 
@@ -309,7 +310,7 @@ const makeRow = (cols = 2) => ({
   cols: Array.from({ length: cols }, () => makeColumn()),
 });
 
-const createDefaultRows = () => {
+const createDefaultRows = (templateId) => {
   const navbarRow = makeRow(1);
   navbarRow.cols[0].elements.push(makeElement("navbar"));
 
@@ -544,7 +545,7 @@ const useBuilderStore = create(
           },
           documents: [pageDoc],
           activeDocId: pageDoc.id,
-          rows: sanitizedRows,
+          rows: createDefaultRows(),
           selectedId: null,
           selectedType: null,
           _history: { past: [], future: [] },
@@ -576,7 +577,7 @@ const useBuilderStore = create(
           },
           documents: [doc],
           activeDocId: doc.id,
-          rows: doc.rows,
+          rows: createDefaultRows(),
           selectedId: null,
           selectedType: null,
           _history: { past: [], future: [] },
@@ -670,6 +671,11 @@ const useBuilderStore = create(
       themeModalInitialTab: 'palette',
       themeLoading: false,
       themeError: null,
+
+      //Templates──────────────────────────────────────────────────────────────
+      defaultTemplateId: 'preset-0',
+      activeTemplate: BUILT_IN_TEMPLATES[0],
+      availableTemplates: BUILT_IN_TEMPLATES,
 
       setDefaultTheme: (themeId) =>
         set((state) => {
@@ -1657,3 +1663,4 @@ if (!useBuilderStore.getState().activeDocId) {
 
 export default useBuilderStore;
 export { makeElement, defaultElementProps };
+export {createDefaultRows};
