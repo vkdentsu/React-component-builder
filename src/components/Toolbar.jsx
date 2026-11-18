@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Monitor, Tablet, Smartphone, Trash2, Code2, Undo2, Redo2, Eye, Upload, FileJson, ArrowLeft, Save } from 'lucide-react';
+import { Monitor, Tablet, Smartphone, Trash2, Code2, Undo2, Redo2, Eye, Upload, FileJson, ArrowLeft, Save, Globe } from 'lucide-react';
 import useBuilderStore from '../store/builderStore';
 import DocumentSwitcher from './DocumentSwitcher';
 
@@ -9,7 +9,24 @@ const DEVICES = [
   { id: 'mobile', label: 'Mobile', Icon: Smartphone },
 ];
 
-export default function Toolbar({ onExport, onExportJson, onImportJson, onPreview, onDeployVercel, vercelConnected, isDeploying, canUndo, canRedo, onSavePage, isSaving }) {
+export default function Toolbar({
+  onExport,
+  onExportJson,
+  onImportJson,
+  onPreview,
+  onDeployVercel,
+  vercelConnected,
+  isDeploying,
+  canUndo,
+  canRedo,
+  onSavePage,
+  isSaving,
+  pageMeta,
+  onPublishPage,
+  onChangeToDraft,
+  onOpenPublishedUrl,
+  isPublishingPage,
+}) {
   const navigate = useNavigate();
   const { device, setDevice, clearAll, undo, redo } = useBuilderStore();
 
@@ -144,6 +161,61 @@ export default function Toolbar({ onExport, onExportJson, onImportJson, onPrevie
             <Save size={13} />
             <span>{isSaving ? 'Saving...' : 'Save'}</span>
           </button>
+        )}
+
+        {/* Status Pill (click to toggle Published / Draft) + Compact View as Published Button */}
+        {onPublishPage && (
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                if (pageMeta?.status === 'PUBLISHED') {
+                  if (onChangeToDraft) onChangeToDraft();
+                } else {
+                  onPublishPage();
+                }
+              }}
+              disabled={isPublishingPage || isSaving}
+              title={
+                pageMeta?.status === 'PUBLISHED'
+                  ? 'Click to convert page back to Draft'
+                  : 'Click to publish page'
+              }
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors cursor-pointer disabled:opacity-50 ${
+                pageMeta?.status === 'PUBLISHED'
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                  : 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100'
+              }`}
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  pageMeta?.status === 'PUBLISHED' ? 'bg-emerald-500' : 'bg-amber-500'
+                }`}
+              />
+              <span>{pageMeta?.status === 'PUBLISHED' ? 'Published' : 'Draft'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (pageMeta?.status === 'PUBLISHED') {
+                  if (onOpenPublishedUrl) onOpenPublishedUrl();
+                } else {
+                  onPublishPage(true);
+                }
+              }}
+              disabled={isPublishingPage || isSaving}
+              title={
+                pageMeta?.status === 'PUBLISHED'
+                  ? `View published page at /${pageMeta.slug}`
+                  : 'Publish and view page as published'
+              }
+              className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-2.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50"
+            >
+              <Globe size={13} />
+              <span>{isPublishingPage ? 'Publishing...' : 'View as Published'}</span>
+            </button>
+          </div>
         )}
 
         {/* Export JSX */}

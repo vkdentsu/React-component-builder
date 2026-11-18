@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import ImageUploadField from './ImageUploadField';
 import useBuilderStore from '../store/builderStore';
+import { authenticatedFetch } from '../utils/api';
 import { FONT_OPTIONS } from "../utils/fonts";
 import FontUpload from "./FontUpload";
 import { createFontData, loadCustomFont } from "../utils/fontManager";
@@ -465,7 +466,68 @@ function DividerProps({ el, update }) {
   );
 }
 
+const toDefaultSlugUrl = (label) => {
+  const slug = String(label || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  return slug ? `/${slug}` : '/';
+};
+
 function NavbarProps({ el, update }) {
+  const [publishedPages, setPublishedPages] = useState([]);
+
+  useEffect(() => {
+    let active = true;
+    authenticatedFetch('/api/pages?status=PUBLISHED')
+      .then((res) => (res.ok ? res.json() : { data: [] }))
+      .then((json) => {
+        if (active && Array.isArray(json.data)) {
+          setPublishedPages(json.data);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const menuLabels = (el.links || '')
+    .split(',')
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  const linkUrls = el.linkUrls && typeof el.linkUrls === 'object' ? el.linkUrls : {};
+
+  const getMenuUrl = (label) => {
+    if (linkUrls[label] !== undefined) {
+      return linkUrls[label];
+    }
+    const labelLower = label.toLowerCase().trim();
+    const defaultSlug = toDefaultSlugUrl(label).replace(/^\/+/, '');
+    const matchedPublished = publishedPages.find(
+      (p) =>
+        String(p.name || '').toLowerCase().trim() === labelLower ||
+        String(p.slug || '').toLowerCase().trim() === defaultSlug
+    );
+    return matchedPublished ? `/${matchedPublished.slug}` : toDefaultSlugUrl(label);
+  };
+
+  const handleUrlChange = (label, nextUrl) => {
+    const normalized = nextUrl.trim()
+      ? nextUrl.trim().startsWith('/') || nextUrl.trim().startsWith('http')
+        ? nextUrl.trim()
+        : `/${nextUrl.trim()}`
+      : '';
+    update({
+      linkUrls: {
+        ...linkUrls,
+        [label]: normalized,
+      },
+    });
+  };
+
   return (
     <>
       <Section title="Logo">
@@ -477,7 +539,55 @@ function NavbarProps({ el, update }) {
         </Field>
       </Section>
       <Section title="Navigation">
-        <Field label="Links (comma separated)"><Inp value={el.links} onChange={(v) => update({ links: v })} placeholder="Home, About, Contact" /></Field>
+        <Field label="Links (comma separated)"><Inp value={el.links} onChange={(v) => update({ links: v })} placeholder="Home, About Us, Contact Us" /></Field>
+
+        {menuLabels.length > 0 && (
+          <div className="flex flex-col gap-1.5 pt-1">
+            <div className="grid grid-cols-[1fr_1.2fr] gap-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+              <span>Menu Label</span>
+              <span>Page URL</span>
+            </div>
+            <div className="flex flex-col gap-2 rounded-lg border border-gray-100 bg-gray-50/70 p-2">
+              {menuLabels.map((label) => {
+                const currentUrl = getMenuUrl(label);
+                return (
+                  <div key={label} className="flex flex-col gap-1 border-b border-gray-100 pb-2 last:border-0 last:pb-0">
+                    <div className="grid grid-cols-[1fr_1.2fr] items-center gap-1.5">
+                      <span className="truncate text-[11px] font-medium text-gray-700" title={label}>
+                        {label}
+                      </span>
+                      <input
+                        type="text"
+                        value={currentUrl}
+                        onChange={(e) => handleUrlChange(label, e.target.value)}
+                        placeholder={toDefaultSlugUrl(label)}
+                        className="w-full rounded border border-gray-200 bg-white px-2 py-1 font-mono text-[11px] text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                      />
+                    </div>
+                    {publishedPages.length > 0 && (
+                      <select
+                        value={publishedPages.some((p) => `/${p.slug}` === currentUrl) ? currentUrl : ''}
+                        onChange={(e) => {
+                          if (e.target.value) handleUrlChange(label, e.target.value);
+                        }}
+                        aria-label={`Select published page for ${label}`}
+                        className="w-full rounded border border-gray-200 bg-white px-1.5 py-1 text-[10px] text-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                      >
+                        <option value="">Select published page slug...</option>
+                        {publishedPages.map((p) => (
+                          <option key={p.id} value={`/${p.slug}`}>
+                            {p.name} (/{p.slug})
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <Field label="Submenus (JSON)">
           <Textarea value={el.submenus} onChange={(v) => update({ submenus: v })} rows={3} />
           <p className="text-[10px] text-gray-400 leading-relaxed mt-1">
