@@ -535,6 +535,7 @@ const useBuilderStore = create(
 
         set({
           builderMode: 'page',
+          device: 'desktop',
           activeDbPageId: pageRecord.id,
           pageMeta: {
             name: pageRecord.name || 'Untitled Page',
@@ -567,6 +568,7 @@ const useBuilderStore = create(
 
         set({
           builderMode: 'page',
+          device: 'desktop',
           activeDbPageId: null,
           pageMeta: {
             name,
@@ -1589,6 +1591,7 @@ const useBuilderStore = create(
         state._history = { past: [], future: [] };
         state.selectedId = null;
         state.selectedType = null;
+        state.device = 'desktop';
 
         if (!state.globalFont) {
           state.globalFont = "'Inter', sans-serif";
