@@ -545,7 +545,7 @@ const useBuilderStore = create(
           },
           documents: [pageDoc],
           activeDocId: pageDoc.id,
-          rows: sanitizedRows,
+          rows: createDefaultRows(),
           selectedId: null,
           selectedType: null,
           _history: { past: [], future: [] },
