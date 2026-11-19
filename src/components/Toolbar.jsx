@@ -134,11 +134,10 @@ export default function Toolbar({
             }}
             disabled={isPublishingPage || isSaving}
             title={isPublished ? 'Unpublish this page' : 'Publish this page'}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 shadow-2xs ${
-              isPublished
+            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 shadow-2xs ${isPublished
                 ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200'
                 : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-            }`}
+              }`}
           >
             <Globe size={13} className="shrink-0" />
             <span>
@@ -147,8 +146,8 @@ export default function Toolbar({
                   ? 'Unpublishing...'
                   : 'Publishing...'
                 : isPublished
-                ? 'Unpublish'
-                : 'Publish'}
+                  ? 'Unpublish'
+                  : 'Publish'}
             </span>
           </button>
         )}
@@ -164,11 +163,10 @@ export default function Toolbar({
                 ? `Open published page at /${pageMeta?.slug || ''}`
                 : 'Publish this page first to open the published URL'
             }
-            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
-              isPublished
+            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${isPublished
                 ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200'
                 : 'bg-gray-50 hover:bg-gray-100 text-gray-500 border border-gray-200'
-            }`}
+              }`}
           >
             <ExternalLink size={13} className="shrink-0" />
             <span>Open Page</span>
@@ -222,15 +220,25 @@ export default function Toolbar({
           </button>
         )}
 
+        {/* Export JSX */}
         <button
-          onClick={onDeployVercel}
-          disabled={!vercelConnected || isDeploying}
-          title={vercelConnected ? 'Deploy the current Builder project directly to Vercel' : 'Add a Vercel token in Dashboard > Settings'}
-          className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-white bg-black hover:bg-gray-800 disabled:opacity-50 rounded-lg transition-colors duration-150"
+          onClick={onExport}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors duration-150 shadow-xs"
         >
-          <span>{isDeploying ? 'Deploying...' : 'Deploy'}</span>
-          <span className="hidden xl:inline">{!isDeploying && 'to Vercel'}</span>
+          <Code2 size={13} />
+          <span className="hidden md:inline">Export JSX</span>
+          <span className="md:hidden">JSX</span>
         </button>
+        {onDeployVercel && (
+          <button
+            onClick={onDeployVercel}
+            disabled={!vercelConnected || isDeploying}
+            title={vercelConnected ? 'Deploy the current Builder project directly to Vercel' : 'Add a Vercel token in Dashboard > Settings'}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-white bg-black hover:bg-gray-800 disabled:opacity-50 rounded-lg transition-colors duration-150"
+          >
+            <span>{isDeploying ? 'Deploying...' : 'Deploy to Vercel'}</span>
+          </button>
+        )}
       </div>
     </header>
   );
