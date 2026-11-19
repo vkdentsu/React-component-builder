@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Monitor, Tablet, Smartphone, Trash2, Code2, Undo2, Redo2, Eye, Upload, FileJson, ArrowLeft, Save, Globe, ExternalLink } from 'lucide-react';
 import useBuilderStore from '../store/builderStore';
@@ -27,10 +28,17 @@ export default function Toolbar({
   onOpenPublishedUrl,
   isPublishingPage,
   showExportJsx = false,
+  showDeviceSwitcher = false,
 }) {
   const navigate = useNavigate();
   const { device, setDevice, clearAll, undo, redo } = useBuilderStore();
   const isPublished = pageMeta?.status === 'PUBLISHED';
+
+  useEffect(() => {
+    if (!showDeviceSwitcher && device !== 'desktop') {
+      setDevice('desktop');
+    }
+  }, [showDeviceSwitcher, device, setDevice]);
 
   return (
     <header className="h-12 bg-white border-b border-gray-200 flex items-center justify-between px-3 sm:px-4 shrink-0 gap-2 min-w-0">
@@ -53,24 +61,26 @@ export default function Toolbar({
         </div>
       </div>
 
-      {/* Device switcher */}
-      <div className="flex items-center gap-0.5 bg-gray-100 rounded-lg p-0.5 shrink-0">
-        {DEVICES.map(({ id, label, Icon }) => (
-          <button
-            key={id}
-            onClick={() => setDevice(id)}
-            title={label}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all duration-150
-              ${device === id
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
-              }`}
-          >
-            <Icon size={13} />
-            <span className="hidden lg:inline">{label}</span>
-          </button>
-        ))}
-      </div>
+      {/* Device switcher — Temporarily hidden so it can be restored later */}
+      {showDeviceSwitcher && (
+        <div className="flex items-center gap-0.5 bg-gray-100 rounded-lg p-0.5 shrink-0">
+          {DEVICES.map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              onClick={() => setDevice(id)}
+              title={label}
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all duration-150
+                ${device === id
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+                }`}
+            >
+              <Icon size={13} />
+              <span className="hidden lg:inline">{label}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Actions */}
       <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
