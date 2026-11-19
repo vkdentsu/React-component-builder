@@ -143,6 +143,7 @@ export default function CustomBuilder() {
     : null;
 
   useEffect(() => {
+    if (isComponentMode) return undefined;
     let cancelled = false;
     authenticatedFetch('/api/integrations/connections')
       .then(async (response) => {
@@ -156,7 +157,7 @@ export default function CustomBuilder() {
     return () => {
       cancelled = true;
     };
-  }, [showToast]);
+  }, [isComponentMode, showToast]);
 
   useEffect(() => {
     if (!activeDocId || loadedPublishingResultsRef.current.has(activeDocId)) return undefined;
@@ -224,11 +225,7 @@ export default function CustomBuilder() {
       const response = await authenticatedFetch('/api/integrations/vercel/deploy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: projectName,
-          pageName,
-          jsx,
-        }),
+        body: JSON.stringify({ name: projectName, pageName, jsx }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error?.message || 'Could not deploy to Vercel.');
@@ -806,7 +803,7 @@ export default function CustomBuilder() {
           onExportJson={() => setExportJsonOpen(true)}
           onImportJson={() => setImportJsonOpen(true)}
           onPreview={() => setPreviewOpen(true)}
-          onDeployVercel={handleDeployToVercel}
+          onDeployVercel={!isComponentMode ? handleDeployToVercel : undefined}
           vercelConnected={Boolean(integrationConnections.vercel)}
           isDeploying={isDeploying}
           canUndo={canUndo()}
@@ -821,7 +818,7 @@ export default function CustomBuilder() {
           onEditPageSettings={() => setPageSettingsOpen(true)}
 
         />
-        {deployment?.deploymentUrl && (
+        {!isComponentMode && deployment?.deploymentUrl && (
           <div className="flex flex-wrap gap-x-5 gap-y-1 px-4 py-2 bg-emerald-50 border-b border-emerald-200 text-xs text-emerald-800">
             <span>
               Vercel: <a className="font-semibold underline" href={deployment.deploymentUrl} target="_blank" rel="noreferrer">{deployment.deploymentUrl}</a>
