@@ -495,24 +495,93 @@ export default function CustomBuilder() {
     }
   };
 
-  // Change Published Page back to Draft
-  const handleChangePageToDraft = async () => {
-    if (!activeDbPageId) return;
+  // Change Published Page back to Draft (and optionally open the Draft view in a separate page)
+  const handleChangePageToDraft = async (openAfterDraft = false) => {
+    const meta = pageMeta;
+    if (!meta?.name?.trim() || !meta?.slug?.trim()) {
+      setPageSettingsOpen(true);
+      return;
+    }
+
     try {
       setIsPublishingPage(true);
-      const res = await authenticatedFetch(`/api/pages/${activeDbPageId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'DRAFT' }),
-      });
-      const json = await res.json();
-      if (!res.ok) {
-        throw new Error(json.error?.message || 'Failed to change page status to Draft');
+
+      let themeIdToUse = activeTheme?.id || meta.themeId;
+      const themeObj = availableThemes.find((t) => t.id === themeIdToUse) || activeTheme;
+      const isPreset = !themeIdToUse ||
+        String(themeIdToUse).startsWith('preset-') ||
+        Boolean(themeObj?.isPreset);
+
+      if (isPreset) {
+        const persistedTheme = await ensureUserTheme(themeObj || themeIdToUse);
+        if (!persistedTheme?.id) {
+          throw new Error('Failed to persist theme for this page.');
+        }
+        themeIdToUse = persistedTheme.id;
+        setPageMeta({ themeId: persistedTheme.id });
+        selectTheme(persistedTheme.id);
+      } else {
+        setPageMeta({ themeId: themeIdToUse });
       }
-      setPageMeta({ ...json.data, status: 'DRAFT' });
-      showToast(`Page "${json.data.name}" status changed to Draft.`);
+
+      const contentJson = {
+        rows,
+        globalFont,
+        customFonts: useBuilderStore.getState().customFonts,
+        device: useBuilderStore.getState().device,
+        themeId: themeIdToUse,
+      };
+
+      let targetPageId = activeDbPageId;
+      let updatedPageData = null;
+
+      if (targetPageId) {
+        const res = await authenticatedFetch(`/api/pages/${targetPageId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: meta.name.trim(),
+            slug: meta.slug.trim(),
+            contentJson,
+            themeId: themeIdToUse,
+            status: 'DRAFT',
+          }),
+        });
+        const json = await res.json();
+        if (!res.ok) {
+          throw new Error(json.error?.message || 'Failed to change page status to Draft');
+        }
+        updatedPageData = json.data;
+      } else {
+        const createRes = await authenticatedFetch('/api/pages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: meta.name.trim(),
+            slug: meta.slug.trim(),
+            themeId: themeIdToUse,
+            contentJson,
+            status: 'DRAFT',
+          }),
+        });
+        const createJson = await createRes.json();
+        if (!createRes.ok) {
+          throw new Error(createJson.error?.message || 'Failed to save draft page');
+        }
+        updatedPageData = createJson.data;
+        targetPageId = updatedPageData.id;
+        loadedPageIdRef.current = targetPageId;
+        setActiveDbPageId(targetPageId);
+        window.history.replaceState(null, '', `/custom-builder?pageId=${targetPageId}`);
+      }
+
+      setPageMeta({ ...updatedPageData, themeId: themeIdToUse, status: 'DRAFT' });
+      showToast(`Page "${updatedPageData.name}" is now Unpublished.`);
+      if (openAfterDraft === true && updatedPageData?.slug) {
+        window.open(`/${updatedPageData.slug.replace(/^\/+/, '')}?mode=draft`, '_blank', 'noopener,noreferrer');
+      }
     } catch (err) {
-      console.error('Change to draft error:', err);
+      console.error('Unpublish page error:', err);
       showToast(err.message, 'error');
     } finally {
       setIsPublishingPage(false);
@@ -520,6 +589,10 @@ export default function CustomBuilder() {
   };
 
   const handleOpenPublishedUrl = () => {
+    if (pageMeta?.status !== 'PUBLISHED') {
+      showToast('This page is currently Unpublished. Please publish the page first before opening it.', 'error');
+      return;
+    }
     if (pageMeta?.slug) {
       window.open(`/${pageMeta.slug.replace(/^\/+/, '')}`, '_blank', 'noopener,noreferrer');
     }

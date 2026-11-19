@@ -215,27 +215,20 @@ function resolveNavItemsForElement(rawLinks, linkUrlsMap, publishedPages, draftP
       : null;
 
     if (!targetSlug) {
-      // Auto-match by page name or slug (including prefix match like "About" -> "about-us", "Contact" -> "contact-us")
-      const matchedPub = publishedPages.find((p) => {
+      // Prefer an exact page name or slug match first, then fallback to prefix match (e.g. "About" -> "about-us")
+      const isExactMatch = (p) => {
         const pName = String(p.name || '').toLowerCase().trim();
         const pSlug = String(p.slug || '').toLowerCase().trim();
-        return (
-          pName === labelLower ||
-          pSlug === labelSlug ||
-          toSlug(p.name) === labelSlug ||
-          pSlug.startsWith(`${labelSlug}-`)
-        );
-      });
-      const matchedDraft = !matchedPub && draftPages.find((p) => {
-        const pName = String(p.name || '').toLowerCase().trim();
+        return pName === labelLower || pSlug === labelSlug || toSlug(p.name) === labelSlug;
+      };
+      const isPrefixMatch = (p) => {
         const pSlug = String(p.slug || '').toLowerCase().trim();
-        return (
-          pName === labelLower ||
-          pSlug === labelSlug ||
-          toSlug(p.name) === labelSlug ||
-          pSlug.startsWith(`${labelSlug}-`)
-        );
-      });
+        return pSlug.startsWith(`${labelSlug}-`);
+      };
+
+      const matchedPub = publishedPages.find(isExactMatch) || publishedPages.find(isPrefixMatch);
+      const matchedDraft =
+        !matchedPub && (draftPages.find(isExactMatch) || draftPages.find(isPrefixMatch));
 
       if (matchedPub) {
         targetSlug = String(matchedPub.slug).trim();
@@ -251,7 +244,13 @@ function resolveNavItemsForElement(rawLinks, linkUrlsMap, publishedPages, draftP
       continue;
     }
 
-    const finalUrl = configuredUrl || (targetSlug ? `/${targetSlug.replace(/^\/+/, '')}` : '#');
+    const normalizedConfiguredUrl = configuredUrl
+      ? /^https?:\/\//i.test(configuredUrl) || configuredUrl.startsWith('#')
+        ? configuredUrl
+        : `/${configuredUrl.replace(/^\/+/, '')}`
+      : null;
+
+    const finalUrl = normalizedConfiguredUrl || (targetSlug ? `/${targetSlug.replace(/^\/+/, '')}` : '#');
     items.push({
       label,
       url: finalUrl,
