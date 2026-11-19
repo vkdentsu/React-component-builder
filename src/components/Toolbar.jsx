@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Monitor, Tablet, Smartphone, Trash2, Code2, Undo2, Redo2, Eye, Upload, FileJson, ArrowLeft, Save, Globe, ExternalLink } from 'lucide-react';
+import { Monitor, Tablet, Smartphone, Trash2, Code2, Undo2, Redo2, Eye, Upload, FileJson, ArrowLeft, Save, Globe, ExternalLink, ChevronDown } from 'lucide-react';
 import useBuilderStore from '../store/builderStore';
 import DocumentSwitcher from './DocumentSwitcher';
 
@@ -33,12 +33,25 @@ export default function Toolbar({
   const navigate = useNavigate();
   const { device, setDevice, clearAll, undo, redo } = useBuilderStore();
   const isPublished = pageMeta?.status === 'PUBLISHED';
+  const [jsonMenuOpen, setJsonMenuOpen] = useState(false);
+  const jsonMenuRef = useRef(null);
 
   useEffect(() => {
     if (!showDeviceSwitcher && device !== 'desktop') {
       setDevice('desktop');
     }
   }, [showDeviceSwitcher, device, setDevice]);
+
+  useEffect(() => {
+    if (!jsonMenuOpen) return undefined;
+    const handleClickOutside = (event) => {
+      if (jsonMenuRef.current && !jsonMenuRef.current.contains(event.target)) {
+        setJsonMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [jsonMenuOpen]);
 
   return (
     <header className="h-12 bg-white border-b border-gray-200 flex items-center justify-between px-3 sm:px-4 shrink-0 gap-2 min-w-0">
@@ -145,8 +158,8 @@ export default function Toolbar({
             disabled={isPublishingPage || isSaving}
             title={isPublished ? 'Unpublish this page' : 'Publish this page'}
             className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 shadow-2xs ${isPublished
-                ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200'
-                : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+              ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200'
+              : 'bg-emerald-600 hover:bg-emerald-700 text-white'
               }`}
           >
             <Globe size={13} className="shrink-0" />
@@ -174,8 +187,8 @@ export default function Toolbar({
                 : 'Publish this page first to open the published URL'
             }
             className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${isPublished
-                ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200'
-                : 'bg-gray-50 hover:bg-gray-100 text-gray-500 border border-gray-200'
+              ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200'
+              : 'bg-gray-50 hover:bg-gray-100 text-gray-500 border border-gray-200'
               }`}
           >
             <ExternalLink size={13} className="shrink-0" />
@@ -183,27 +196,51 @@ export default function Toolbar({
           </button>
         )}
 
-        {/* Import JSON CTA */}
-        <button
-          onClick={onImportJson}
-          title="Import JSON to render component"
-          className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors duration-150 shadow-xs"
-        >
-          <Upload size={13} className="text-blue-600 shrink-0" />
-          <span className="hidden xl:inline">Import JSON</span>
-          <span className="hidden md:inline xl:hidden">Import</span>
-        </button>
+        {/* JSON Actions Dropdown (Import JSON / Export JSON) */}
+        <div className="relative" ref={jsonMenuRef}>
+          <button
+            type="button"
+            onClick={() => setJsonMenuOpen((prev) => !prev)}
+            title="Import or Export JSON"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors duration-150 shadow-2xs"
+          >
+            <FileJson size={13} className="text-blue-600 shrink-0" />
+            <span>Import&Export</span>
+            <ChevronDown
+              size={12}
+              className={`text-gray-400 transition-transform duration-150 ${jsonMenuOpen ? 'rotate-180' : ''}`}
+            />
+          </button>
 
-        {/* Export JSON CTA */}
-        <button
-          onClick={onExportJson}
-          title="Export component or project JSON"
-          className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors duration-150 shadow-xs"
-        >
-          <FileJson size={13} className="text-emerald-600 shrink-0" />
-          <span className="hidden xl:inline">Export JSON</span>
-          <span className="hidden md:inline xl:hidden">Export</span>
-        </button>
+          {jsonMenuOpen && (
+            <div className="absolute right-0 mt-1.5 w-40 bg-white rounded-xl shadow-lg border border-gray-200 py-1 z-50">
+              <button
+                type="button"
+                onClick={() => {
+                  setJsonMenuOpen(false);
+                  if (onImportJson) onImportJson();
+                }}
+                title="Import JSON to render component"
+                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors text-left"
+              >
+                <Upload size={13} className="text-blue-600 shrink-0" />
+                <span>Import JSON</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setJsonMenuOpen(false);
+                  if (onExportJson) onExportJson();
+                }}
+                title="Export component or project JSON"
+                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors text-left"
+              >
+                <FileJson size={13} className="text-emerald-600 shrink-0" />
+                <span>Export JSON</span>
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* Save Page */}
         {onSavePage && (
@@ -229,16 +266,6 @@ export default function Toolbar({
             <span className="md:hidden">JSX</span>
           </button>
         )}
-
-        {/* Export JSX */}
-        <button
-          onClick={onExport}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors duration-150 shadow-xs"
-        >
-          <Code2 size={13} />
-          <span className="hidden md:inline">Export JSX</span>
-          <span className="md:hidden">JSX</span>
-        </button>
         {onDeployVercel && (
           <button
             onClick={onDeployVercel}
