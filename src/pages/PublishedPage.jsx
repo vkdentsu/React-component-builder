@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import * as Babel from '@babel/standalone';
 import { ArrowLeft, AlertCircle, FileText, LoaderCircle } from 'lucide-react';
 import ElementPreview from '../components/ElementPreview';
 import ThemeProvider from '../components/ThemeProvider';
-import { authenticatedFetch } from '../utils/api';
+import { authenticatedFetch, parseJsonResponse } from '../utils/api';
 import { BUILT_IN_PRESET_THEMES, normalizeThemeConfig } from '../utils/themeDefaults';
 import { loadGoogleFont } from '../utils/loadGoogleFont';
 import { loadCustomFont } from '../utils/fontManager';
@@ -406,6 +406,8 @@ function GeneratedJsxFrame({ pageName, generatedJSX }) {
 
 export default function PublishedPage() {
   const { slug } = useParams();
+  const [searchParams] = useSearchParams();
+  const isDraftView = searchParams.get('mode') === 'draft';
   const navigate = useNavigate();
   const [page, setPage] = useState(null);
   const [publishedPages, setPublishedPages] = useState([]);
@@ -414,6 +416,8 @@ export default function PublishedPage() {
   const [loading, setLoading] = useState(true);
   const [notFoundReason, setNotFoundReason] = useState('');
   const [device, setDevice] = useState(getViewportDevice);
+  const allPagesCacheRef = useRef([]);
+  const themesCacheRef = useRef(new Map());
 
   useEffect(() => {
     const handleResize = () => setDevice(getViewportDevice());
@@ -425,70 +429,100 @@ export default function PublishedPage() {
     let active = true;
     const normalizedSlug = String(slug || '').trim().toLowerCase();
 
-    const fetchPublishedPage = async () => {
-      setLoading(true);
-      setNotFoundReason('');
+    const resolveThemeForPage = async (targetPage) => {
+      if (!targetPage?.themeId) return BUILT_IN_PRESET_THEMES[0];
+      const preset = BUILT_IN_PRESET_THEMES.find((t) => t.id === targetPage.themeId);
+      if (preset || String(targetPage.themeId).startsWith('preset-')) {
+        return preset || BUILT_IN_PRESET_THEMES[0];
+      }
+      if (themesCacheRef.current.has(targetPage.themeId)) {
+        return themesCacheRef.current.get(targetPage.themeId);
+      }
       try {
-        const res = await authenticatedFetch('/api/pages');
-        const json = await res.json();
-        if (!res.ok) {
-          throw new Error(json.error?.message || 'Could not load pages.');
+        const themeRes = await authenticatedFetch(`/api/themes/${targetPage.themeId}`);
+        if (themeRes.ok) {
+          const themeJson = await parseJsonResponse(themeRes, 'Could not load theme.');
+          if (themeJson?.data) {
+            const resolved = {
+              ...themeJson.data,
+              configJson: normalizeThemeConfig(themeJson.data.configJson),
+            };
+            themesCacheRef.current.set(targetPage.themeId, resolved);
+            return resolved;
+          }
         }
+      } catch {
+        // Fallback to default preset theme if theme fetch fails
+      }
+      return BUILT_IN_PRESET_THEMES[0];
+    };
 
-        const allPages = json.data || [];
-        const onlyPublishedPages = allPages.filter((p) => p.status === 'PUBLISHED');
-        const onlyDraftPages = allPages.filter((p) => p.status === 'DRAFT');
-        const matchedPage = allPages.find(
+    const applyPagesForSlug = async (allPages) => {
+      const onlyPublishedPages = allPages.filter((p) => p.status === 'PUBLISHED');
+      const onlyDraftPages = allPages.filter((p) => p.status === 'DRAFT');
+      const matchedPage =
+        onlyPublishedPages.find(
+          (p) => String(p.slug || '').trim().toLowerCase() === normalizedSlug
+        ) ||
+        allPages.find(
           (p) => String(p.slug || '').trim().toLowerCase() === normalizedSlug
         );
 
-        if (!matchedPage) {
-          if (active) {
-            setPage(null);
-            setPublishedPages(onlyPublishedPages);
-            setDraftPages(onlyDraftPages);
-            setNotFoundReason(`No page was found with the route "/${slug}".`);
-          }
-          return;
-        }
-
-        if (matchedPage.status !== 'PUBLISHED') {
-          if (active) {
-            setPage(null);
-            setPublishedPages(onlyPublishedPages);
-            setDraftPages(onlyDraftPages);
-            setNotFoundReason(`The page "${matchedPage.name}" (/${matchedPage.slug}) is currently in Draft status and has not been published yet.`);
-          }
-          return;
-        }
-
-        let resolvedTheme = BUILT_IN_PRESET_THEMES.find((t) => t.id === matchedPage.themeId) || BUILT_IN_PRESET_THEMES[0];
-        if (matchedPage.themeId && !String(matchedPage.themeId).startsWith('preset-')) {
-          try {
-            const themeRes = await authenticatedFetch(`/api/themes/${matchedPage.themeId}`);
-            if (themeRes.ok) {
-              const themeJson = await themeRes.json();
-              if (themeJson?.data) {
-                resolvedTheme = {
-                  ...themeJson.data,
-                  configJson: normalizeThemeConfig(themeJson.data.configJson),
-                };
-              }
-            }
-          } catch {
-            // Fallback to default preset theme if theme fetch fails
-          }
-        }
-
+      if (!matchedPage) {
         if (active) {
-          setPage(matchedPage);
+          setPage(null);
           setPublishedPages(onlyPublishedPages);
           setDraftPages(onlyDraftPages);
-          setTheme(resolvedTheme);
-          document.title = `${matchedPage.name} — Published Page`;
+          setNotFoundReason(`No page was found with the route "/${slug}".`);
         }
-      } catch (err) {
+        return false;
+      }
+
+      if (matchedPage.status !== 'PUBLISHED' && !isDraftView) {
         if (active) {
+          setPage(null);
+          setPublishedPages(onlyPublishedPages);
+          setDraftPages(onlyDraftPages);
+          setNotFoundReason(`The page "${matchedPage.name}" (/${matchedPage.slug}) is currently Unpublished and has not been published yet.`);
+        }
+        return false;
+      }
+
+      const resolvedTheme = await resolveThemeForPage(matchedPage);
+
+      if (active) {
+        setPage(matchedPage);
+        setPublishedPages(onlyPublishedPages);
+        setDraftPages(onlyDraftPages);
+        setTheme(resolvedTheme);
+        setNotFoundReason('');
+        document.title = `${matchedPage.name} — ${isDraftView || matchedPage.status === 'DRAFT' ? 'Draft Page' : 'Published Page'}`;
+      }
+      return true;
+    };
+
+    const fetchPublishedPage = async () => {
+      const cachedPages = allPagesCacheRef.current;
+      let renderedFromCache = false;
+
+      if (cachedPages.length > 0) {
+        renderedFromCache = await applyPagesForSlug(cachedPages);
+        if (active && renderedFromCache) {
+          setLoading(false);
+        }
+      } else {
+        setLoading(true);
+        setNotFoundReason('');
+      }
+
+      try {
+        const res = await authenticatedFetch('/api/pages');
+        const json = await parseJsonResponse(res, 'Could not load pages.');
+        const allPages = Array.isArray(json.data) ? json.data : [];
+        allPagesCacheRef.current = allPages;
+        await applyPagesForSlug(allPages);
+      } catch (err) {
+        if (active && !renderedFromCache) {
           setNotFoundReason(err.message || 'Could not load the published page.');
         }
       } finally {
@@ -500,7 +534,7 @@ export default function PublishedPage() {
     return () => {
       active = false;
     };
-  }, [slug]);
+  }, [slug, isDraftView]);
 
   const rawContent = page?.contentJson || {};
   const globalFont = rawContent.globalFont || "'Inter', sans-serif";

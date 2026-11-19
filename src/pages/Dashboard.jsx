@@ -605,7 +605,7 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
         }
     };
 
-    // Toggle Publish / Convert to Draft Status
+    // Toggle Publish / Unpublish Status
     const handleTogglePublish = async (page) => {
         setPublishingPageId(page.id);
         try {
@@ -633,7 +633,7 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
             if (store.activeDbPageId === page.id) {
                 store.setPageMeta({ status: newStatus });
             }
-            showToast(`Page "${page.name}" status changed to ${newStatus === 'PUBLISHED' ? 'Published' : 'Draft'}`);
+            showToast(`Page "${page.name}" is now ${newStatus === 'PUBLISHED' ? 'Published' : 'Unpublished'}`);
         } catch (err) {
             showToast(err.message, 'error');
         } finally {
@@ -641,34 +641,13 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
         }
     };
 
-    // View as Published (publishes first if Draft, then opens /:slug)
-    const handleViewAsPublished = async (page) => {
-        if (page.status === 'PUBLISHED') {
-            window.open(`/${page.slug.replace(/^\/+/, '')}`, '_blank', 'noopener,noreferrer');
+    // Open Published Page
+    const handleViewAsPublished = (page) => {
+        if (page.status !== 'PUBLISHED') {
+            showToast(`"${page.name}" is currently Unpublished. Please publish it first to open the page.`, 'error');
             return;
         }
-        setPublishingPageId(page.id);
-        try {
-            const res = await authenticatedFetch(`/api/pages/${page.id}/publish`, { method: 'POST' });
-            const json = await res.json();
-            if (!res.ok) {
-                throw new Error(json.error?.message || 'Failed to publish page');
-            }
-
-            setPages((prev) =>
-                prev.map((p) => (p.id === page.id ? { ...p, ...json.data, status: 'PUBLISHED' } : p))
-            );
-            const store = useBuilderStore.getState();
-            if (store.activeDbPageId === page.id) {
-                store.setPageMeta({ status: 'PUBLISHED' });
-            }
-            showToast(`Page "${page.name}" is now Published!`);
-            window.open(`/${page.slug.replace(/^\/+/, '')}`, '_blank', 'noopener,noreferrer');
-        } catch (err) {
-            showToast(err.message, 'error');
-        } finally {
-            setPublishingPageId(null);
-        }
+        window.open(`/${page.slug.replace(/^\/+/, '')}`, '_blank', 'noopener,noreferrer');
     };
 
     // Filtered pages for table/cards
@@ -926,7 +905,7 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
 
                                 <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
                                     <div>
-                                        <p className="text-xs font-medium text-slate-400">Draft Pages</p>
+                                        <p className="text-xs font-medium text-slate-400">Unpublished Pages</p>
                                         <p className="text-2xl font-bold text-slate-800 mt-1">
                                             {loading ? '...' : draftCount}
                                         </p>
@@ -1020,7 +999,7 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                                                     type="button"
                                                                     onClick={() => handleTogglePublish(page)}
                                                                     disabled={publishingPageId === page.id}
-                                                                    title={page.status === 'PUBLISHED' ? 'Click to convert to Draft' : 'Click to Publish'}
+                                                                    title={page.status === 'PUBLISHED' ? 'Click to Unpublish' : 'Click to Publish'}
                                                                     className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full transition-colors cursor-pointer disabled:opacity-50 ${page.status === 'PUBLISHED'
                                                                         ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
                                                                         : 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100'
@@ -1032,7 +1011,7 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                                                             : 'bg-amber-500'
                                                                             }`}
                                                                     />
-                                                                    {page.status === 'PUBLISHED' ? 'Published' : 'Draft'}
+                                                                    {page.status === 'PUBLISHED' ? 'Published' : 'Unpublished'}
                                                                 </button>
                                                             </div>
                                                             <p className="text-[11px] text-slate-400 font-mono mt-0.5">
@@ -1320,7 +1299,7 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                     >
                                         <option value="ALL">All ({pages.length})</option>
                                         <option value="PUBLISHED">Published ({publishedCount})</option>
-                                        <option value="DRAFT">Draft ({draftCount})</option>
+                                        <option value="DRAFT">Unpublished ({draftCount})</option>
                                     </select>
 
                                     <button
@@ -1459,7 +1438,7 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                                                     type="button"
                                                                     onClick={() => handleTogglePublish(page)}
                                                                     disabled={publishingPageId === page.id}
-                                                                    title={page.status === 'PUBLISHED' ? 'Click to convert to Draft' : 'Click to Publish'}
+                                                                    title={page.status === 'PUBLISHED' ? 'Click to Unpublish' : 'Click to Publish'}
                                                                     className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold transition-colors cursor-pointer disabled:opacity-50 ${page.status === 'PUBLISHED'
                                                                         ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
                                                                         : 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100'
@@ -1471,7 +1450,7 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                                                             : 'bg-amber-500'
                                                                             }`}
                                                                     />
-                                                                    {page.status === 'PUBLISHED' ? 'Published' : 'Draft'}
+                                                                    {page.status === 'PUBLISHED' ? 'Published' : 'Unpublished'}
                                                                 </button>
                                                             </td>
 
@@ -1493,11 +1472,15 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                                                         type="button"
                                                                         onClick={() => handleViewAsPublished(page)}
                                                                         disabled={publishingPageId === page.id}
-                                                                        title={page.status === 'PUBLISHED' ? `View published page at /${page.slug}` : `Publish and view ${page.name}`}
-                                                                        className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-2.5 py-1.5 text-[11px] font-semibold transition-colors disabled:opacity-50"
+                                                                        title={page.status === 'PUBLISHED' ? `Open published page at /${page.slug}` : 'Publish this page first to open it'}
+                                                                        className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-colors disabled:opacity-50 ${
+                                                                            page.status === 'PUBLISHED'
+                                                                                ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200'
+                                                                                : 'bg-slate-50 hover:bg-slate-100 text-slate-400 border border-slate-200'
+                                                                        }`}
                                                                     >
                                                                         <Globe size={13} />
-                                                                        <span>{publishingPageId === page.id ? 'Publishing...' : 'View as Published'}</span>
+                                                                        <span>Open Page</span>
                                                                     </button>
 
                                                                     <button
