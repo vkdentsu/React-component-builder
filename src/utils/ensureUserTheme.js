@@ -138,35 +138,7 @@ export async function ensureUserTheme(presetOrTheme) {
       }
       return persisted;
     }
-
-    // Try creating with a disambiguated slug
-    for (let attempt = 1; attempt <= 5; attempt += 1) {
-      const altSlug = `${slug}-${attempt}`;
-      response = await authenticatedFetch('/api/themes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: `${presetData.name} ${attempt + 1}`,
-          slug: altSlug,
-          configJson: normalizedConfig,
-        }),
-      });
-      result = await response.json();
-      if (response.ok && result.data?.id) {
-        const persisted = {
-          ...result.data,
-          configJson: normalizeThemeConfig(result.data.configJson),
-          isPreset: false,
-        };
-        if (store?.availableThemes) {
-          useBuilderStore.setState((s) => ({
-            availableThemes: [persisted, ...s.availableThemes.filter((t) => t.id !== persisted.id)],
-          }));
-        }
-        return persisted;
-      }
-    }
   }
 
-  throw new Error(result.error?.message || 'Failed to create a theme for this page.');
+  throw new Error(result?.error?.message || 'A theme with this name or slug already exists.');
 }
