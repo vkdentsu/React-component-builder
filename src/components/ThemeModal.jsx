@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
   Check,
-  Copy,
   Download,
   Maximize2,
   Palette,
@@ -43,9 +42,15 @@ function uniqueSlug(name, themes, excludeId) {
 }
 
 function validateTheme(name, slug, tokens, themes, selectedId) {
-  if (!name.trim()) return 'Project name is required.';
+  const trimmedName = name.trim();
+  if (!trimmedName) return 'Theme name is required.';
+  if (themes.some((theme) => theme.id !== selectedId && theme.name?.trim().toLowerCase() === trimmedName.toLowerCase())) {
+    return `A theme named "${trimmedName}" already exists. Please choose a different name.`;
+  }
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) return 'Slug must use lowercase letters, numbers, and single hyphens only.';
-  if (themes.some((theme) => theme.id !== selectedId && !String(theme.id).startsWith('preset-') && !theme.isPreset && theme.slug?.toLowerCase() === slug.toLowerCase())) return 'This slug is already in use.';
+  if (themes.some((theme) => theme.id !== selectedId && theme.slug?.toLowerCase() === slug.toLowerCase())) {
+    return 'This slug is already in use.';
+  }
 
   const invalidColor = Object.entries(tokens.colors).find(([, value]) => !/^#[0-9a-f]{6}$/i.test(value));
   if (invalidColor) return `Enter a valid HEX value for ${invalidColor[0]}.`;
@@ -104,7 +109,6 @@ export default function ThemeModal({ onClose, initialThemeId, onSaved }) {
     applyThemeDraft,
     createTheme,
     updateTheme,
-    cloneTheme,
     themeLoading,
     themeError,
     addCustomFont,
@@ -255,30 +259,6 @@ export default function ThemeModal({ onClose, initialThemeId, onSaved }) {
     setTokens(normalizeThemeConfig(source.configJson));
     setLocalError('');
     setSaveSuccess(false);
-  };
-
-  const handleDuplicate = async () => {
-    const name = `${projectName.trim() || 'Theme'} Copy`;
-    const isPresetTheme = String(selectedThemeId).startsWith('preset-') ||
-      availableThemes.find((theme) => theme.id === selectedThemeId)?.isPreset;
-    if (isNewTheme || isPresetTheme) {
-      handleStartNew(configForSave(), name);
-      return;
-    }
-    try {
-      const duplicate = await cloneTheme(selectedThemeId, name);
-      if (duplicate) {
-        setIsNewTheme(false);
-        setSelectedThemeId(duplicate.id);
-        setProjectName(duplicate.name);
-        setSlugName(duplicate.slug);
-        setSlugManuallyEdited(false);
-        setDescription(duplicate.configJson?.description || '');
-        setTokens(normalizeThemeConfig(duplicate.configJson));
-      }
-    } catch (error) {
-      setLocalError(error.message || 'Failed to duplicate theme.');
-    }
   };
 
   const handleExport = () => {
@@ -434,7 +414,6 @@ export default function ThemeModal({ onClose, initialThemeId, onSaved }) {
               </div>
               <div className="flex w-full flex-wrap items-center justify-end gap-1.5 border-t border-slate-100 pt-3">
                 <button type="button" onClick={handleReset} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-2 text-[10px] font-medium text-slate-600 hover:bg-slate-50 sm:text-xs"><RotateCcw size={12} /> Reset</button>
-                <button type="button" onClick={handleDuplicate} disabled={themeLoading} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-2 text-[10px] font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 sm:text-xs"><Copy size={12} /> Duplicate</button>
                 <button type="button" onClick={handleExport} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-2 text-[10px] font-medium text-slate-600 hover:bg-slate-50 sm:text-xs"><Download size={12} /> Export</button>
                 <label className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-2 text-[10px] font-medium text-slate-600 hover:bg-slate-50 sm:text-xs"><Upload size={12} /> Import<input type="file" accept=".json,application/json" onChange={handleImport} className="sr-only" /></label>
                 <button type="button" onClick={handleApply} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-2 text-[10px] font-medium text-slate-700 hover:bg-slate-50 sm:text-xs"><Check size={12} className="text-blue-600" /> Apply to Canvas</button>

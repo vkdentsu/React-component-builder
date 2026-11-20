@@ -1824,16 +1824,13 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                     Assign Theme (Default Theme applied)
                                 </label>
                                 <select
-                                    value={newPageThemeId}
+                                    value={newPageThemeId || useBuilderStore.getState().defaultThemeId || allAvailableThemes[0]?.id || ''}
                                     onChange={(e) => setNewPageThemeId(e.target.value)}
                                     className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                                 >
-                                    <option value="">
-                                        Default Theme ({themes.find((t) => t.id === useBuilderStore.getState().defaultThemeId)?.name || themes[0]?.name || 'Modern Blue'})
-                                    </option>
-                                    {themes.map((t) => (
+                                    {allAvailableThemes.map((t) => (
                                         <option key={t.id} value={t.id}>
-                                            {t.name} {t.id === useBuilderStore.getState().defaultThemeId ? '(Default)' : ''}
+                                            {t.name} {t.id === (useBuilderStore.getState().defaultThemeId || allAvailableThemes[0]?.id) ? '(Default)' : ''}
                                         </option>
                                     ))}
                                 </select>

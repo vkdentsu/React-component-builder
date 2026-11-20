@@ -3,22 +3,15 @@ import {
   Edit3,
   Plus,
   Trash2,
-  Copy,
   Check,
   Palette,
-  ShieldCheck,
 } from "lucide-react";
 import useBuilderStore from "../store/builderStore";
 import ThemeModal from "../components/ThemeModal";
-import { BUILT_IN_PRESET_THEMES, mergeThemes } from "../utils/themeDefaults";
+import { BUILT_IN_PRESET_THEMES, PRESET_SLUGS, mergeThemes } from "../utils/themeDefaults";
 
 export default function ConfigurationAndThemes({ themes = [], onRefresh }) {
   const {
-    activeTheme,
-    defaultThemeId,
-    selectTheme,
-    setDefaultTheme,
-    cloneTheme,
     deleteTheme,
   } = useBuilderStore();
 
@@ -35,30 +28,6 @@ export default function ConfigurationAndThemes({ themes = [], onRefresh }) {
     themes.length > 0 ? themes : useBuilderStore.getState().availableThemes,
     BUILT_IN_PRESET_THEMES
   );
-
-  const currentDefaultId = defaultThemeId || activeTheme?.id || allThemes[0]?.id;
-
-  const handleSelectTheme = (theme) => {
-    selectTheme(theme.id);
-    setDefaultTheme(theme.id);
-    showToast(`"${theme.name}" set as active theme & default for new pages.`);
-  };
-
-  const handleCloneTheme = async (theme) => {
-    setActionLoadingId(theme.id);
-    try {
-      const cloned = await cloneTheme(theme.id, `${theme.name} (Copy)`);
-      showToast(`Cloned "${theme.name}" as "${cloned?.name || 'New Theme'}".`);
-      await onRefresh?.();
-      if (cloned?.id) {
-        setEditingThemeId(cloned.id);
-      }
-    } catch (err) {
-      showToast(err.message || "Failed to clone theme", "error");
-    } finally {
-      setActionLoadingId(null);
-    }
-  };
 
   const handleDeleteTheme = async (theme) => {
     if (String(theme.id).startsWith("preset-") || theme.isPreset) {
@@ -79,9 +48,6 @@ export default function ConfigurationAndThemes({ themes = [], onRefresh }) {
       setActionLoadingId(null);
     }
   };
-
-  const currentActive = allThemes.find((t) => t.id === activeTheme?.id) || allThemes[0];
-  const activeColors = currentActive?.configJson?.colors || {};
 
   return (
     <div className="space-y-6">
@@ -127,92 +93,12 @@ export default function ConfigurationAndThemes({ themes = [], onRefresh }) {
         </button>
       </div>
 
-      {/* Active Theme Spotlight Card */}
-      {currentActive && (
-        <div className="relative overflow-hidden rounded-2xl border border-blue-200/80 bg-gradient-to-br from-blue-50/60 via-white to-indigo-50/40 p-5 shadow-xs">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                  <ShieldCheck size={12} /> Active & Default Theme
-                </span>
-                <span className="text-[11px] font-mono text-slate-400">
-                  /{currentActive.slug}
-                </span>
-              </div>
-              <h2 className="text-lg font-bold text-slate-900">{currentActive.name}</h2>
-              <p className="text-xs text-slate-500 max-w-lg">
-                Automatically applied when new pages are created, and dynamically feeds CSS
-                variables (<code className="text-blue-600 font-mono text-[11px]">--theme-primary</code>, <code className="text-blue-600 font-mono text-[11px]">--theme-font-heading</code>) across the canvas.
-              </p>
-
-              {/* Token Previews */}
-              <div className="flex flex-wrap items-center gap-4 pt-1 text-xs text-slate-600">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[11px] text-slate-400 font-medium">Palette:</span>
-                  <div className="flex items-center -space-x-1.5">
-                    {["primary", "secondary", "background", "surface", "text"].map(
-                      (key) =>
-                        activeColors[key] && (
-                          <span
-                            key={key}
-                            style={{ backgroundColor: activeColors[key] }}
-                            className="w-5 h-5 rounded-full border-2 border-white shadow-xs"
-                            title={`${key}: ${activeColors[key]}`}
-                          />
-                        )
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[11px] text-slate-400 font-medium">Font:</span>
-                  <span className="font-semibold text-slate-800">
-                    {currentActive.configJson?.typography?.fontFamily || "Inter"}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[11px] text-slate-400 font-medium">Radius:</span>
-                  <span className="font-mono text-slate-700 text-[11px]">
-                    {currentActive.configJson?.borderRadius?.md || "8px"} (md)
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 self-start md:self-auto shrink-0">
-              <button
-                type="button"
-                onClick={() => setEditingThemeId(currentActive.id)}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 border border-slate-200 shadow-2xs hover:bg-slate-50 transition-colors"
-              >
-                <Edit3 size={13} className="text-blue-600" />
-                <span>Edit Tokens</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleCloneTheme(currentActive)}
-                disabled={actionLoadingId === currentActive.id}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 border border-slate-200 shadow-2xs hover:bg-slate-50 transition-colors"
-              >
-                <Copy size={13} className="text-indigo-600" />
-                <span>Clone Theme</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Grid of All Themes */}
       <div>
         <div className="flex items-center justify-between mb-3.5">
           <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider text-[11px]">
             Available Themes ({allThemes.length})
           </h2>
-          <span className="text-xs text-slate-400">
-            Click &ldquo;Set Active&rdquo; to apply theme to canvas & new pages
-          </span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -220,18 +106,12 @@ export default function ConfigurationAndThemes({ themes = [], onRefresh }) {
             const colors = theme.configJson?.colors || {};
             const typography = theme.configJson?.typography || {};
             const borderRadius = theme.configJson?.borderRadius || {};
-            const isActive = theme.id === activeTheme?.id;
-            const isDefault = theme.id === currentDefaultId;
-            const isPreset = Boolean(theme.isPreset || String(theme.id).startsWith("preset-"));
+            const isPreset = Boolean(theme.isPreset || String(theme.id).startsWith("preset-") || PRESET_SLUGS?.has(theme.slug?.toLowerCase()));
 
             return (
               <div
                 key={theme.id}
-                className={`bg-white rounded-2xl border p-5 shadow-xs flex flex-col justify-between transition-all hover:shadow-md ${
-                  isActive
-                    ? "border-blue-400 ring-2 ring-blue-500/20"
-                    : "border-slate-200/80 hover:border-slate-300"
-                }`}
+                className="bg-white rounded-2xl border border-slate-200/80 hover:border-slate-300 p-5 shadow-xs flex flex-col justify-between transition-all hover:shadow-md"
               >
                 <div>
                   {/* Card Header */}
@@ -241,16 +121,6 @@ export default function ConfigurationAndThemes({ themes = [], onRefresh }) {
                         <h3 className="text-sm font-bold text-slate-800 truncate">
                           {theme.name}
                         </h3>
-                        {isActive && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                            Active
-                          </span>
-                        )}
-                        {isDefault && (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            Default
-                          </span>
-                        )}
                         {isPreset && (
                           <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-slate-100 text-slate-500">
                             Preset
@@ -261,22 +131,6 @@ export default function ConfigurationAndThemes({ themes = [], onRefresh }) {
                         /{theme.slug}
                       </span>
                     </div>
-
-                    {/* Quick Active Check */}
-                    {isActive ? (
-                      <span className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-xs shrink-0">
-                        <Check size={14} />
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => handleSelectTheme(theme)}
-                        title="Set as Active & Default Theme"
-                        className="text-[11px] font-semibold text-slate-500 hover:text-blue-600 px-2 py-1 rounded-lg border border-slate-200 hover:border-blue-200 hover:bg-blue-50/50 transition-colors shrink-0"
-                      >
-                        Set Active
-                      </button>
-                    )}
                   </div>
 
                   {/* Color Palette Swatches */}
@@ -334,31 +188,18 @@ export default function ConfigurationAndThemes({ themes = [], onRefresh }) {
                 </div>
 
                 {/* Card Footer Actions */}
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
+                {!isPreset ? (
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
                     <button
                       type="button"
                       onClick={() => setEditingThemeId(theme.id)}
-                      title={`Edit tokens for ${theme.name}`}
+                      title={`Edit theme ${theme.name}`}
                       className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                     >
                       <Edit3 size={13} />
-                      <span>Edit Tokens</span>
+                      <span>Edit Theme</span>
                     </button>
 
-                    <button
-                      type="button"
-                      onClick={() => handleCloneTheme(theme)}
-                      disabled={actionLoadingId === theme.id}
-                      title={`Clone ${theme.name}`}
-                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-                    >
-                      <Copy size={13} />
-                      <span>Clone</span>
-                    </button>
-                  </div>
-
-                  {!isPreset && (
                     <button
                       type="button"
                       onClick={() => handleDeleteTheme(theme)}
@@ -368,8 +209,13 @@ export default function ConfigurationAndThemes({ themes = [], onRefresh }) {
                     >
                       <Trash2 size={14} />
                     </button>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+                    <span>Preset theme</span>
+                    <span className="font-medium">Read only</span>
+                  </div>
+                )}
               </div>
             );
           })}
