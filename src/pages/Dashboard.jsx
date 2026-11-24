@@ -24,6 +24,8 @@ import {
     Database,
     Activity,
     Code2,
+    FolderKanban,
+    FolderInput,
     RefreshCw,
     Globe,
     Upload,
@@ -35,6 +37,7 @@ import { BUILT_IN_PRESET_THEMES, mergeThemes } from '../utils/themeDefaults';
 import useBuilderStore from '../store/builderStore';
 import ConfigurationAndThemes from "./ConfigurationAndThemes";
 import MediaAssets from "../components/MediaAssets";
+import Projects from "./Projects";
 
 const isDesignConvertedPage = (page) => page.contentJson?.type === 'generated-jsx';
 
@@ -42,13 +45,13 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
     const navigate = useNavigate();
     const location = useLocation();
 
-    // Tab State: dashboard | pages | themes | media | settings
+    // Tab State: dashboard | projects | pages | themes | media | settings
     const determineInitialTab = () => {
-        if (initialTab && ['dashboard', 'pages', 'themes', 'media', 'settings'].includes(initialTab)) {
+        if (initialTab && ['dashboard', 'projects', 'pages', 'themes', 'media', 'settings'].includes(initialTab)) {
             return initialTab;
         }
         const path = location.pathname.replace('/', '').toLowerCase();
-        if (['dashboard', 'pages', 'themes', 'media', 'settings'].includes(path)) {
+        if (['dashboard', 'projects', 'pages', 'themes', 'media', 'settings'].includes(path)) {
             return path;
         }
         return 'dashboard';
@@ -101,6 +104,7 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
     // Database Data States
     const [pages, setPages] = useState([]);
     const [components, setComponents] = useState([]);
+    const [projects, setProjects] = useState([]);
     const [themes, setThemes] = useState([]);
     const [health, setHealth] = useState({ status: 'checking', database: 'checking' });
     const [loading, setLoading] = useState(true);
@@ -130,6 +134,10 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
     const [openingPageId, setOpeningPageId] = useState(null);
     const [updatingPageThemeId, setUpdatingPageThemeId] = useState(null);
     const [publishingPageId, setPublishingPageId] = useState(null);
+    const [pageToMove, setPageToMove] = useState(null);
+    const [moveProjectId, setMoveProjectId] = useState('');
+    const [movingPage, setMovingPage] = useState(false);
+    const [moveError, setMoveError] = useState('');
 
     const allAvailableThemes = useMemo(() => {
         return mergeThemes(
@@ -166,12 +174,14 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
         setError(null);
         return Promise.all([
             authenticatedFetch('/api/pages').then((r) => r.json()),
+            authenticatedFetch('/api/projects').then((r) => r.json()),
             authenticatedFetch('/api/components').then((r) => r.json()),
             useBuilderStore.getState().fetchThemes(),
             authenticatedFetch('/api/auth/me').then((r) => r.json()),
             fetch(getApiUrl('/api/health')).then((r) => r.json()).catch(() => ({ status: 'error', database: 'unavailable' })),
-        ]).then(([pagesRes, componentsRes, themesRes, userRes, healthRes]) => {
+        ]).then(([pagesRes, projectsRes, componentsRes, themesRes, userRes, healthRes]) => {
             if (pagesRes.data) setPages(pagesRes.data);
+            if (projectsRes.data) setProjects(projectsRes.data);
             if (componentsRes.data) setComponents(componentsRes.data);
             if (themesRes) {
                 setThemes(Array.isArray(themesRes) ? themesRes : (themesRes.data || []));
@@ -219,13 +229,15 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
         let isMounted = true;
         Promise.all([
             authenticatedFetch('/api/pages').then((r) => r.json()),
+            authenticatedFetch('/api/projects').then((r) => r.json()),
             authenticatedFetch('/api/components').then((r) => r.json()),
             useBuilderStore.getState().fetchThemes(),
             authenticatedFetch('/api/auth/me').then((r) => r.json()),
             fetch(getApiUrl('/api/health')).then((r) => r.json()).catch(() => ({ status: 'error', database: 'unavailable' })),
-        ]).then(([pagesRes, componentsRes, themesRes, userRes, healthRes]) => {
+        ]).then(([pagesRes, projectsRes, componentsRes, themesRes, userRes, healthRes]) => {
             if (!isMounted) return;
             if (pagesRes.data) setPages(pagesRes.data);
+            if (projectsRes.data) setProjects(projectsRes.data);
             if (componentsRes.data) setComponents(componentsRes.data);
             if (themesRes) {
                 setThemes(Array.isArray(themesRes) ? themesRes : (themesRes.data || []));
@@ -647,7 +659,60 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
             showToast(`"${page.name}" is currently Unpublished. Please publish it first to open the page.`, 'error');
             return;
         }
-        window.open(`/${page.slug.replace(/^\/+/, '')}`, '_blank', 'noopener,noreferrer');
+        const pagePath = page.project?.slug
+            ? `/${page.project.slug}/${page.slug.replace(/^\/+/, '')}`
+            : `/${page.slug.replace(/^\/+/, '')}`;
+        window.open(pagePath, '_blank', 'noopener,noreferrer');
+    };
+
+    const openMovePageModal = (page) => {
+        setPageToMove(page);
+        setMoveProjectId(page.projectId || '');
+        setMoveError('');
+    };
+
+    const handleMovePage = async (event) => {
+        event.preventDefault();
+        if (!pageToMove || (pageToMove.projectId || '') === moveProjectId) return;
+
+        setMovingPage(true);
+        setMoveError('');
+        try {
+            const response = await authenticatedFetch(`/api/pages/${encodeURIComponent(pageToMove.id)}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ projectId: moveProjectId || null }),
+            });
+            const result = await response.json();
+            if (!response.ok) {
+                throw new Error(result.error?.message || 'Could not move this page.');
+            }
+
+            const destination = projects.find((project) => project.id === moveProjectId);
+            setPages((current) => current.map((page) => page.id === pageToMove.id
+                ? { ...page, ...result.data, project: destination
+                    ? { id: destination.id, name: destination.name, slug: destination.slug }
+                    : null }
+                : page));
+            setProjects((current) => current.map((project) => {
+                const count = project._count?.pages || 0;
+                if (project.id === pageToMove.projectId) {
+                    return { ...project, _count: { ...project._count, pages: Math.max(0, count - 1) } };
+                }
+                if (project.id === moveProjectId) {
+                    return { ...project, _count: { ...project._count, pages: count + 1 } };
+                }
+                return project;
+            }));
+            showToast(moveProjectId
+                ? `"${pageToMove.name}" moved to ${destination?.name || 'the selected project'}.`
+                : `"${pageToMove.name}" moved out of its project.`);
+            setPageToMove(null);
+        } catch (moveRequestError) {
+            setMoveError(moveRequestError.message || 'Could not move this page.');
+        } finally {
+            setMovingPage(false);
+        }
     };
 
     // Filtered pages for table/cards
@@ -706,7 +771,9 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                 </td>
 
                                 <td className="py-4 px-6 font-mono text-slate-500 text-[11px]">
-                                    /{page.slug}
+                                    {page.project?.slug
+                                        ? `/${page.project.slug}/${page.slug}`
+                                        : `/${page.slug}`}
                                 </td>
 
                                 <td className="py-4 px-6 text-slate-600">
@@ -791,7 +858,9 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                             type="button"
                                             onClick={() => handleViewAsPublished(page)}
                                             disabled={publishingPageId === page.id}
-                                            title={page.status === 'PUBLISHED' ? `Open published page at /${page.slug}` : 'Publish this page first to open it'}
+                                            title={page.status === 'PUBLISHED'
+                                                ? `Open published page at ${page.project?.slug ? `/${page.project.slug}/` : '/'}${page.slug}`
+                                                : 'Publish this page first to open it'}
                                             className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-colors whitespace-nowrap disabled:opacity-50 ${
                                                 page.status === 'PUBLISHED'
                                                     ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200'
@@ -801,6 +870,20 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                             <Globe size={13} />
                                             <span>Open Page</span>
                                         </button>
+
+                                            {(projects.length > 0 || page.projectId) && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openMovePageModal(page)}
+                                                    title={page.project?.name
+                                                        ? `Move "${page.name}" to another project or back to standalone pages`
+                                                        : `Move "${page.name}" into a project`}
+                                                    aria-label={`Move ${page.name} to a project`}
+                                                    className="p-1.5 rounded-lg text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 border border-transparent hover:border-indigo-200 transition-colors"
+                                                >
+                                                    <FolderInput size={14} />
+                                                </button>
+                                            )}
 
                                         <button
                                             type="button"
@@ -1023,6 +1106,8 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                     {/* ========================================================================= */}
                     {/* TAB 1: DASHBOARD OVERVIEW                                                 */}
                     {/* ========================================================================= */}
+                    {activeTab === 'projects' && <Projects embedded />}
+
                     {activeTab === 'dashboard' && (
                         <div className="space-y-8 animate-in fade-in duration-200">
                             {/* Welcome Banner */}
@@ -1045,6 +1130,13 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                         >
                                             <Plus size={15} />
                                             <span>Create Page</span>
+                                        </button>
+                                        <button
+                                            onClick={() => navigate('/projects')}
+                                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold text-xs border border-white/20 transition-all hover:scale-[1.02]"
+                                        >
+                                            <FolderKanban size={15} />
+                                            <span>Manage Projects</span>
                                         </button>
                                         <button
                                             onClick={() => {
@@ -1667,6 +1759,22 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                             </span>
                         </button>
 
+                        <button
+                            onClick={() => {
+                                setActiveTab('projects');
+                                navigate('/projects');
+                            }}
+                            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${activeTab === 'projects'
+                                ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+                                : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                                }`}
+                        >
+                            <div className="flex items-center gap-3">
+                                <FolderKanban size={16} />
+                                <span>Projects</span>
+                            </div>
+                        </button>
+
                         {/* 3. Themes */}
                         <button
                             onClick={() => setActiveTab('themes')}
@@ -1856,6 +1964,82 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                             </div>
                         </form>
                     </div>
+                </div>
+            )}
+
+            {pageToMove && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+                    <form onSubmit={handleMovePage} className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                        <div className="flex items-start justify-between border-b border-slate-100 px-6 py-5">
+                            <div>
+                                <h2 className="text-sm font-bold text-slate-800">Move page</h2>
+                                <p className="mt-1 text-xs text-slate-500">Choose where “{pageToMove.name}” belongs.</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setPageToMove(null)}
+                                disabled={movingPage}
+                                aria-label="Close move page dialog"
+                                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                            >
+                                <X size={17} />
+                            </button>
+                        </div>
+                        <div className="space-y-4 p-6">
+                            {moveError && (
+                                <div role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+                                    {moveError}
+                                </div>
+                            )}
+                            <div>
+                                <label htmlFor="move-page-project" className="mb-1.5 block text-xs font-semibold text-slate-700">
+                                    Destination
+                                </label>
+                                <select
+                                    id="move-page-project"
+                                    value={moveProjectId}
+                                    onChange={(event) => setMoveProjectId(event.target.value)}
+                                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                >
+                                    <option value="">Standalone page (not in a project)</option>
+                                    {projects.map((project) => (
+                                        <option key={project.id} value={project.id}>
+                                            {project.name} (/{project.slug})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <p className="text-xs leading-5 text-slate-500">
+                                Moving a page changes its published URL to include its project slug. Existing page content and publish status are preserved.
+                            </p>
+                            {projects.length === 0 && !pageToMove.projectId && (
+                                <button
+                                    type="button"
+                                    onClick={() => navigate('/projects')}
+                                    className="text-xs font-semibold text-blue-600 hover:text-blue-800"
+                                >
+                                    Create a project first
+                                </button>
+                            )}
+                            <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setPageToMove(null)}
+                                    disabled={movingPage}
+                                    className="rounded-lg px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={movingPage || (pageToMove.projectId || '') === moveProjectId}
+                                    className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    {movingPage ? 'Moving...' : 'Move page'}
+                                </button>
+                            </div>
+                        </div>
+                    </form>
                 </div>
             )}
 
