@@ -21,42 +21,21 @@ function Processing() {
 
     useEffect(() => {
 
-        // -----------------------------------------
-        // No desktop image
-        // -----------------------------------------
-
         if (!desktopFile) {
             navigate("/upload");
             return;
         }
 
-
-        // -----------------------------------------
-        // Prevent duplicate Gemini requests
-        // -----------------------------------------
-
         if (hasStarted.current) {
-            console.log(
-                "Gemini request already started. Skipping duplicate call."
-            );
-
+            console.log("Already one request is being processed.");
             return;
         }
 
         hasStarted.current = true;
 
-
-        // -----------------------------------------
-        // Process image
-        // -----------------------------------------
-
         async function processImage() {
-
             try {
-
-                console.log(
-                    "Starting ONE Gemini request..."
-                );
+                console.log("Starting request...");
 
                 const generatedCode =
                     await convertDesignToJSX(
@@ -65,10 +44,7 @@ function Processing() {
                         mobileFile
                     );
 
-
-                console.log(
-                    "Gemini JSX generation completed."
-                );
+                console.log(" JSX generation completed.");
 
 
                 navigate("/generated", {
@@ -79,19 +55,9 @@ function Processing() {
                 });
 
             } catch (error) {
+                console.error("JSX generation failed:", error);
 
-                console.error(
-                    "AI Generation Failed:",
-                    error
-                );
-
-
-                // ---------------------------------
-                // Rate limit
-                // ---------------------------------
-
-                const message =
-                    error?.message || String(error);
+                const message = error?.message || String(error);
 
                 if (
                     error?.status === 429 ||
@@ -113,21 +79,12 @@ function Processing() {
                         );
                     }
 
-                    setError(
-                        "Gemini API quota has been reached. Please wait before trying again."
-                    );
+                    setError("Gemini API quota has been reached. Please wait before trying again.");
 
                     return;
                 }
 
-
-                // ---------------------------------
-                // Other errors
-                // ---------------------------------
-
-                setError(
-                    "AI generation failed. Please check the browser console for details."
-                );
+                setError("AI generation failed. Please check the browser console for details.");
             }
         }
 
@@ -173,7 +130,7 @@ function Processing() {
 
                 <>
                     <h2>
-                        Analyzing your design layout...
+                        Analyzing design layout...
                     </h2>
 
                     <p>
@@ -197,7 +154,7 @@ function Processing() {
 
                 <>
                     <h2>
-                        AI Generation Failed
+                        Generation Failed
                     </h2>
 
                     <p
