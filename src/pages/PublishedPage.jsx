@@ -405,7 +405,8 @@ function GeneratedJsxFrame({ pageName, generatedJSX }) {
 }
 
 export default function PublishedPage() {
-  const { slug } = useParams();
+  const { slug, projectSlug, pageSlug } = useParams();
+  const normalizedProjectSlug = String(projectSlug || '').trim().toLowerCase();
   const [searchParams] = useSearchParams();
   const isDraftView = searchParams.get('mode') === 'draft';
   const navigate = useNavigate();
@@ -427,7 +428,10 @@ export default function PublishedPage() {
 
   useEffect(() => {
     let active = true;
-    const normalizedSlug = String(slug || '').trim().toLowerCase();
+    const normalizedSlug = String(pageSlug || slug || '').trim().toLowerCase();
+    const routePath = normalizedProjectSlug
+      ? `/${projectSlug}/${pageSlug}`
+      : `/${slug}`;
 
     const resolveThemeForPage = async (targetPage) => {
       if (!targetPage?.themeId) return BUILT_IN_PRESET_THEMES[0];
@@ -458,13 +462,19 @@ export default function PublishedPage() {
     };
 
     const applyPagesForSlug = async (allPages) => {
-      const onlyPublishedPages = allPages.filter((p) => p.status === 'PUBLISHED');
-      const onlyDraftPages = allPages.filter((p) => p.status === 'DRAFT');
+      const scopedPages = allPages.filter((p) => {
+        const pageProjectSlug = String(p.project?.slug || '').trim().toLowerCase();
+        return normalizedProjectSlug
+          ? pageProjectSlug === normalizedProjectSlug
+          : !pageProjectSlug && !p.projectId;
+      });
+      const onlyPublishedPages = scopedPages.filter((p) => p.status === 'PUBLISHED');
+      const onlyDraftPages = scopedPages.filter((p) => p.status === 'DRAFT');
       const matchedPage =
         onlyPublishedPages.find(
           (p) => String(p.slug || '').trim().toLowerCase() === normalizedSlug
         ) ||
-        allPages.find(
+        scopedPages.find(
           (p) => String(p.slug || '').trim().toLowerCase() === normalizedSlug
         );
 
@@ -473,7 +483,7 @@ export default function PublishedPage() {
           setPage(null);
           setPublishedPages(onlyPublishedPages);
           setDraftPages(onlyDraftPages);
-          setNotFoundReason(`No page was found with the route "/${slug}".`);
+          setNotFoundReason(`No page was found with the route "${routePath}".`);
         }
         return false;
       }
@@ -483,7 +493,7 @@ export default function PublishedPage() {
           setPage(null);
           setPublishedPages(onlyPublishedPages);
           setDraftPages(onlyDraftPages);
-          setNotFoundReason(`The page "${matchedPage.name}" (/${matchedPage.slug}) is currently Unpublished and has not been published yet.`);
+          setNotFoundReason(`The page "${matchedPage.name}" (${routePath}) is currently Unpublished and has not been published yet.`);
         }
         return false;
       }
@@ -534,7 +544,7 @@ export default function PublishedPage() {
     return () => {
       active = false;
     };
-  }, [slug, isDraftView]);
+  }, [slug, projectSlug, pageSlug, normalizedProjectSlug, isDraftView]);
 
   const rawContent = page?.contentJson || {};
   const globalFont = rawContent.globalFont || "'Inter', sans-serif";
@@ -629,7 +639,19 @@ export default function PublishedPage() {
             device={device}
             publishedPages={publishedPages}
             draftPages={draftPages}
-            onNavigatePublished={(targetPath) => navigate(targetPath)}
+            onNavigatePublished={(targetPath) => {
+              const normalizedTarget = targetPath.startsWith('/') ? targetPath : `/${targetPath}`;
+              if (!normalizedProjectSlug) {
+                navigate(normalizedTarget);
+                return;
+              }
+              const projectPrefix = `/${projectSlug}/`;
+              navigate(
+                normalizedTarget === `/${projectSlug}` || normalizedTarget.startsWith(projectPrefix)
+                  ? normalizedTarget
+                  : `/${projectSlug}${normalizedTarget}`,
+              );
+            }}
           />
         )}
       </div>

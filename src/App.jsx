@@ -82,6 +82,9 @@ function App() {
         <Route path="/pages" element={<RequireAuth><Dashboard initialTab="pages" /></RequireAuth>} />
         <Route path="/media" element={<RequireAuth><Dashboard initialTab="media" /></RequireAuth>} />
         <Route path="/settings" element={<RequireAuth><Dashboard initialTab="settings" /></RequireAuth>} />
+        <Route path="/projects" element={<RequireAuth><Dashboard initialTab="projects" /></RequireAuth>} />
+        <Route path="/projects/:projectId" element={<RequireAuth><Dashboard initialTab="projects" /></RequireAuth>} />
+        <Route path="/:projectSlug/:pageSlug" element={<RequireAuth><PublishedPage /></RequireAuth>} />
         <Route path="/:slug" element={<RequireAuth><PublishedPage /></RequireAuth>} />
       </Routes>
     </BrowserRouter>

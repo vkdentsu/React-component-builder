@@ -183,7 +183,7 @@ export default function Toolbar({
             disabled={isPublishingPage || isSaving}
             title={
               isPublished
-                ? `Open published page at /${pageMeta?.slug || ''}`
+                ? `Open published page at ${pageMeta?.projectSlug ? `/${pageMeta.projectSlug}/` : '/'}${pageMeta?.slug || ''}`
                 : 'Publish this page first to open the published URL'
             }
             className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${isPublished

@@ -33,6 +33,7 @@ import { loadGoogleFont } from "../utils/loadGoogleFont";
 import { authenticatedFetch } from '../utils/api';
 import { ensureUserTheme } from '../utils/ensureUserTheme';
 import { generateJSX } from '../utils/codeGen';
+import { deployProjectToVercel } from '../utils/projectDeployment';
 
 function isHttpsUrl(value) {
   if (typeof value !== 'string') return false;
@@ -41,6 +42,13 @@ function isHttpsUrl(value) {
   } catch {
     return false;
   }
+}
+
+function getPublishedPagePath(meta) {
+  const segments = [meta?.projectSlug, meta?.slug]
+    .filter(Boolean)
+    .map((segment) => String(segment).replace(/^\/+|\/+$/g, ''));
+  return `/${segments.join('/')}`;
 }
 
 function isPublishingResult(value) {
@@ -210,6 +218,26 @@ export default function CustomBuilder() {
     setIsDeploying(true);
     setToast(null);
     try {
+      if (pageMeta?.projectId) {
+        const savedPage = await handleSavePage();
+        if (!savedPage?.id) return;
+        const projectResponse = await authenticatedFetch(`/api/projects/${encodeURIComponent(pageMeta.projectId)}`);
+        const projectResult = await projectResponse.json();
+        if (!projectResponse.ok) {
+          throw new Error(projectResult.error?.message || 'Could not load the project pages.');
+        }
+        const result = await deployProjectToVercel(
+          pageMeta.projectId,
+          projectResult.data.pages || [],
+          { id: savedPage.id, rows, globalFont },
+        );
+        setPublishingResults(activeDocId, { deployment: result });
+        showToast(result.deploymentUrl
+          ? `Project deployment ready: ${result.deploymentUrl}`
+          : 'Project deployment started. Check the Vercel dashboard for its status.');
+        return;
+      }
+
       const pageName = activeDocument.name
         .replace(/[^a-zA-Z0-9 ]/g, ' ')
         .split(/\s+/)
@@ -360,6 +388,8 @@ export default function CustomBuilder() {
 
         setPageMeta({ ...json.data, themeId: themeIdToUse });
         showToast(`Page "${json.data.name}" saved to database!`);
+        setPageSettingsOpen(false);
+        return json.data;
       } else {
         const res = await authenticatedFetch('/api/pages', {
           method: 'POST',
@@ -383,12 +413,13 @@ export default function CustomBuilder() {
         setPageMeta({ ...json.data, themeId: themeIdToUse });
         window.history.replaceState(null, '', `/custom-builder?pageId=${json.data.id}`);
         showToast(`Page "${json.data.name}" created and saved!`);
+        setPageSettingsOpen(false);
+        return json.data;
       }
-
-      setPageSettingsOpen(false);
     } catch (err) {
       console.error('Save page error:', err);
       showToast(err.message, 'error');
+      return null;
     } finally {
       setIsSaving(false);
     }
@@ -397,7 +428,7 @@ export default function CustomBuilder() {
   // Publish or Preview as Published Handler in Page Builder
   const handlePublishOrPreviewPage = async (openAfterPublish = false) => {
     if (pageMeta?.status === 'PUBLISHED' && pageMeta?.slug) {
-      window.open(`/${pageMeta.slug.replace(/^\/+/, '')}`, '_blank', 'noopener,noreferrer');
+      window.open(getPublishedPagePath(pageMeta), '_blank', 'noopener,noreferrer');
       return;
     }
 
@@ -485,7 +516,7 @@ export default function CustomBuilder() {
       setPageMeta({ ...publishJson.data, themeId: themeIdToUse, status: 'PUBLISHED' });
       showToast(`Page "${publishJson.data.name}" is now Published!`);
       if (openAfterPublish === true && publishJson.data?.slug) {
-        window.open(`/${publishJson.data.slug.replace(/^\/+/, '')}`, '_blank', 'noopener,noreferrer');
+        window.open(getPublishedPagePath({ ...pageMeta, ...publishJson.data }), '_blank', 'noopener,noreferrer');
       }
     } catch (err) {
       console.error('Publish page error:', err);
@@ -578,7 +609,7 @@ export default function CustomBuilder() {
       setPageMeta({ ...updatedPageData, themeId: themeIdToUse, status: 'DRAFT' });
       showToast(`Page "${updatedPageData.name}" is now Unpublished.`);
       if (openAfterDraft === true && updatedPageData?.slug) {
-        window.open(`/${updatedPageData.slug.replace(/^\/+/, '')}?mode=draft`, '_blank', 'noopener,noreferrer');
+        window.open(`${getPublishedPagePath({ ...pageMeta, ...updatedPageData })}?mode=draft`, '_blank', 'noopener,noreferrer');
       }
     } catch (err) {
       console.error('Unpublish page error:', err);
@@ -594,7 +625,7 @@ export default function CustomBuilder() {
       return;
     }
     if (pageMeta?.slug) {
-      window.open(`/${pageMeta.slug.replace(/^\/+/, '')}`, '_blank', 'noopener,noreferrer');
+      window.open(getPublishedPagePath(pageMeta), '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -983,7 +1014,7 @@ export default function CustomBuilder() {
                 </label>
                 <div className="flex items-center rounded-lg border border-slate-300 overflow-hidden bg-slate-50">
                   <span className="px-2.5 py-2 text-xs text-slate-400 font-mono bg-slate-100 border-r border-slate-200">
-                    /
+                    /{pageMeta?.projectSlug ? `${pageMeta.projectSlug}/` : ''}
                   </span>
                   <input
                     type="text"

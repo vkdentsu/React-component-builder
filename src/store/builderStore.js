@@ -526,6 +526,8 @@ const useBuilderStore = create(
           pageMeta: {
             name: pageRecord.name || 'Untitled Page',
             slug: pageRecord.slug || '',
+            projectId: pageRecord.projectId || null,
+            projectSlug: pageRecord.project?.slug || null,
             themeId: assignedThemeId || finalTheme.id || '',
             status: pageRecord.status || 'DRAFT',
           },
