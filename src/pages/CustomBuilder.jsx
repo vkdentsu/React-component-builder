@@ -79,6 +79,7 @@ export default function CustomBuilder() {
   const [activeDrag, setActiveDrag] = useState(null);
   // Saving & Toast states
   const [isSaving, setIsSaving] = useState(false);
+  const [isPublishingPage, setIsPublishingPage] = useState(false);
   const [saveComponentOpen, setSaveComponentOpen] = useState(false);
   const [componentName, setComponentName] = useState('');
   const [isSavingComponent, setIsSavingComponent] = useState(false);
@@ -142,6 +143,7 @@ export default function CustomBuilder() {
     : null;
 
   useEffect(() => {
+    if (isComponentMode) return undefined;
     let cancelled = false;
     authenticatedFetch('/api/integrations/connections')
       .then(async (response) => {
@@ -155,7 +157,7 @@ export default function CustomBuilder() {
     return () => {
       cancelled = true;
     };
-  }, [showToast]);
+  }, [isComponentMode, showToast]);
 
   useEffect(() => {
     if (!activeDocId || loadedPublishingResultsRef.current.has(activeDocId)) return undefined;
@@ -223,11 +225,7 @@ export default function CustomBuilder() {
       const response = await authenticatedFetch('/api/integrations/vercel/deploy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: projectName,
-          pageName,
-          jsx,
-        }),
+        body: JSON.stringify({ name: projectName, pageName, jsx }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error?.message || 'Could not deploy to Vercel.');
@@ -393,6 +391,210 @@ export default function CustomBuilder() {
       showToast(err.message, 'error');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Publish or Preview as Published Handler in Page Builder
+  const handlePublishOrPreviewPage = async (openAfterPublish = false) => {
+    if (pageMeta?.status === 'PUBLISHED' && pageMeta?.slug) {
+      window.open(`/${pageMeta.slug.replace(/^\/+/, '')}`, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    const meta = pageMeta;
+    if (!meta?.name?.trim() || !meta?.slug?.trim()) {
+      setPageSettingsOpen(true);
+      return;
+    }
+
+    try {
+      setIsPublishingPage(true);
+
+      let themeIdToUse = activeTheme?.id || meta.themeId;
+      const themeObj = availableThemes.find((t) => t.id === themeIdToUse) || activeTheme;
+      const isPreset = !themeIdToUse ||
+        String(themeIdToUse).startsWith('preset-') ||
+        Boolean(themeObj?.isPreset);
+
+      if (isPreset) {
+        const persistedTheme = await ensureUserTheme(themeObj || themeIdToUse);
+        if (!persistedTheme?.id) {
+          throw new Error('Failed to persist theme for this page.');
+        }
+        themeIdToUse = persistedTheme.id;
+        setPageMeta({ themeId: persistedTheme.id });
+        selectTheme(persistedTheme.id);
+      } else {
+        setPageMeta({ themeId: themeIdToUse });
+      }
+
+      const contentJson = {
+        rows,
+        globalFont,
+        customFonts: useBuilderStore.getState().customFonts,
+        device: useBuilderStore.getState().device,
+        themeId: themeIdToUse,
+      };
+
+      let targetPageId = activeDbPageId;
+      if (targetPageId) {
+        const patchRes = await authenticatedFetch(`/api/pages/${targetPageId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: meta.name.trim(),
+            slug: meta.slug.trim(),
+            contentJson,
+            themeId: themeIdToUse,
+          }),
+        });
+        const patchJson = await patchRes.json();
+        if (!patchRes.ok) {
+          throw new Error(patchJson.error?.message || 'Failed to save page before publishing');
+        }
+      } else {
+        const createRes = await authenticatedFetch('/api/pages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: meta.name.trim(),
+            slug: meta.slug.trim(),
+            themeId: themeIdToUse,
+            contentJson,
+            status: 'PUBLISHED',
+          }),
+        });
+        const createJson = await createRes.json();
+        if (!createRes.ok) {
+          throw new Error(createJson.error?.message || 'Failed to create and publish page');
+        }
+        targetPageId = createJson.data.id;
+        loadedPageIdRef.current = targetPageId;
+        setActiveDbPageId(targetPageId);
+        window.history.replaceState(null, '', `/custom-builder?pageId=${targetPageId}`);
+      }
+
+      const publishRes = await authenticatedFetch(`/api/pages/${targetPageId}/publish`, {
+        method: 'POST',
+      });
+      const publishJson = await publishRes.json();
+      if (!publishRes.ok) {
+        throw new Error(publishJson.error?.message || 'Failed to publish page');
+      }
+
+      setPageMeta({ ...publishJson.data, themeId: themeIdToUse, status: 'PUBLISHED' });
+      showToast(`Page "${publishJson.data.name}" is now Published!`);
+      if (openAfterPublish === true && publishJson.data?.slug) {
+        window.open(`/${publishJson.data.slug.replace(/^\/+/, '')}`, '_blank', 'noopener,noreferrer');
+      }
+    } catch (err) {
+      console.error('Publish page error:', err);
+      showToast(err.message, 'error');
+    } finally {
+      setIsPublishingPage(false);
+    }
+  };
+
+  // Change Published Page back to Draft (and optionally open the Draft view in a separate page)
+  const handleChangePageToDraft = async (openAfterDraft = false) => {
+    const meta = pageMeta;
+    if (!meta?.name?.trim() || !meta?.slug?.trim()) {
+      setPageSettingsOpen(true);
+      return;
+    }
+
+    try {
+      setIsPublishingPage(true);
+
+      let themeIdToUse = activeTheme?.id || meta.themeId;
+      const themeObj = availableThemes.find((t) => t.id === themeIdToUse) || activeTheme;
+      const isPreset = !themeIdToUse ||
+        String(themeIdToUse).startsWith('preset-') ||
+        Boolean(themeObj?.isPreset);
+
+      if (isPreset) {
+        const persistedTheme = await ensureUserTheme(themeObj || themeIdToUse);
+        if (!persistedTheme?.id) {
+          throw new Error('Failed to persist theme for this page.');
+        }
+        themeIdToUse = persistedTheme.id;
+        setPageMeta({ themeId: persistedTheme.id });
+        selectTheme(persistedTheme.id);
+      } else {
+        setPageMeta({ themeId: themeIdToUse });
+      }
+
+      const contentJson = {
+        rows,
+        globalFont,
+        customFonts: useBuilderStore.getState().customFonts,
+        device: useBuilderStore.getState().device,
+        themeId: themeIdToUse,
+      };
+
+      let targetPageId = activeDbPageId;
+      let updatedPageData = null;
+
+      if (targetPageId) {
+        const res = await authenticatedFetch(`/api/pages/${targetPageId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: meta.name.trim(),
+            slug: meta.slug.trim(),
+            contentJson,
+            themeId: themeIdToUse,
+            status: 'DRAFT',
+          }),
+        });
+        const json = await res.json();
+        if (!res.ok) {
+          throw new Error(json.error?.message || 'Failed to change page status to Draft');
+        }
+        updatedPageData = json.data;
+      } else {
+        const createRes = await authenticatedFetch('/api/pages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: meta.name.trim(),
+            slug: meta.slug.trim(),
+            themeId: themeIdToUse,
+            contentJson,
+            status: 'DRAFT',
+          }),
+        });
+        const createJson = await createRes.json();
+        if (!createRes.ok) {
+          throw new Error(createJson.error?.message || 'Failed to save draft page');
+        }
+        updatedPageData = createJson.data;
+        targetPageId = updatedPageData.id;
+        loadedPageIdRef.current = targetPageId;
+        setActiveDbPageId(targetPageId);
+        window.history.replaceState(null, '', `/custom-builder?pageId=${targetPageId}`);
+      }
+
+      setPageMeta({ ...updatedPageData, themeId: themeIdToUse, status: 'DRAFT' });
+      showToast(`Page "${updatedPageData.name}" is now Unpublished.`);
+      if (openAfterDraft === true && updatedPageData?.slug) {
+        window.open(`/${updatedPageData.slug.replace(/^\/+/, '')}?mode=draft`, '_blank', 'noopener,noreferrer');
+      }
+    } catch (err) {
+      console.error('Unpublish page error:', err);
+      showToast(err.message, 'error');
+    } finally {
+      setIsPublishingPage(false);
+    }
+  };
+
+  const handleOpenPublishedUrl = () => {
+    if (pageMeta?.status !== 'PUBLISHED') {
+      showToast('This page is currently Unpublished. Please publish the page first before opening it.', 'error');
+      return;
+    }
+    if (pageMeta?.slug) {
+      window.open(`/${pageMeta.slug.replace(/^\/+/, '')}`, '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -674,7 +876,7 @@ export default function CustomBuilder() {
           onExportJson={() => setExportJsonOpen(true)}
           onImportJson={() => setImportJsonOpen(true)}
           onPreview={() => setPreviewOpen(true)}
-          onDeployVercel={handleDeployToVercel}
+          onDeployVercel={!isComponentMode ? handleDeployToVercel : undefined}
           vercelConnected={Boolean(integrationConnections.vercel)}
           isDeploying={isDeploying}
           canUndo={canUndo()}
@@ -682,10 +884,14 @@ export default function CustomBuilder() {
           onSavePage={!isComponentMode ? () => handleSavePage() : undefined}
           isSaving={!isComponentMode && isSaving}
           pageMeta={pageMeta}
+          onPublishPage={!isComponentMode ? handlePublishOrPreviewPage : undefined}
+          onChangeToDraft={!isComponentMode ? handleChangePageToDraft : undefined}
+          onOpenPublishedUrl={!isComponentMode ? handleOpenPublishedUrl : undefined}
+          isPublishingPage={!isComponentMode && isPublishingPage}
           onEditPageSettings={() => setPageSettingsOpen(true)}
 
         />
-        {deployment?.deploymentUrl && (
+        {!isComponentMode && deployment?.deploymentUrl && (
           <div className="flex flex-wrap gap-x-5 gap-y-1 px-4 py-2 bg-emerald-50 border-b border-emerald-200 text-xs text-emerald-800">
             <span>
               Vercel: <a className="font-semibold underline" href={deployment.deploymentUrl} target="_blank" rel="noreferrer">{deployment.deploymentUrl}</a>

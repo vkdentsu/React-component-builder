@@ -131,48 +131,6 @@ export const THEME_PRESETS = [
       },
     },
   },
-  {
-    name: 'Emerald Garden',
-    slug: 'emerald-garden',
-    configJson: {
-      ...DEFAULT_THEME_TOKENS,
-      colors: {
-        primary: '#059669',
-        secondary: '#0d9488',
-        background: '#ffffff',
-        surface: '#f0fdf4',
-        text: '#064e3b',
-        textMuted: '#047857',
-        border: '#bbf7d0',
-      },
-      typography: {
-        ...DEFAULT_THEME_TOKENS.typography,
-        fontFamily: 'Montserrat',
-        fonts: { ...DEFAULT_THEME_TOKENS.typography.fonts, primary: 'Montserrat' },
-      },
-    },
-  },
-  {
-    name: 'Sunset Coral',
-    slug: 'sunset-coral',
-    configJson: {
-      ...DEFAULT_THEME_TOKENS,
-      colors: {
-        primary: '#f43f5e',
-        secondary: '#f97316',
-        background: '#fffbfb',
-        surface: '#fff1f2',
-        text: '#4c0519',
-        textMuted: '#9f1239',
-        border: '#fecdd3',
-      },
-      typography: {
-        ...DEFAULT_THEME_TOKENS.typography,
-        fontFamily: 'Nunito',
-        fonts: { ...DEFAULT_THEME_TOKENS.typography.fonts, primary: 'Nunito' },
-      },
-    },
-  },
 ];
 
 const asRecord = (value) =>
@@ -483,8 +441,12 @@ export const BUILT_IN_PRESET_THEMES = THEME_PRESETS.map((p, idx) => ({
   isPreset: true,
 }));
 
+export const PRESET_SLUGS = new Set(THEME_PRESETS.map((p) => p.slug.toLowerCase()));
+
 export function mergeThemes(customThemes = [], presets = BUILT_IN_PRESET_THEMES) {
   const seenIds = new Set();
+  const seenSlugs = new Set();
+  const seenNames = new Set();
   const result = [];
 
   const safeCustom = Array.isArray(customThemes) ? customThemes : [];
@@ -494,17 +456,28 @@ export function mergeThemes(customThemes = [], presets = BUILT_IN_PRESET_THEMES)
   for (const theme of safeCustom) {
     if (!theme || !theme.id || seenIds.has(theme.id)) continue;
     seenIds.add(theme.id);
+    if (theme.slug) seenSlugs.add(theme.slug.toLowerCase());
+    if (theme.name) seenNames.add(theme.name.trim().toLowerCase());
+    const isPresetTheme = Boolean(
+      theme.isPreset ||
+      String(theme.id).startsWith('preset-') ||
+      PRESET_SLUGS.has(theme.slug?.toLowerCase())
+    );
     result.push({
       ...theme,
       configJson: normalizeThemeConfig(theme.configJson),
-      isPreset: Boolean(theme.isPreset),
+      isPreset: isPresetTheme,
     });
   }
 
-  // Add built-in presets without duplicates
+  // Add built-in presets without duplicates (skip if a custom theme already has this slug or name)
   for (const preset of safePresets) {
     if (!preset || !preset.id || seenIds.has(preset.id)) continue;
+    if (preset.slug && seenSlugs.has(preset.slug.toLowerCase())) continue;
+    if (preset.name && seenNames.has(preset.name.trim().toLowerCase())) continue;
     seenIds.add(preset.id);
+    if (preset.slug) seenSlugs.add(preset.slug.toLowerCase());
+    if (preset.name) seenNames.add(preset.name.trim().toLowerCase());
     result.push({
       ...preset,
       configJson: normalizeThemeConfig(preset.configJson),

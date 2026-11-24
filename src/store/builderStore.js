@@ -328,26 +328,12 @@ const makeDocument = (name = 'My Component') => ({
   rows: createDefaultRows(),
 });
 
-function getUniqueThemeSlug(name, themes, attempt = 0) {
-  const baseSlug = name
+function slugify(name) {
+  return name
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '') || 'theme';
-  const usedSlugs = new Set(
-    themes
-      .filter((theme) => !String(theme.id).startsWith('preset-') && !theme.isPreset)
-      .map((theme) => theme.slug),
-  );
-  let suffix = attempt;
-  let slug = suffix === 0 ? baseSlug : `${baseSlug}-${suffix + 1}`;
-
-  while (usedSlugs.has(slug)) {
-    suffix += 1;
-    slug = `${baseSlug}-${suffix + 1}`;
-  }
-
-  return slug;
 }
 
 const responsiveTypographyFields = {
@@ -535,6 +521,7 @@ const useBuilderStore = create(
 
         set({
           builderMode: 'page',
+          device: 'desktop',
           activeDbPageId: pageRecord.id,
           pageMeta: {
             name: pageRecord.name || 'Untitled Page',
@@ -567,6 +554,7 @@ const useBuilderStore = create(
 
         set({
           builderMode: 'page',
+          device: 'desktop',
           activeDbPageId: null,
           pageMeta: {
             name,
@@ -775,45 +763,36 @@ const useBuilderStore = create(
           if (!trimmedName) throw new Error('Please enter a theme name.');
 
           const normalizedTokens = normalizeThemeConfig(configJson);
-          let json;
-          let response;
           const themes = get().availableThemes;
-          let slug = requestedSlug || getUniqueThemeSlug(trimmedName, themes);
+
+          if (themes.some((theme) => theme.name?.trim().toLowerCase() === trimmedName.toLowerCase())) {
+            throw new Error(`A theme named "${trimmedName}" already exists. Please choose a different name.`);
+          }
+
+          let slug = requestedSlug || slugify(trimmedName);
           if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
             throw new Error('Theme slug must use lowercase letters, numbers, and hyphens only.');
           }
-          if (themes.some((theme) =>
-            !String(theme.id).startsWith('preset-') &&
-            theme.slug?.toLowerCase() === slug.toLowerCase())) {
-            throw new Error('This theme slug is already in use.');
+          if (themes.some((theme) => theme.slug?.toLowerCase() === slug.toLowerCase())) {
+            throw new Error(`A theme with slug "${slug}" already exists. Please choose a different slug.`);
           }
 
-          for (let attempt = 0; attempt < 5; attempt += 1) {
-            response = await authenticatedFetch('/api/themes', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                name: trimmedName,
-                slug,
-                configJson: normalizedTokens,
-              }),
-            });
-            json = await response.json();
+          const response = await authenticatedFetch('/api/themes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: trimmedName,
+              slug,
+              configJson: normalizedTokens,
+            }),
+          });
+          const json = await response.json();
 
-            if (response.ok) {
-              if (!json?.data?.id) {
-                throw new Error('The server did not return the created theme.');
-              }
-              break;
-            }
-            if (response.status !== 409 || requestedSlug || attempt === 4) {
-              throw new Error(json.error?.message || 'Failed to create theme');
-            }
-
-            slug = getUniqueThemeSlug(
-              trimmedName,
-              [...get().availableThemes, { id: 'pending', slug }],
-            );
+          if (!response.ok) {
+            throw new Error(json.error?.message || 'Failed to create theme');
+          }
+          if (!json?.data?.id) {
+            throw new Error('The server did not return the created theme.');
           }
 
           const newTheme = {
@@ -854,6 +833,11 @@ const useBuilderStore = create(
           if (typeof name === 'string') {
             const trimmedName = name.trim();
             if (!trimmedName) throw new Error('Please enter a theme name.');
+            if (get().availableThemes.some((theme) =>
+              theme.id !== id &&
+              theme.name?.trim().toLowerCase() === trimmedName.toLowerCase())) {
+              throw new Error(`A theme named "${trimmedName}" already exists. Please choose a different name.`);
+            }
             data.name = trimmedName;
           }
           if (typeof slug === 'string') {
@@ -862,10 +846,8 @@ const useBuilderStore = create(
             }
             if (get().availableThemes.some((theme) =>
               theme.id !== id &&
-              !String(theme.id).startsWith('preset-') &&
-              !theme.isPreset &&
               theme.slug?.toLowerCase() === slug.toLowerCase())) {
-              throw new Error('This theme slug is already in use.');
+              throw new Error(`A theme with slug "${slug}" already exists. Please choose a different slug.`);
             }
             data.slug = slug;
           }
@@ -1589,6 +1571,7 @@ const useBuilderStore = create(
         state._history = { past: [], future: [] };
         state.selectedId = null;
         state.selectedType = null;
+        state.device = 'desktop';
 
         if (!state.globalFont) {
           state.globalFont = "'Inter', sans-serif";

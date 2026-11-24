@@ -129,6 +129,7 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
     const [openingComponentId, setOpeningComponentId] = useState(null);
     const [openingPageId, setOpeningPageId] = useState(null);
     const [updatingPageThemeId, setUpdatingPageThemeId] = useState(null);
+    const [publishingPageId, setPublishingPageId] = useState(null);
 
     const allAvailableThemes = useMemo(() => {
         return mergeThemes(
@@ -604,8 +605,9 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
         }
     };
 
-    // Toggle Publish Status
+    // Toggle Publish / Unpublish Status
     const handleTogglePublish = async (page) => {
+        setPublishingPageId(page.id);
         try {
             const newStatus = page.status === 'PUBLISHED' ? 'DRAFT' : 'PUBLISHED';
             let res;
@@ -625,12 +627,27 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
             }
 
             setPages((prev) =>
-                prev.map((p) => (p.id === page.id ? { ...p, status: newStatus } : p))
+                prev.map((p) => (p.id === page.id ? { ...p, ...json.data, status: newStatus } : p))
             );
-            showToast(`Page status changed to ${newStatus}`);
+            const store = useBuilderStore.getState();
+            if (store.activeDbPageId === page.id) {
+                store.setPageMeta({ status: newStatus });
+            }
+            showToast(`Page "${page.name}" is now ${newStatus === 'PUBLISHED' ? 'Published' : 'Unpublished'}`);
         } catch (err) {
             showToast(err.message, 'error');
+        } finally {
+            setPublishingPageId(null);
         }
+    };
+
+    // Open Published Page
+    const handleViewAsPublished = (page) => {
+        if (page.status !== 'PUBLISHED') {
+            showToast(`"${page.name}" is currently Unpublished. Please publish it first to open the page.`, 'error');
+            return;
+        }
+        window.open(`/${page.slug.replace(/^\/+/, '')}`, '_blank', 'noopener,noreferrer');
     };
 
     // Filtered pages for table/cards
@@ -648,6 +665,207 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
     // Quick stats
     const publishedCount = pages.filter((p) => p.status === 'PUBLISHED').length;
     const draftCount = pages.filter((p) => p.status === 'DRAFT').length;
+
+    const renderPagesTable = (pagesList) => (
+        <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+                <thead>
+                    <tr className="border-b border-slate-100 bg-slate-50/50 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                        <th className="py-3 px-6">Page</th>
+                        <th className="py-3 px-6">Route Slug</th>
+                        <th className="py-3 px-6">Theme</th>
+                        <th className="py-3 px-6">Status</th>
+                        <th className="py-3 px-6">Last Updated</th>
+                        <th className="py-3 px-6 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+                    {pagesList.map((page) => {
+                        const isDesignConversion = isDesignConvertedPage(page);
+                        const pageTheme = getPageTheme(page);
+                        const themeColors = pageTheme?.configJson?.colors || {};
+                        const isUpdating = updatingPageThemeId === page.id;
+
+                        return (
+                            <tr
+                                key={page.id}
+                                className="hover:bg-slate-50/70 transition-colors group"
+                            >
+                                <td className="py-4 px-6 font-semibold text-slate-800">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                                            <FileText size={15} />
+                                        </div>
+                                        <span className="truncate max-w-[200px]">{page.name}</span>
+                                    </div>
+                                    {isDesignConversion && (
+                                        <p className="ml-10 mt-1 max-w-xs text-[11px] font-normal leading-4 text-violet-700">
+                                            Created using design conversion; this page cannot be edited in the Page Builder.
+                                        </p>
+                                    )}
+                                </td>
+
+                                <td className="py-4 px-6 font-mono text-slate-500 text-[11px]">
+                                    /{page.slug}
+                                </td>
+
+                                <td className="py-4 px-6 text-slate-600">
+                                    <div
+                                        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs transition-all shadow-2xs ${isUpdating
+                                            ? 'border-blue-300 bg-blue-50/50'
+                                            : 'border-slate-200/90 bg-white hover:border-slate-300 hover:bg-slate-50'
+                                            }`}
+                                        title={`Current Theme: ${pageTheme?.name || 'Default Theme'}. Click to change.`}
+                                    >
+                                        <div className="flex items-center -space-x-1 shrink-0">
+                                            <span
+                                                className="w-2.5 h-2.5 rounded-full border border-white shadow-2xs shrink-0"
+                                                style={{ backgroundColor: themeColors.primary || '#3b82f6' }}
+                                            />
+                                            <span
+                                                className="w-2.5 h-2.5 rounded-full border border-white shadow-2xs shrink-0"
+                                                style={{ backgroundColor: themeColors.secondary || '#8b5cf6' }}
+                                            />
+                                        </div>
+                                        <Palette size={12} className="text-violet-500 shrink-0" />
+                                        <select
+                                            value={page.themeId || pageTheme?.id || ''}
+                                            onChange={(e) => handleChangePageTheme(page, e.target.value)}
+                                            disabled={isUpdating}
+                                            aria-label={`Change theme for page ${page.name}`}
+                                            className="bg-transparent text-[11px] font-medium text-slate-700 focus:outline-none cursor-pointer pr-4 appearance-none disabled:opacity-60 max-w-[130px] truncate"
+                                            style={{
+                                                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+                                                backgroundRepeat: 'no-repeat',
+                                                backgroundPosition: 'right center',
+                                            }}
+                                        >
+                                            {allAvailableThemes.map((t) => (
+                                                <option key={t.id} value={t.id}>
+                                                    {t.name} {t.isPreset ? '(Preset)' : ''}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        {isUpdating && (
+                                            <RefreshCw size={11} className="animate-spin text-blue-600 shrink-0" />
+                                        )}
+                                    </div>
+                                </td>
+
+                                <td className="py-4 px-6">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleTogglePublish(page)}
+                                        disabled={publishingPageId === page.id}
+                                        title={page.status === 'PUBLISHED' ? 'Click to Unpublish' : 'Click to Publish'}
+                                        className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold transition-colors cursor-pointer disabled:opacity-50 ${page.status === 'PUBLISHED'
+                                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                                            : 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100'
+                                            }`}
+                                    >
+                                        <span
+                                            className={`w-1.5 h-1.5 rounded-full ${page.status === 'PUBLISHED'
+                                                ? 'bg-emerald-500'
+                                                : 'bg-amber-500'
+                                                }`}
+                                        />
+                                        {page.status === 'PUBLISHED' ? 'Published' : 'Unpublished'}
+                                    </button>
+                                </td>
+
+                                <td className="py-4 px-6 text-slate-400 text-[11px] whitespace-nowrap">
+                                    {new Date(page.updatedAt || page.createdAt).toLocaleString(
+                                        undefined,
+                                        {
+                                            month: 'short',
+                                            day: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit',
+                                        }
+                                    )}
+                                </td>
+
+                                <td className="py-4 px-6 text-right">
+                                    <div className="flex items-center justify-end gap-1.5">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleViewAsPublished(page)}
+                                            disabled={publishingPageId === page.id}
+                                            title={page.status === 'PUBLISHED' ? `Open published page at /${page.slug}` : 'Publish this page first to open it'}
+                                            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-colors whitespace-nowrap disabled:opacity-50 ${
+                                                page.status === 'PUBLISHED'
+                                                    ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200'
+                                                    : 'bg-slate-50 hover:bg-slate-100 text-slate-400 border border-slate-200'
+                                            }`}
+                                        >
+                                            <Globe size={13} />
+                                            <span>Open Page</span>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => handleOpenPage(page)}
+                                            disabled={openingPageId === page.id}
+                                            title={
+                                                openingPageId === page.id
+                                                    ? 'Opening page...'
+                                                    : isDesignConversion
+                                                        ? 'Preview design-converted page'
+                                                        : 'Edit in Builder'
+                                            }
+                                            aria-label={
+                                                openingPageId === page.id
+                                                    ? 'Opening page'
+                                                    : isDesignConversion
+                                                        ? `Preview ${page.name}`
+                                                        : `Edit ${page.name} in Builder`
+                                            }
+                                            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-semibold border transition-colors whitespace-nowrap disabled:opacity-60 disabled:cursor-wait ${
+                                                isDesignConversion
+                                                    ? 'text-violet-700 hover:bg-violet-50 border-violet-200'
+                                                    : 'text-blue-600 hover:bg-blue-50 border-blue-200'
+                                            }`}
+                                        >
+                                            {isDesignConversion ? <Eye size={13} /> : <Edit3 size={13} />}
+                                            <span>
+                                                {openingPageId === page.id
+                                                    ? 'Opening...'
+                                                    : isDesignConversion
+                                                        ? 'Preview'
+                                                        : 'Edit in Builder'}
+                                            </span>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => handleDuplicate(page)}
+                                            title="Duplicate Page"
+                                            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-colors"
+                                        >
+                                            <Copy size={14} />
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setResourceToDelete(page);
+                                                setDeleteResourceType('page');
+                                                setDeleteModalOpen(true);
+                                            }}
+                                            title="Delete Page"
+                                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-colors"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        );
+                    })}
+                </tbody>
+            </table>
+        </div>
+    );
 
     return (
         <div className="flex h-screen w-screen overflow-hidden bg-slate-50 font-sans text-slate-800">
@@ -888,7 +1106,7 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
 
                                 <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
                                     <div>
-                                        <p className="text-xs font-medium text-slate-400">Draft Pages</p>
+                                        <p className="text-xs font-medium text-slate-400">Unpublished Pages</p>
                                         <p className="text-2xl font-bold text-slate-800 mt-1">
                                             {loading ? '...' : draftCount}
                                         </p>
@@ -957,135 +1175,7 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                         </button>
                                     </div>
                                 ) : (
-                                    <div className="divide-y divide-slate-100">
-                                        {pages.slice(0, 5).map((page) => {
-                                            const pageTheme = getPageTheme(page);
-                                            const themeColors = pageTheme?.configJson?.colors || {};
-                                            const isUpdating = updatingPageThemeId === page.id;
-                                            const isDesignConversion = isDesignConvertedPage(page);
-
-                                            return (
-                                                <div
-                                                    key={page.id}
-                                                    className="px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/70 transition-colors group"
-                                                >
-                                                    <div className="flex items-center gap-3 min-w-0">
-                                                        <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                                                            <FileText size={16} />
-                                                        </div>
-                                                        <div className="min-w-0">
-                                                            <div className="flex items-center gap-2">
-                                                                <p className="text-xs font-semibold text-slate-800 truncate">
-                                                                    {page.name}
-                                                                </p>
-                                                                <span
-                                                                    className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${page.status === 'PUBLISHED'
-                                                                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                                                        : 'bg-amber-50 text-amber-700 border border-amber-200'
-                                                                        }`}
-                                                                >
-                                                                    {page.status}
-                                                                </span>
-                                                            </div>
-                                                            <p className="text-[11px] text-slate-400 font-mono mt-0.5">
-                                                                /{page.slug}
-                                                            </p>
-                                                            {isDesignConversion && (
-                                                                <p className="mt-1 text-[11px] leading-4 text-violet-700">
-                                                                    Created using design conversion; this page cannot be edited in the Page Builder.
-                                                                </p>
-                                                            )}
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="flex items-center flex-wrap sm:flex-nowrap gap-3 sm:gap-4 shrink-0">
-                                                        {/* Applied Theme with Change Option */}
-                                                        <div className="relative flex items-center">
-                                                            <div
-                                                                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs transition-all shadow-2xs ${
-                                                                    isUpdating
-                                                                        ? 'border-blue-300 bg-blue-50/50'
-                                                                        : 'border-slate-200/90 bg-white hover:border-slate-300 hover:bg-slate-50'
-                                                                }`}
-                                                                title={`Current Theme: ${pageTheme?.name || 'Default Theme'}. Click to change.`}
-                                                            >
-                                                                {/* Color swatches */}
-                                                                <div className="flex items-center -space-x-1 shrink-0">
-                                                                    <span
-                                                                        className="w-2.5 h-2.5 rounded-full border border-white shadow-2xs shrink-0"
-                                                                        style={{ backgroundColor: themeColors.primary || '#3b82f6' }}
-                                                                    />
-                                                                    <span
-                                                                        className="w-2.5 h-2.5 rounded-full border border-white shadow-2xs shrink-0"
-                                                                        style={{ backgroundColor: themeColors.secondary || '#8b5cf6' }}
-                                                                    />
-                                                                </div>
-                                                                <Palette size={12} className="text-violet-500 shrink-0" />
-                                                                <select
-                                                                    value={page.themeId || pageTheme?.id || ''}
-                                                                    onChange={(e) => handleChangePageTheme(page, e.target.value)}
-                                                                    disabled={isUpdating}
-                                                                    aria-label={`Change theme for page ${page.name}`}
-                                                                    className="bg-transparent text-xs font-medium text-slate-700 focus:outline-none cursor-pointer pr-4 appearance-none disabled:opacity-60 max-w-[140px] truncate"
-                                                                    style={{
-                                                                        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
-                                                                        backgroundRepeat: 'no-repeat',
-                                                                        backgroundPosition: 'right center',
-                                                                    }}
-                                                                >
-                                                                    {allAvailableThemes.map((t) => (
-                                                                        <option key={t.id} value={t.id}>
-                                                                            {t.name} {t.isPreset ? '(Preset)' : ''}
-                                                                        </option>
-                                                                    ))}
-                                                                </select>
-                                                                {isUpdating && (
-                                                                    <RefreshCw size={11} className="animate-spin text-blue-600 shrink-0" />
-                                                                )}
-                                                            </div>
-                                                        </div>
-
-                                                        <span className="text-[11px] text-slate-400 hidden lg:inline">
-                                                            Updated {new Date(page.updatedAt || page.createdAt).toLocaleDateString()}
-                                                        </span>
-                                                        <button
-                                                            onClick={() => handleOpenPage(page)}
-                                                            disabled={openingPageId === page.id}
-                                                            title={isDesignConversion ? 'Preview design-converted page' : 'Edit in Builder'}
-                                                            aria-label={isDesignConversion ? `Preview ${page.name}` : `Edit ${page.name} in Builder`}
-                                                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors disabled:opacity-60 disabled:cursor-wait ${
-                                                                isDesignConversion
-                                                                    ? 'text-violet-700 hover:bg-violet-50 border-violet-200'
-                                                                    : 'text-blue-600 hover:bg-blue-50 border-blue-200'
-                                                            }`}
-                                                        >
-                                                            {isDesignConversion ? <Eye size={13} /> : <Edit3 size={13} />}
-                                                            <span>
-                                                                {openingPageId === page.id
-                                                                    ? 'Opening...'
-                                                                    : isDesignConversion
-                                                                        ? 'Preview'
-                                                                        : 'Edit in Builder'}
-                                                            </span>
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                                setResourceToDelete(page);
-                                                                setDeleteResourceType('page');
-                                                                setDeleteModalOpen(true);
-                                                            }}
-                                                            title={`Delete page ${page.name}`}
-                                                            aria-label={`Delete page ${page.name}`}
-                                                            className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors"
-                                                        >
-                                                            <Trash2 size={14} />
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
+                                    renderPagesTable(pages.slice(0, 5))
                                 )}
                             </div>
 
@@ -1274,7 +1364,7 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                     >
                                         <option value="ALL">All ({pages.length})</option>
                                         <option value="PUBLISHED">Published ({publishedCount})</option>
-                                        <option value="DRAFT">Draft ({draftCount})</option>
+                                        <option value="DRAFT">Unpublished ({draftCount})</option>
                                     </select>
 
                                     <button
@@ -1318,180 +1408,7 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                 </div>
                             ) : (
                                 <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-left border-collapse">
-                                            <thead>
-                                                <tr className="border-b border-slate-100 bg-slate-50/50 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                                                    <th className="py-3 px-6">Page</th>
-                                                    <th className="py-3 px-6">Route Slug</th>
-                                                    <th className="py-3 px-6">Theme</th>
-                                                    <th className="py-3 px-6">Status</th>
-                                                    <th className="py-3 px-6">Last Updated</th>
-                                                    <th className="py-3 px-6 text-right">Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
-                                                {filteredPages.map((page) => {
-                                                    const isDesignConversion = isDesignConvertedPage(page);
-
-                                                    return (
-                                                    <tr
-                                                        key={page.id}
-                                                        className="hover:bg-slate-50/70 transition-colors group"
-                                                    >
-                                                        <td className="py-4 px-6 font-semibold text-slate-800">
-                                                            <div className="flex items-center gap-2.5">
-                                                                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                                                                    <FileText size={15} />
-                                                                </div>
-                                                                <span className="truncate max-w-[200px]">{page.name}</span>
-                                                            </div>
-                                                            {isDesignConversion && (
-                                                                <p className="ml-10 mt-1 max-w-xs text-[11px] font-normal leading-4 text-violet-700">
-                                                                    Created using design conversion; this page cannot be edited in the Page Builder.
-                                                                </p>
-                                                            )}
-                                                        </td>
-
-                                                        <td className="py-4 px-6 font-mono text-slate-500 text-[11px]">
-                                                            /{page.slug}
-                                                        </td>
-
-                                                        <td className="py-4 px-6 text-slate-600">
-                                                            {(() => {
-                                                                const pageTheme = getPageTheme(page);
-                                                                const themeColors = pageTheme?.configJson?.colors || {};
-                                                                const isUpdating = updatingPageThemeId === page.id;
-
-                                                                return (
-                                                                    <div
-                                                                        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs transition-all shadow-2xs ${
-                                                                            isUpdating
-                                                                                ? 'border-blue-300 bg-blue-50/50'
-                                                                                : 'border-slate-200/90 bg-white hover:border-slate-300 hover:bg-slate-50'
-                                                                        }`}
-                                                                        title={`Current Theme: ${pageTheme?.name || 'Default Theme'}. Click to change.`}
-                                                                    >
-                                                                        <div className="flex items-center -space-x-1 shrink-0">
-                                                                            <span
-                                                                                className="w-2.5 h-2.5 rounded-full border border-white shadow-2xs shrink-0"
-                                                                                style={{ backgroundColor: themeColors.primary || '#3b82f6' }}
-                                                                            />
-                                                                            <span
-                                                                                className="w-2.5 h-2.5 rounded-full border border-white shadow-2xs shrink-0"
-                                                                                style={{ backgroundColor: themeColors.secondary || '#8b5cf6' }}
-                                                                            />
-                                                                        </div>
-                                                                        <Palette size={12} className="text-violet-500 shrink-0" />
-                                                                        <select
-                                                                            value={page.themeId || pageTheme?.id || ''}
-                                                                            onChange={(e) => handleChangePageTheme(page, e.target.value)}
-                                                                            disabled={isUpdating}
-                                                                            aria-label={`Change theme for page ${page.name}`}
-                                                                            className="bg-transparent text-[11px] font-medium text-slate-700 focus:outline-none cursor-pointer pr-4 appearance-none disabled:opacity-60 max-w-[130px] truncate"
-                                                                            style={{
-                                                                                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
-                                                                                backgroundRepeat: 'no-repeat',
-                                                                                backgroundPosition: 'right center',
-                                                                            }}
-                                                                        >
-                                                                            {allAvailableThemes.map((t) => (
-                                                                                <option key={t.id} value={t.id}>
-                                                                                    {t.name} {t.isPreset ? '(Preset)' : ''}
-                                                                                </option>
-                                                                            ))}
-                                                                        </select>
-                                                                        {isUpdating && (
-                                                                            <RefreshCw size={11} className="animate-spin text-blue-600 shrink-0" />
-                                                                        )}
-                                                                    </div>
-                                                                );
-                                                            })()}
-                                                        </td>
-
-                                                        <td className="py-4 px-6">
-                                                            <button
-                                                                onClick={() => handleTogglePublish(page)}
-                                                                title="Click to toggle publish status"
-                                                                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold transition-colors ${page.status === 'PUBLISHED'
-                                                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
-                                                                    : 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100'
-                                                                    }`}
-                                                            >
-                                                                <span
-                                                                    className={`w-1.5 h-1.5 rounded-full ${page.status === 'PUBLISHED'
-                                                                        ? 'bg-emerald-500'
-                                                                        : 'bg-amber-500'
-                                                                        }`}
-                                                                />
-                                                                {page.status}
-                                                            </button>
-                                                        </td>
-
-                                                        <td className="py-4 px-6 text-slate-400 text-[11px]">
-                                                            {new Date(page.updatedAt || page.createdAt).toLocaleString(
-                                                                undefined,
-                                                                {
-                                                                    month: 'short',
-                                                                    day: 'numeric',
-                                                                    hour: '2-digit',
-                                                                    minute: '2-digit',
-                                                                }
-                                                            )}
-                                                        </td>
-
-                                                        <td className="py-4 px-6 text-right">
-                                                            <div className="flex items-center justify-end gap-1">
-                                                                <button
-                                                                    onClick={() => handleOpenPage(page)}
-                                                                    disabled={openingPageId === page.id}
-                                                                    title={openingPageId === page.id
-                                                                        ? 'Opening page...'
-                                                                        : isDesignConversion
-                                                                            ? 'Preview design-converted page'
-                                                                            : 'Edit in Component Builder'}
-                                                                    aria-label={openingPageId === page.id
-                                                                        ? 'Opening page'
-                                                                        : isDesignConversion
-                                                                            ? `Preview ${page.name}`
-                                                                            : `Edit ${page.name} in Component Builder`}
-                                                                    className={`inline-flex items-center gap-1.5 rounded-lg border border-transparent px-2 py-1.5 transition-colors disabled:opacity-60 disabled:cursor-wait ${
-                                                                        isDesignConversion
-                                                                            ? 'text-violet-700 hover:bg-violet-50 hover:border-violet-200'
-                                                                            : 'text-blue-600 hover:bg-blue-50 hover:border-blue-200'
-                                                                    }`}
-                                                                >
-                                                                    {isDesignConversion ? <Eye size={14} /> : <Edit3 size={14} />}
-                                                                    {isDesignConversion && <span>Preview</span>}
-                                                                </button>
-
-                                                                <button
-                                                                    onClick={() => handleDuplicate(page)}
-                                                                    title="Duplicate Page"
-                                                                    className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-colors"
-                                                                >
-                                                                    <Copy size={14} />
-                                                                </button>
-
-                                                                <button
-                                                                    onClick={() => {
-                                                                        setResourceToDelete(page);
-                                                                        setDeleteResourceType('page');
-                                                                        setDeleteModalOpen(true);
-                                                                    }}
-                                                                    title="Delete Page"
-                                                                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-colors"
-                                                                >
-                                                                    <Trash2 size={14} />
-                                                                </button>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                    );
-                                                })}
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                    {renderPagesTable(filteredPages)}
                                 </div>
                             )}
                         </div>
@@ -1907,16 +1824,13 @@ export default function Dashboard({ initialTab = 'dashboard' }) {
                                     Assign Theme (Default Theme applied)
                                 </label>
                                 <select
-                                    value={newPageThemeId}
+                                    value={newPageThemeId || useBuilderStore.getState().defaultThemeId || allAvailableThemes[0]?.id || ''}
                                     onChange={(e) => setNewPageThemeId(e.target.value)}
                                     className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                                 >
-                                    <option value="">
-                                        Default Theme ({themes.find((t) => t.id === useBuilderStore.getState().defaultThemeId)?.name || themes[0]?.name || 'Modern Blue'})
-                                    </option>
-                                    {themes.map((t) => (
+                                    {allAvailableThemes.map((t) => (
                                         <option key={t.id} value={t.id}>
-                                            {t.name} {t.id === useBuilderStore.getState().defaultThemeId ? '(Default)' : ''}
+                                            {t.name} {t.id === (useBuilderStore.getState().defaultThemeId || allAvailableThemes[0]?.id) ? '(Default)' : ''}
                                         </option>
                                     ))}
                                 </select>

@@ -848,27 +848,38 @@ case 'popover': {
 
       const logoJSX = `<div className="flex items-center gap-2 shrink-0">${el.logoUrl ? `<img src="${el.logoUrl}" alt="logo" className="h-7 w-auto object-contain" />` : ''}${el.brand ? `<span className="font-bold whitespace-nowrap ${navTypography}">${el.brand}</span>` : ''}</div>`;
 
+      const linkUrls = el.linkUrls && typeof el.linkUrls === 'object' ? el.linkUrls : {};
+      const getHref = (label) => {
+        if (typeof linkUrls[label] === 'string' && linkUrls[label].trim()) {
+          return escapeAttr(linkUrls[label].trim());
+        }
+        const slug = label.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        return slug ? `/${slug}` : '#';
+      };
+
       // Desktop inline links (hover submenus) — visible md and up only.
       const desktopLinkItems = navLinkNames.map((l) => {
+        const href = getHref(l);
         const hasSub = submenus[l] && submenus[l].length > 0;
         if (hasSub) {
           const subs = submenus[l].split(',').map(s => s.trim());
-          const subJSX = subs.map(s => `${indent}          <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">${s}</a>`).join('\n');
-          return `${indent}      <div className="relative group">\n${indent}        <button className="flex items-center gap-1 px-2 py-1 rounded hover:bg-black/5 ${navTypography}">${l} &#8964;</button>\n${indent}        <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-100 py-1 hidden group-hover:block min-w-[160px] z-50">\n${subJSX}\n${indent}        </div>\n${indent}      </div>`;
+          const subJSX = subs.map(s => `${indent}          <a href="${getHref(s)}" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">${s}</a>`).join('\n');
+          return `${indent}      <div className="relative group">\n${indent}        <a href="${href}" className="flex items-center gap-1 px-2 py-1 rounded hover:bg-black/5 ${navTypography}">${l} &#8964;</a>\n${indent}        <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-100 py-1 hidden group-hover:block min-w-[160px] z-50">\n${subJSX}\n${indent}        </div>\n${indent}      </div>`;
         }
-        return `${indent}      <a href="#" className="px-2 py-1 rounded hover:bg-black/5 ${navTypography} whitespace-nowrap">${l}</a>`;
+        return `${indent}      <a href="${href}" className="px-2 py-1 rounded hover:bg-black/5 ${navTypography} whitespace-nowrap">${l}</a>`;
       }).join('\n');
 
       // Mobile accordion links — submenus expand inline on click (no hover on touch).
       const mobileLinkItems = navLinkNames.map((l) => {
+        const href = getHref(l);
         const hasSub = submenus[l] && submenus[l].length > 0;
         if (hasSub) {
           const subs = submenus[l].split(',').map(s => s.trim());
-          const subJSX = subs.map(s => `${indent}            <div className="px-2 py-1.5 text-xs text-gray-600">${s}</div>`).join('\n');
+          const subJSX = subs.map(s => `${indent}            <a href="${getHref(s)}" className="block px-2 py-1.5 text-xs text-gray-600">${s}</a>`).join('\n');
           const slug = l.replace(/[^a-zA-Z0-9]/g, '');
           return `${indent}        <div>\n${indent}          <button onClick={() => setOpenMenu(openMenu === '${slug}' ? null : '${slug}')} className="w-full flex items-center justify-between px-2 py-2 rounded hover:bg-black/5 text-left ${navTypography}">\n${indent}            ${l}\n${indent}            <span className={\`transition-transform \${openMenu === '${slug}' ? 'rotate-180' : ''}\`}>&#8964;</span>\n${indent}          </button>\n${indent}          {openMenu === '${slug}' && (\n${indent}            <div className="flex flex-col pl-4 pb-1">\n${subJSX}\n${indent}            </div>\n${indent}          )}\n${indent}        </div>`;
         }
-        return `${indent}        <a href="#" className="px-2 py-2 rounded hover:bg-black/5 ${navTypography} block">${l}</a>`;
+        return `${indent}        <a href="${href}" className="px-2 py-2 rounded hover:bg-black/5 ${navTypography} block">${l}</a>`;
       }).join('\n');
 
       const justifyClass = logoAlign === 'right' ? 'justify-between flex-row-reverse' : 'justify-between';
