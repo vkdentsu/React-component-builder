@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { buildDesignToJsxPrompt } from "./prompts/designToJsx.js";
 
 export default async function handler(req, res) {
     
@@ -59,52 +60,9 @@ export default async function handler(req, res) {
             });
         }
 
-        //Prompt
         input.push({
             type: "text",
-            text: `
-            You are an expert React frontend developer.
-            Analyze the uploaded website design image(s).
-            Convert the design into a functional React JSX component.
-            The component name must be: ${pageName}
-
-            Requirements:
-            1. Return ONLY the complete JSX code.
-            2. Do NOT use markdown code fences.
-            3. Do NOT provide explanations.
-            4. Do NOT put anything before or after the JSX.
-            5. Recreate the uploaded design as accurately as possible.
-            6. Analyze carefully:
-                - page structure
-                - layout
-                - spacing
-                - margins
-                - padding
-                - typography
-                - font sizes
-                - font weights
-                - colors
-                - backgrounds
-                - borders
-                - border radius
-                - shadows
-                - buttons
-                - cards
-                - images
-                - alignment
-                - widths
-                - heights
-            7. If a desktop and mobile design are provided, use both designs to determine responsive behavior.
-            8. The component must be responsive.
-            9. Use standard React JSX.
-            10. Use inline styles or CSS classes.
-            11. Do not use external UI libraries.
-            12. Do not use Tailwind unless absolutely necessary.
-            13. The component must be directly usable in a React application.
-            14. Component name must be exactly: ${pageName}
-            
-
-            Return ONLY the JSX component.`,
+            text: buildDesignToJsxPrompt(pageName),
         });
 
         // Gemini Interactions API

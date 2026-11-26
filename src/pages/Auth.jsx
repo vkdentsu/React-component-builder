@@ -49,7 +49,10 @@ export default function Auth({ mode }) {
       const returnPath = returnLocation?.pathname?.startsWith("/")
         ? `${returnLocation.pathname}${returnLocation.search || ""}${returnLocation.hash || ""}`
         : "/dashboard";
-      navigate(returnPath, { replace: true });
+      navigate(returnPath, {
+        replace: true,
+        state: returnLocation?.state,
+      });
     } catch (error) {
       setMessage(error.message || "Unable to connect to the authentication service.");
     } finally {
