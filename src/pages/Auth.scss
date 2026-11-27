@@ -100,8 +100,24 @@
     }
   }
 
+  .auth-forgot-link {
+    align-self: flex-end;
+    margin: -6px 0 18px;
+    color: #2f6bff;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
   .auth-submit {
+    display: flex;
     min-height: 50px;
+    align-items: center;
+    justify-content: center;
     border: 0;
     border-radius: 9px;
     background: #2f6bff;
@@ -126,6 +142,10 @@
       outline: 3px solid #18c7b5;
       outline-offset: 3px;
     }
+  }
+
+  .auth-submit-link {
+    text-decoration: none;
   }
 
   .auth-switch {
