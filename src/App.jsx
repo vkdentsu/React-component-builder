@@ -76,8 +76,10 @@ function App() {
             </RequireAuth>
           }
         />
-        <Route path="/login" element={<Auth mode="login" />} />
-        <Route path="/register" element={<Auth mode="register" />} />
+        <Route path="/login" element={<Auth key="login" mode="login" />} />
+        <Route path="/register" element={<Auth key="register" mode="register" />} />
+        <Route path="/forgot-password" element={<Auth key="forgot-password" mode="forgot-password" />} />
+        <Route path="/reset-password" element={<Auth key="reset-password" mode="reset-password" />} />
         <Route path="/dashboard" element={<RequireAuth><Dashboard initialTab="dashboard" /></RequireAuth>} />
         <Route path="/pages" element={<RequireAuth><Dashboard initialTab="pages" /></RequireAuth>} />
         <Route path="/media" element={<RequireAuth><Dashboard initialTab="media" /></RequireAuth>} />
